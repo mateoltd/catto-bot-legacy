@@ -1,0 +1,42 @@
+{
+  "ping": {
+    "name": "ping",
+    "description": "Verificar la latencia del bot",
+    "content": "🏓 ¡Pong! Latencia: {{latency}}ms | Latencia API: {{apiLatency}}ms"
+  },
+  "info": {
+    "name": "info",
+    "description": "Mostrar información del bot",
+    "title": "ℹ️ Información del Bot",
+    "version": "Versión",
+    "uptime": "Tiempo activo",
+    "guilds": "Servidores",
+    "users": "Usuarios",
+    "memory": "Uso de memoria"
+  },
+  "help": {
+    "name": "help",
+    "description": "Mostrar comandos disponibles",
+    "title": "📚 Menú de Ayuda",
+    "commandsTitle": "Comandos Disponibles",
+    "noDescription": "Sin descripción disponible"
+  },
+  "dbstats": {
+    "name": "dbstats",
+    "description": "Muestra estadísticas de la base de datos",
+    "title": "📊 Estadísticas de Base de Datos",
+    "guilds": "🏰 Servidores",
+    "users": "👥 Usuarios",
+    "logs": "📝 Registros",
+    "error": "❌ Error al obtener las estadísticas."
+  },
+  "language": {
+    "name": "language",
+    "description": "Cambiar el idioma del bot para este servidor",
+    "currentLanguage": "Idioma Actual",
+    "availableLanguages": "Idiomas Disponibles",
+    "changed": "✅ Idioma cambiado a {{language}}",
+    "invalid": "❌ Idioma inválido. Idiomas disponibles: {{languages}}",
+    "adminOnly": "❌ Solo los administradores pueden cambiar el idioma."
+  }
+}

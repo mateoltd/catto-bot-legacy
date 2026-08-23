@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+
+# Build output and generated artifacts
+dist/
+**/.next/
+**/out/
+**/build/
+**/target/
+coverage/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+*.tsbuildinfo
+**/next-env.d.ts
+
+# Logs and debug files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local databases and runtime files
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.pid
+tmp/
+temp/
+
+# Tooling and OS files
+.cache/
+.eslintcache
+.turbo/
+.vercel/
+.DS_Store
+Thumbs.db

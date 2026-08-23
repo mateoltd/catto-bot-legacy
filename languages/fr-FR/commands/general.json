@@ -1,0 +1,42 @@
+{
+  "ping": {
+    "name": "ping",
+    "description": "Vérifier la latence du bot",
+    "content": "🏓 Pong! Latence: {{latency}}ms | Latence API: {{apiLatency}}ms"
+  },
+  "info": {
+    "name": "info",
+    "description": "Afficher les informations du bot",
+    "title": "ℹ️ Informations du Bot",
+    "version": "Version",
+    "uptime": "Temps de fonctionnement",
+    "guilds": "Serveurs",
+    "users": "Utilisateurs",
+    "memory": "Utilisation de la mémoire"
+  },
+  "help": {
+    "name": "help",
+    "description": "Afficher les commandes disponibles",
+    "title": "📚 Menu d'aide",
+    "commandsTitle": "Commandes Disponibles",
+    "noDescription": "Aucune description disponible"
+  },
+  "dbstats": {
+    "name": "dbstats",
+    "description": "Afficher les statistiques de la base de données",
+    "title": "📊 Statistiques de la Base de Données",
+    "guilds": "🏰 Serveurs",
+    "users": "👥 Utilisateurs",
+    "logs": "📝 Journaux",
+    "error": "❌ Échec de la récupération des statistiques."
+  },
+  "language": {
+    "name": "language",
+    "description": "Changer la langue du bot pour ce serveur",
+    "currentLanguage": "Langue Actuelle",
+    "availableLanguages": "Langues Disponibles",
+    "changed": "✅ Langue changée en {{language}}",
+    "invalid": "❌ Langue invalide. Langues disponibles: {{languages}}",
+    "adminOnly": "❌ Seuls les administrateurs peuvent changer la langue."
+  }
+}

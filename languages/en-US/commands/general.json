@@ -1,0 +1,20 @@
+{
+  "dbstats": {
+    "name": "dbstats",
+    "description": "Shows database statistics",
+    "title": "📊 Database Statistics",
+    "guilds": "🏰 Guilds",
+    "users": "👥 Users",
+    "logs": "📝 Logs",
+    "error": "❌ Failed to fetch database statistics."
+  },
+  "language": {
+    "name": "language",
+    "description": "Change the bot's language for this server",
+    "currentLanguage": "Current Language",
+    "availableLanguages": "Available Languages",
+    "changed": "✅ Language changed to {{language}}",
+    "invalid": "❌ Invalid language. Available languages: {{languages}}",
+    "adminOnly": "❌ Only administrators can change the language."
+  }
+}

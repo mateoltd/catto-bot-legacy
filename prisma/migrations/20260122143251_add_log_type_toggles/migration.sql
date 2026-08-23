@@ -1,0 +1,18 @@
+-- AlterTable
+ALTER TABLE "log_configs" ADD COLUMN     "channelsEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "emojisEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "eventsEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "joinsEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "leavesEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "membersEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "messagesEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "pollsEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "rolesEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "serverEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "stageEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "stickersEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "ticketsEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "transcriptsEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "voiceEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "voiceStateEnabled" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "webhooksEnabled" BOOLEAN NOT NULL DEFAULT false;

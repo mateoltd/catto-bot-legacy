@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: catto-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-catto}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - catto-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: catto-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - catto-network
+
+  watermark:
+    build:
+      context: ./services/watermark-rs
+      dockerfile: Dockerfile
+    container_name: catto-watermark
+    restart: unless-stopped
+    environment:
+      WATERMARK_SERVICE_PORT: 3847
+      WATERMARK_MAX_UPLOAD_SIZE: ${WATERMARK_MAX_UPLOAD_SIZE:-1gb}
+      RUST_LOG: info
+    ports:
+      - '${WATERMARK_SERVICE_PORT:-3847}:3847'
+    networks:
+      - catto-network
+
+  image-gen:
+    build:
+      context: ./services/image-gen-rs
+      dockerfile: Dockerfile
+    container_name: catto-image-gen
+    restart: unless-stopped
+    environment:
+      IMAGE_GEN_SERVICE_PORT: 3848
+      RUST_LOG: info
+    ports:
+      - '${IMAGE_GEN_SERVICE_PORT:-3848}:3848'
+    networks:
+      - catto-network
+
+  # Bot service is deployed via Dokploy (not in this compose file)
+  # Dokploy's bot container connects to this network to access postgres/redis/watermark
+  #
+  # For local development only, uncomment below:
+  # bot:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: catto-bot
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-catto}
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #     REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+  #     WATERMARK_SERVICE_URL: http://watermark:3847
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - watermark
+  #   networks:
+  #     - catto-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  catto-network:
+    external: true  # Created manually with: docker network create catto-network

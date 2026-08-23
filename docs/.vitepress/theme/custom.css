@@ -1,0 +1,542 @@
+/* ============================================
+   CATTO DOCS - Monochromatic Dark Theme
+   ============================================ */
+
+/* ============================================
+   1. FONT IMPORT
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ============================================
+   2. CSS VARIABLES
+   ============================================ */
+
+:root {
+  /* Monochrome Palette */
+  --mono-black: #000000;
+  --mono-950: #0a0a0a;
+  --mono-900: #121212;
+  --mono-850: #1a1a1a;
+  --mono-800: #222222;
+  --mono-700: #333333;
+  --mono-600: #444444;
+  --mono-500: #666666;
+  --mono-400: #888888;
+  --mono-300: #aaaaaa;
+  --mono-200: #cccccc;
+  --mono-100: #e5e5e5;
+  --mono-white: #ffffff;
+
+  /* VitePress Theme Variables */
+  --vp-c-brand-1: var(--mono-white);
+  --vp-c-brand-2: var(--mono-200);
+  --vp-c-brand-3: var(--mono-300);
+  --vp-c-brand-soft: rgba(255, 255, 255, 0.08);
+
+  --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+
+  --vp-c-bg: var(--mono-black);
+  --vp-c-bg-alt: var(--mono-950);
+  --vp-c-bg-elv: var(--mono-900);
+  --vp-c-bg-soft: var(--mono-850);
+  --vp-c-border: var(--mono-800);
+  --vp-c-divider: var(--mono-850);
+  --vp-c-text-1: var(--mono-white);
+  --vp-c-text-2: var(--mono-400);
+  --vp-c-text-3: var(--mono-500);
+  --vp-code-block-bg: var(--mono-950);
+  --vp-code-line-highlight-color: rgba(255, 255, 255, 0.05);
+  --vp-c-default-1: var(--mono-850);
+  --vp-c-default-2: var(--mono-800);
+  --vp-c-default-3: var(--mono-700);
+  --vp-c-default-soft: rgba(255, 255, 255, 0.03);
+
+  /* VitePress Layout Variables - override defaults */
+  --vp-nav-bg-color: var(--mono-black);
+  --vp-sidebar-bg-color: var(--mono-black);
+  --vp-sidebar-width: 256px;
+  --vp-nav-height: 64px;
+}
+
+/* ============================================
+   3. GLOBAL RESETS
+   ============================================ */
+
+html {
+  color-scheme: dark;
+}
+
+* {
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mono-700);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mono-500);
+}
+
+/* ============================================
+   4. BACKGROUNDS
+   ============================================ */
+
+html,
+body,
+.VPContent,
+.VPDoc,
+.VPPage,
+.VPHome {
+  background: var(--mono-black) !important;
+}
+
+/* ============================================
+   5. HEADER / NAVIGATION
+
+   Using pseudo-element for border to ensure
+   full-width span regardless of inner structure
+   ============================================ */
+
+.VPNav,
+.VPNav *,
+.VPNavBar,
+.VPNavBar * {
+  background-color: var(--mono-black) !important;
+  background: var(--mono-black) !important;
+}
+
+/* Sticky header */
+.VPNav {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 50 !important;
+}
+
+.VPNav::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--mono-850);
+  z-index: 100;
+}
+
+/* Title font styling */
+.VPNavBarTitle .title {
+  font-family: var(--vp-font-family-mono) !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.15em !important;
+}
+
+/* Search button size */
+.VPNavBarSearch .DocSearch-Button,
+.VPNavBarSearch .VPLocalSearchBox,
+.VPNavBarSearch button {
+  width: 400px !important;
+  height: 30px !important;
+}
+
+/* Menu links styling */
+.VPNavBarMenuLink {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Mobile nav */
+.VPLocalNav,
+.VPLocalNav *,
+.VPNavScreen,
+.VPNavScreen * {
+  background: var(--mono-black) !important;
+}
+
+.VPLocalNav::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--mono-850);
+}
+
+/* ============================================
+   6. SIDEBAR
+   ============================================ */
+
+.VPSidebar {
+  background: var(--mono-black) !important;
+  border-right: 1px solid var(--mono-850) !important;
+  width: var(--vp-sidebar-width) !important;
+  padding-inline: 0 !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mono-800) var(--mono-black);
+}
+
+.VPSidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.VPSidebar::-webkit-scrollbar-track {
+  background: var(--mono-black);
+}
+
+.VPSidebar::-webkit-scrollbar-thumb {
+  background: var(--mono-800);
+  border-radius: 0;
+}
+
+.VPSidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--mono-600);
+}
+
+.VPSidebar .curtain {
+  display: none !important;
+}
+
+.VPSidebar > .nav {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 8px 16px 24px 16px !important;
+  margin: 0 !important;
+}
+
+.VPSidebar .group {
+  width: 100% !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.VPSidebar .group:first-child {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.VPSidebar .VPSidebarItem:first-child {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.VPSidebar .VPSidebarItem:first-child > .item {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Sidebar text */
+.VPSidebarItem .text {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+}
+
+/* Section headers */
+.VPSidebarItem.level-0 > .item > .text,
+.VPSidebarItem.level-0 > .item > h2.text {
+  font-family: var(--vp-font-family-mono) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  color: var(--mono-500) !important;
+}
+
+/* Link text padding from indicator */
+.VPSidebarItem .link .text {
+  padding-left: 2px !important;
+}
+
+/* Active state - background */
+.VPSidebarItem.is-active > .item > .link {
+  background: var(--mono-900) !important;
+}
+
+/* Active state - text color */
+.VPSidebarItem.is-active > .item > .link > .text {
+  color: var(--mono-white) !important;
+}
+
+/* Active state - indicator (white bar) */
+.VPSidebarItem.is-active > .item .indicator {
+  background-color: var(--mono-white) !important;
+}
+
+/* ============================================
+   7. TYPOGRAPHY
+   ============================================ */
+
+.vp-doc h1 {
+  font-weight: 700 !important;
+  font-size: 2rem !important;
+  letter-spacing: -0.03em;
+}
+
+.vp-doc h2 {
+  font-weight: 600 !important;
+  font-size: 1.3rem !important;
+  letter-spacing: -0.02em;
+  border-top: 1px solid var(--mono-850) !important;
+  padding-top: 1.5rem !important;
+  margin-top: 2rem !important;
+}
+
+.vp-doc h3 {
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+}
+
+.vp-doc a {
+  color: var(--mono-white) !important;
+  text-decoration: underline !important;
+  text-decoration-color: var(--mono-600) !important;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.vp-doc a:hover {
+  text-decoration-color: var(--mono-white) !important;
+}
+
+/* ============================================
+   8. CODE BLOCKS
+   ============================================ */
+
+div[class*="language-"] {
+  background: var(--mono-950) !important;
+  border: 1px solid var(--mono-850) !important;
+  border-radius: 0 !important;
+}
+
+div[class*="language-"] code {
+  font-size: 0.8rem !important;
+}
+
+div[class*="language-"]::before {
+  color: var(--mono-500) !important;
+  font-family: var(--vp-font-family-mono) !important;
+  font-size: 0.65rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+:not(pre) > code {
+  background: var(--mono-900) !important;
+  color: var(--mono-white) !important;
+  border: 1px solid var(--mono-800);
+  border-radius: 0;
+  padding: 2px 6px;
+  font-size: 0.85em;
+}
+
+/* ============================================
+   9. TABLES
+   ============================================ */
+
+.vp-doc table {
+  display: table !important;
+  width: 100% !important;
+  border: 1px solid var(--mono-850);
+  border-radius: 0;
+  border-collapse: collapse;
+}
+
+.vp-doc th,
+.vp-doc td {
+  border: 1px solid var(--mono-850) !important;
+}
+
+.vp-doc th {
+  background: var(--mono-900) !important;
+  font-family: var(--vp-font-family-mono) !important;
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mono-400);
+}
+
+.vp-doc td {
+  font-size: 0.85rem;
+}
+
+.vp-doc tr {
+  border-color: var(--mono-850) !important;
+}
+
+.vp-doc tr:hover {
+  background: var(--mono-950) !important;
+}
+
+/* ============================================
+   10. CUSTOM BLOCKS
+   ============================================ */
+
+.custom-block {
+  border-radius: 0 !important;
+}
+
+.custom-block.tip {
+  background: var(--mono-950) !important;
+  border-color: var(--mono-700) !important;
+}
+
+.custom-block.warning {
+  background: var(--mono-950) !important;
+  border-color: var(--mono-600) !important;
+}
+
+.custom-block.danger {
+  background: var(--mono-950) !important;
+  border-color: var(--mono-500) !important;
+}
+
+/* ============================================
+   11. BUTTONS
+   ============================================ */
+
+.VPButton.brand {
+  background: var(--mono-white) !important;
+  border: none !important;
+  color: var(--mono-black) !important;
+  font-family: var(--vp-font-family-mono) !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.VPButton.brand:hover {
+  background: var(--mono-200) !important;
+  transform: translateY(-1px);
+}
+
+.VPButton.alt {
+  background: transparent !important;
+  border: 1px solid var(--mono-700) !important;
+  color: var(--mono-white) !important;
+  font-family: var(--vp-font-family-mono) !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: 0 !important;
+}
+
+.VPButton.alt:hover {
+  border-color: var(--mono-white) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ============================================
+   12. SEARCH
+   ============================================ */
+
+.DocSearch-Button {
+  background: var(--mono-900) !important;
+  border: 1px solid var(--mono-800) !important;
+  border-radius: 0 !important;
+}
+
+.DocSearch-Button:hover {
+  border-color: var(--mono-600) !important;
+}
+
+.DocSearch-Button-Key {
+  background: var(--mono-800) !important;
+  border-radius: 0 !important;
+}
+
+.DocSearch-Button-Container,
+.DocSearch-Button-Placeholder {
+  background: transparent !important;
+}
+
+/* Icon overrides */
+.DocSearch-Search-Icon,
+.vpi-social-github {
+  background-color: white !important;
+}
+
+/* Local search styling */
+.VPLocalSearchBox button,
+#local-search button {
+  background: var(--mono-900) !important;
+  border: 1px solid var(--mono-800) !important;
+  border-radius: 0 !important;
+}
+/* ============================================
+   13. FOOTER
+   ============================================ */
+
+.VPFooter {
+  border-top: 1px solid var(--mono-850) !important;
+  background: var(--mono-black) !important;
+}
+
+.VPFooter .message {
+  font-family: var(--vp-font-family-mono) !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   14. OUTLINE (TOC)
+   ============================================ */
+
+.VPDocOutlineItem a {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+.VPDocOutlineItem.active > a {
+  color: var(--mono-white) !important;
+}
+
+/* Outline marker spacing */
+.VPDocAsideOutline .outline-marker {
+  margin-right: 8px !important;
+}
+
+/* ============================================
+   15. UTILITIES
+   ============================================ */
+
+.VPSidebarItem,
+.VPNavBarMenuLink,
+.VPButton {
+  transition: all 0.15s ease !important;
+}
+
+.VPHome .VPHero,
+.VPHome .VPFeatures {
+  display: none !important;
+}
+
+.VPNavBarAppearance,
+.VPSwitchAppearance,
+.appearance {
+  display: none !important;
+}

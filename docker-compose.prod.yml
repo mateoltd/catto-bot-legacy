@@ -1,0 +1,17 @@
+# Production overrides for supporting services
+# Bot is deployed via Dokploy, only postgres/redis/watermark run here
+
+services:
+  postgres:
+    # Production postgres config
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # No default in production
+
+  redis:
+    # Production redis config
+    command: redis-server --requirepass ${REDIS_PASSWORD}  # Require password in prod
+
+  watermark:
+    # Production watermark runs as-is
+
+# Note: Bot service is managed by Dokploy, not in this compose file

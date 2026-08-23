@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "❌ Ocurrió un error al ejecutar este comando.",
+    "noPermission": "❌ No tienes permiso para usar este comando.",
+    "cooldown": "⏰ Espera {{time}} antes de usar este comando nuevamente.",
+    "dmOnly": "❌ Este comando solo se puede usar en mensajes directos.",
+    "guildOnly": "❌ Este comando solo se puede usar en un servidor.",
+    "ownerOnly": "❌ Este comando solo puede ser usado por el dueño del bot."
+  },
+  "success": {
+    "generic": "✅ Comando ejecutado correctamente."
+  }
+}

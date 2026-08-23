@@ -1,0 +1,10 @@
+# VitePress cache
+.vitepress/dist/
+.vitepress/cache/
+
+# Docs server
+server/node_modules/
+
+# Local dev
+*.local
+.DS_Store

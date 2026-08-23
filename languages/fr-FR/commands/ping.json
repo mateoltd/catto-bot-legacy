@@ -1,0 +1,4 @@
+{
+  "success": "🏓 Pong! Latence: {{latency}}ms | Latence API: {{apiLatency}}ms",
+  "content": "🏓 Pong! Latence: {{latency}}ms | Latence API: {{apiLatency}}ms"
+}

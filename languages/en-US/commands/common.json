@@ -1,0 +1,13 @@
+{
+  "errors": {
+    "generic": "❌ An error occurred while executing this command.",
+    "noPermission": "❌ You don't have permission to use this command.",
+    "cooldown": "⏰ Please wait {{time}} before using this command again.",
+    "dmOnly": "❌ This command can only be used in direct messages.",
+    "guildOnly": "❌ This command can only be used in a server.",
+    "ownerOnly": "❌ This command can only be used by the bot owner."
+  },
+  "success": {
+    "generic": "✅ Command executed successfully."
+  }
+}
