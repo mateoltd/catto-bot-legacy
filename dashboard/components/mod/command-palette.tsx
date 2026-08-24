@@ -18,6 +18,7 @@ import {
   IconX,
   IconHistory,
 } from '@/lib/mod-icons';
+import { useTranslations } from 'next-intl';
 
 interface NavItem {
   label: string;
@@ -59,6 +60,8 @@ function saveRecentSearch(guildId: string, label: string, href: string) {
 }
 
 export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
+  const t = useTranslations('Moderation');
+  const navigationT = useTranslations('Navigation');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const router = useRouter();
@@ -76,48 +79,48 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
   }, [open, guildId]);
 
   const navItems: NavItem[] = [
-    { label: 'Overview', href: `/mod/${guildId}`, shortcut: 'G O', icon: IconLayoutDashboard },
-    { label: 'Cases', href: `/mod/${guildId}/cases`, shortcut: 'G C', icon: IconGavel },
-    { label: 'All Evidence', href: `/mod/${guildId}/evidence`, shortcut: 'G E', icon: IconFolder },
-    { label: 'Back to Servers', href: '/mod', shortcut: 'G S', icon: IconChevronLeft },
+    { label: navigationT('overview'), href: `/mod/${guildId}`, shortcut: 'G O', icon: IconLayoutDashboard },
+    { label: navigationT('cases'), href: `/mod/${guildId}/cases`, shortcut: 'G C', icon: IconGavel },
+    { label: t('allEvidence'), href: `/mod/${guildId}/evidence`, shortcut: 'G E', icon: IconFolder },
+    { label: t('backToServers'), href: '/mod', shortcut: 'G S', icon: IconChevronLeft },
   ];
 
   const caseFilterActions: ActionItem[] = [
-    { label: 'Cases: Filter by Ban', action: () => router.push(`/mod/${guildId}/cases?action=BAN`), icon: IconGavel },
-    { label: 'Cases: Filter by Kick', action: () => router.push(`/mod/${guildId}/cases?action=KICK`), icon: IconGavel },
-    { label: 'Cases: Filter by Timeout', action: () => router.push(`/mod/${guildId}/cases?action=TIMEOUT`), icon: IconGavel },
-    { label: 'Cases: Filter by Warning', action: () => router.push(`/mod/${guildId}/cases?action=WARN`), icon: IconGavel },
-    { label: 'Cases: Show Open only', action: () => router.push(`/mod/${guildId}/cases?status=OPEN`), icon: IconFilter },
-    { label: 'Cases: Show Closed only', action: () => router.push(`/mod/${guildId}/cases?status=CLOSED`), icon: IconFilter },
-    { label: 'Cases: Show Void only', action: () => router.push(`/mod/${guildId}/cases?status=VOID`), icon: IconFilter },
-    { label: 'Cases: Clear all filters', action: () => router.push(`/mod/${guildId}/cases`), icon: IconGavel },
+    { label: t('filterCasesByAction', { action: t('actionBan') }), action: () => router.push(`/mod/${guildId}/cases?action=BAN`), icon: IconGavel },
+    { label: t('filterCasesByAction', { action: t('actionKick') }), action: () => router.push(`/mod/${guildId}/cases?action=KICK`), icon: IconGavel },
+    { label: t('filterCasesByAction', { action: t('actionTimeout') }), action: () => router.push(`/mod/${guildId}/cases?action=TIMEOUT`), icon: IconGavel },
+    { label: t('filterCasesByAction', { action: t('actionWarning') }), action: () => router.push(`/mod/${guildId}/cases?action=WARN`), icon: IconGavel },
+    { label: t('showCasesByStatus', { status: t('statusOpen') }), action: () => router.push(`/mod/${guildId}/cases?status=OPEN`), icon: IconFilter },
+    { label: t('showCasesByStatus', { status: t('statusClosed') }), action: () => router.push(`/mod/${guildId}/cases?status=CLOSED`), icon: IconFilter },
+    { label: t('showCasesByStatus', { status: t('statusVoid') }), action: () => router.push(`/mod/${guildId}/cases?status=VOID`), icon: IconFilter },
+    { label: t('clearCaseFilters'), action: () => router.push(`/mod/${guildId}/cases`), icon: IconGavel },
   ];
 
   const evidenceFilterActions: ActionItem[] = [
-    { label: 'Evidence: Filter by Image', action: () => router.push(`/mod/${guildId}/evidence?type=IMAGE`), icon: IconFolder },
-    { label: 'Evidence: Filter by Video', action: () => router.push(`/mod/${guildId}/evidence?type=VIDEO`), icon: IconFolder },
-    { label: 'Evidence: Filter by URL', action: () => router.push(`/mod/${guildId}/evidence?type=URL`), icon: IconFolder },
-    { label: 'Evidence: Filter by Snapshot', action: () => router.push(`/mod/${guildId}/evidence?type=MESSAGE_SNAPSHOT`), icon: IconFolder },
-    { label: 'Evidence: Clear all filters', action: () => router.push(`/mod/${guildId}/evidence`), icon: IconFolder },
+    { label: t('filterEvidenceByType', { type: t('evidenceImage') }), action: () => router.push(`/mod/${guildId}/evidence?type=IMAGE`), icon: IconFolder },
+    { label: t('filterEvidenceByType', { type: t('evidenceVideo') }), action: () => router.push(`/mod/${guildId}/evidence?type=VIDEO`), icon: IconFolder },
+    { label: t('filterEvidenceByType', { type: t('evidenceUrl') }), action: () => router.push(`/mod/${guildId}/evidence?type=URL`), icon: IconFolder },
+    { label: t('filterEvidenceByType', { type: t('evidenceSnapshot') }), action: () => router.push(`/mod/${guildId}/evidence?type=MESSAGE_SNAPSHOT`), icon: IconFolder },
+    { label: t('clearEvidenceFilters'), action: () => router.push(`/mod/${guildId}/evidence`), icon: IconFolder },
   ];
 
   const quickActions: ActionItem[] = [
     {
-      label: 'Copy current URL',
+      label: t('copyCurrentUrl'),
       action: () => {
         navigator.clipboard.writeText(window.location.href);
       },
       icon: IconLink,
     },
     {
-      label: 'Refresh data',
+      label: t('refreshData'),
       action: () => {
         mutate(() => true, undefined, { revalidate: true });
       },
       icon: IconRefresh,
     },
     {
-      label: 'Clear all filters',
+      label: t('clearFilters'),
       action: () => {
         router.push(window.location.pathname);
       },
@@ -126,7 +129,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
   ];
 
   const utilityActions: ActionItem[] = [
-    { label: 'Show keyboard shortcuts', action: () => { setOpen(false); onShowShortcuts?.(); }, icon: IconKeyboard },
+    { label: t('showKeyboardShortcuts'), action: () => { setOpen(false); onShowShortcuts?.(); }, icon: IconKeyboard },
   ];
 
   // Parse search for special patterns
@@ -212,7 +215,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
           <div className="flex items-center border-b border-[var(--mod-border)] px-4">
             <IconSearch size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
             <CommandPrimitive.Input
-              placeholder="Type a command, #case, or @user..."
+              placeholder={t('commandPlaceholder')}
               value={search}
               onValueChange={setSearch}
               className="flex-1 bg-transparent px-3 py-3 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
@@ -225,21 +228,21 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
           <CommandPrimitive.List className="max-h-[300px] overflow-y-auto p-2">
             {!search && (
               <CommandPrimitive.Empty className="py-6 text-center text-sm text-[var(--mod-text-dim)]">
-                No results found.
+                {t('noResultsFound')}
               </CommandPrimitive.Empty>
             )}
 
             {/* Go to case #N — top priority when detected */}
             {caseNumberMatch !== null && (
-              <CommandPrimitive.Group heading={groupHeading('JUMP TO')} forceMount>
+              <CommandPrimitive.Group heading={groupHeading(t('jumpTo'))} forceMount>
                 <CommandPrimitive.Item
                   value={`__jump_case_${caseNumberMatch}`}
-                  onSelect={() => handleNavSelect(`Case #${caseNumberMatch}`, `/mod/${guildId}/cases/${caseNumberMatch}`)}
+                  onSelect={() => handleNavSelect(t('caseTitle', { caseNumber: caseNumberMatch }), `/mod/${guildId}/cases/${caseNumberMatch}`)}
                   className={itemClass}
                   forceMount
                 >
                   <IconGavel size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
-                  <span className="flex-1">Go to Case #{caseNumberMatch}</span>
+                  <span className="flex-1">{t('goToCase', { caseNumber: caseNumberMatch })}</span>
                   <span className="text-[10px] tracking-wider text-[var(--mod-text-dim)]" style={{ fontFamily: 'var(--font-mono)' }}>Enter</span>
                 </CommandPrimitive.Item>
               </CommandPrimitive.Group>
@@ -247,15 +250,15 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
 
             {/* User search @username */}
             {userSearchQuery && (
-              <CommandPrimitive.Group heading={groupHeading('SEARCH USERS')} forceMount>
+              <CommandPrimitive.Group heading={groupHeading(t('searchUsers'))} forceMount>
                 <CommandPrimitive.Item
                   value={`__user_search_${userSearchQuery}`}
-                  onSelect={() => handleNavSelect(`Search: @${userSearchQuery}`, `/mod/${guildId}/cases?search=${encodeURIComponent(userSearchQuery)}`)}
+                  onSelect={() => handleNavSelect(t('searchFor', { query: `@${userSearchQuery}` }), `/mod/${guildId}/cases?search=${encodeURIComponent(userSearchQuery)}`)}
                   className={itemClass}
                   forceMount
                 >
                   <IconSearch size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
-                  <span className="flex-1">Search cases for user &apos;{userSearchQuery}&apos;</span>
+                  <span className="flex-1">{t('searchCasesForUser', { user: userSearchQuery })}</span>
                   <span className="text-[10px] tracking-wider text-[var(--mod-text-dim)]" style={{ fontFamily: 'var(--font-mono)' }}>Enter</span>
                 </CommandPrimitive.Item>
               </CommandPrimitive.Group>
@@ -263,15 +266,15 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
 
             {/* General search — when text is entered but not a special pattern */}
             {search && !isSpecialMode && (
-              <CommandPrimitive.Group heading={groupHeading('SEARCH')} forceMount>
+              <CommandPrimitive.Group heading={groupHeading(t('search'))} forceMount>
                 <CommandPrimitive.Item
                   value={`__general_search_${search}`}
-                  onSelect={() => handleNavSelect(`Search: ${search}`, `/mod/${guildId}/cases?search=${encodeURIComponent(search)}`)}
+                  onSelect={() => handleNavSelect(t('searchFor', { query: search }), `/mod/${guildId}/cases?search=${encodeURIComponent(search)}`)}
                   className={itemClass}
                   forceMount
                 >
                   <IconSearch size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
-                  <span className="flex-1">Search cases for &apos;{search}&apos;</span>
+                  <span className="flex-1">{t('searchCasesFor', { query: search })}</span>
                   <span className="text-[10px] tracking-wider text-[var(--mod-text-dim)]" style={{ fontFamily: 'var(--font-mono)' }}>Enter</span>
                 </CommandPrimitive.Item>
               </CommandPrimitive.Group>
@@ -282,7 +285,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
               <>
                 {/* Recent searches — only when input is empty */}
                 {!search && recentItems.length > 0 && (
-                  <CommandPrimitive.Group heading={groupHeading('RECENT')}>
+                  <CommandPrimitive.Group heading={groupHeading(t('recent'))}>
                     {recentItems.map((item, i) => (
                       <CommandPrimitive.Item
                         key={item.href}
@@ -297,7 +300,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
                   </CommandPrimitive.Group>
                 )}
 
-                <CommandPrimitive.Group heading={groupHeading('NAVIGATION')}>
+                <CommandPrimitive.Group heading={groupHeading(t('shortcutNavigation'))}>
                   {navItems.map((item) => (
                     <CommandPrimitive.Item
                       key={item.href}
@@ -316,7 +319,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
                   ))}
                 </CommandPrimitive.Group>
 
-                <CommandPrimitive.Group heading={groupHeading('QUICK ACTIONS')}>
+                <CommandPrimitive.Group heading={groupHeading(t('quickActions'))}>
                   {quickActions.map((item) => (
                     <CommandPrimitive.Item key={item.label} value={item.label} onSelect={() => handleActionSelect(item.label, item.action)} className={itemClass}>
                       <item.icon size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
@@ -325,7 +328,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
                   ))}
                 </CommandPrimitive.Group>
 
-                <CommandPrimitive.Group heading={groupHeading('CASES')}>
+                <CommandPrimitive.Group heading={groupHeading(navigationT('cases'))}>
                   {caseFilterActions.map((item) => (
                     <CommandPrimitive.Item key={item.label} value={item.label} onSelect={() => handleActionSelect(item.label, item.action)} className={itemClass}>
                       <item.icon size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
@@ -334,7 +337,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
                   ))}
                 </CommandPrimitive.Group>
 
-                <CommandPrimitive.Group heading={groupHeading('EVIDENCE')}>
+                <CommandPrimitive.Group heading={groupHeading(navigationT('evidence'))}>
                   {evidenceFilterActions.map((item) => (
                     <CommandPrimitive.Item key={item.label} value={item.label} onSelect={() => handleActionSelect(item.label, item.action)} className={itemClass}>
                       <item.icon size={16} className="shrink-0 text-[var(--mod-text-dim)]" />
@@ -343,7 +346,7 @@ export function CommandPalette({ onShowShortcuts }: CommandPaletteProps) {
                   ))}
                 </CommandPrimitive.Group>
 
-                <CommandPrimitive.Group heading={groupHeading('UTILITY')}>
+                <CommandPrimitive.Group heading={groupHeading(t('utility'))}>
                   {utilityActions.map((item) => (
                     <CommandPrimitive.Item key={item.label} value={item.label} onSelect={() => handleActionSelect(item.label, item.action)} className={itemClass}>
                       <item.icon size={16} className="shrink-0 text-[var(--mod-text-dim)]" />

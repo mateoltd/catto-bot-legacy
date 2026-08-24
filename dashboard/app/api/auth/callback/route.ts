@@ -1,5 +1,42 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE_MAX_AGE,
+  LOCALE_COOKIE_NAME,
+  matchAcceptLanguage,
+  matchSupportedLocale,
+} from '@/i18n/config';
+import { botApiUrl } from '@/lib/server/bot-api';
+
+const LOCALE_LOOKUP_TIMEOUT_MS = 1_500;
+
+async function getInitialLocale(request: NextRequest, sessionId: string) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), LOCALE_LOOKUP_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(botApiUrl('/api/users/@me'), {
+      headers: { Cookie: `DASHBOARD_AUTH=${sessionId}` },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (response.ok) {
+      const payload = (await response.json()) as { user?: { locale?: unknown } };
+      const discordLocale =
+        typeof payload.user?.locale === 'string'
+          ? matchSupportedLocale(payload.user.locale)
+          : null;
+      if (discordLocale) return discordLocale;
+    }
+  } catch {
+    // Locale detection is non-critical; browser preferences remain available.
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  return matchAcceptLanguage(request.headers.get('accept-language')) ?? DEFAULT_LOCALE;
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -21,6 +58,16 @@ export async function GET(request: NextRequest) {
     path: '/',
   };
   cookieStore.set('DASHBOARD_AUTH', sessionId, cookieOptions);
+
+  if (!cookieStore.get(LOCALE_COOKIE_NAME)) {
+    cookieStore.set(LOCALE_COOKIE_NAME, await getInitialLocale(request, sessionId), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: LOCALE_COOKIE_MAX_AGE,
+      path: '/',
+    });
+  }
 
   // Check if there's a redirect destination (e.g. set by /mod/login)
   const redirectCookie = cookieStore.get('mod_auth_redirect');

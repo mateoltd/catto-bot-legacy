@@ -10,8 +10,11 @@ import { EvidenceGallery } from "@/components/mod/evidence-gallery";
 import { EvidenceWizard } from "@/components/mod/evidence-wizard";
 import { SectionGate } from "@/components/mod/section-gate";
 import { IconSearch } from "@/lib/mod-icons";
+import { useFormatter, useTranslations } from "next-intl";
 
 export default function EvidencePage() {
+  const t = useTranslations("Moderation");
+  const format = useFormatter();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,23 +73,22 @@ export default function EvidencePage() {
         href={`/mod/${guildId}/cases/${caseNumber}`}
         className="mb-4 inline-block text-xs text-[var(--mod-text-dim)] hover:text-[var(--mod-text-muted)]"
       >
-        ← Back to case
+        ← {t("backToCase")}
       </Link>
 
       <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">
-        Evidence — Case #{caseNumber}
+        {t("caseEvidenceTitle", { caseNumber })}
       </h1>
       <p className="mb-6 text-sm text-[var(--mod-text-muted)]">
-        {summary?.total ?? 0} evidence item(s)
+        {t("evidenceItemCount", { count: summary?.total ?? 0 })}
         {summary?.totalSizeBytes
-          ? ` · ${(summary.totalSizeBytes / 1024 / 1024).toFixed(1)} MB`
+          ? ` · ${format.number(summary.totalSizeBytes / 1024 / 1024, { maximumFractionDigits: 1 })} MB`
           : ""}
       </p>
 
       {summary?.hasWeakEvidenceOnly && (
         <div className="mb-4  border border-yellow-800 bg-yellow-950/20 px-4 py-3 text-sm text-yellow-400">
-          This case only has Discord message links. Consider adding stronger
-          evidence.
+          {t("weakEvidenceShortWarning")}
         </div>
       )}
 
@@ -102,14 +104,14 @@ export default function EvidencePage() {
             setLocalQuery(event.target.value);
             updateSearch(event.target.value.trim());
           }}
-          placeholder="Search within this case…"
+          placeholder={t("searchCaseEvidencePlaceholder")}
           className="h-11 w-full bg-transparent pl-11 pr-4 text-sm text-[var(--mono-white)] outline-none placeholder:text-[var(--mod-text-dim)]"
         />
       </div>
 
       {loading ? (
         <div className="py-12 text-center text-[var(--mod-text-dim)]">
-          Loading evidence...
+          {t("loadingEvidence")}
         </div>
       ) : (
         <>
@@ -128,7 +130,7 @@ export default function EvidencePage() {
                 onClick={() => updateLocation({ page: page - 1 })}
                 className="text-[var(--mod-text-muted)] hover:text-[var(--mono-white)] disabled:opacity-25"
               >
-                ← Newer
+                ← {t("newer")}
               </button>
               <span className="font-mono text-[var(--mod-text-dim)]">
                 {page} / {totalPages}
@@ -139,17 +141,17 @@ export default function EvidencePage() {
                 onClick={() => updateLocation({ page: page + 1 })}
                 className="text-[var(--mod-text-muted)] hover:text-[var(--mono-white)] disabled:opacity-25"
               >
-                Older →
+                {t("older")} →
               </button>
             </div>
           )}
         </>
       )}
 
-      <SectionGate section="evidenceAdd" label="evidence uploads">
+      <SectionGate section="evidenceAdd" label={t("evidenceUploads")}>
         <div className="mt-8">
           <h2 className="mb-3 text-lg font-semibold text-[var(--mono-white)]">
-            Upload Evidence
+            {t("uploadEvidence")}
           </h2>
           <EvidenceWizard
             guildId={guildId}

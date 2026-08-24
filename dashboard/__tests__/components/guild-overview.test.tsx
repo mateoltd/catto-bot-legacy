@@ -1,7 +1,9 @@
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NextIntlClientProvider } from 'next-intl';
 import { GuildOverview } from '@/components/dashboard/guild-overview';
+import messages from '@/messages/en-US.json';
 
 const { dashboardContext, mockUseSWR } = vi.hoisted(() => ({
   dashboardContext: {
@@ -36,6 +38,14 @@ describe('GuildOverview', () => {
     dashboardContext.access.canModerate = true;
   });
 
+  function renderOverview() {
+    return render(
+      <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+        <GuildOverview guildId="guild-1" />
+      </NextIntlClientProvider>,
+    );
+  }
+
   it('prioritizes live server context without repeating module navigation', () => {
     mockUseSWR.mockReturnValue({
       data: {
@@ -49,7 +59,7 @@ describe('GuildOverview', () => {
       isLoading: false,
     });
 
-    render(<GuildOverview guildId="guild-1" />);
+    renderOverview();
 
     expect(screen.getByRole('heading', { name: 'Test server' })).toBeInTheDocument();
     expect(screen.getByText('888')).toBeInTheDocument();
@@ -70,7 +80,7 @@ describe('GuildOverview', () => {
     dashboardContext.access.canModerate = false;
     mockUseSWR.mockReturnValue({ data: undefined, error: undefined, isLoading: true });
 
-    render(<GuildOverview guildId="guild-1" />);
+    renderOverview();
 
     expect(screen.queryByRole('link', { name: /open moderation/i })).not.toBeInTheDocument();
   });

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -28,10 +29,13 @@ export function MultiSelectList({
   items,
   value,
   onValueChange,
-  emptyLabel = 'No options available',
-  searchPlaceholder = 'Filter options…',
+  emptyLabel,
+  searchPlaceholder,
   className,
 }: MultiSelectListProps) {
+  const t = useTranslations('ConfigCommon');
+  const resolvedEmptyLabel = emptyLabel ?? t('noOptions');
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t('filterOptions');
   const [query, setQuery] = useState('');
   const selected = useMemo(() => new Set(value), [value]);
   const visibleItems = useMemo(() => {
@@ -57,8 +61,8 @@ export function MultiSelectList({
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
+            aria-label={resolvedSearchPlaceholder}
             className="border-0 bg-transparent pl-10 focus-visible:ring-inset"
           />
         </div>
@@ -66,7 +70,7 @@ export function MultiSelectList({
       <div className="max-h-56 overflow-y-auto p-1">
         {visibleItems.length === 0 ? (
           <p className="px-3 py-5 text-center text-sm text-muted-foreground">
-            {items.length === 0 ? emptyLabel : 'No matching options'}
+            {items.length === 0 ? resolvedEmptyLabel : t('noMatchingOptions')}
           </p>
         ) : (
           visibleItems.map((item) => {
@@ -102,10 +106,10 @@ export function MultiSelectList({
         )}
       </div>
       <div className="flex items-center justify-between border-t border-border px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-        <span>{value.length} selected</span>
+        <span>{t('selectedCount', { count: value.length })}</span>
         {value.length > 0 && (
           <button type="button" onClick={() => onValueChange([])} className="hover:text-foreground">
-            Clear
+            {t('clear')}
           </button>
         )}
       </div>

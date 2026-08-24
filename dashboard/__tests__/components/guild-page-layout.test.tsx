@@ -1,7 +1,9 @@
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NextIntlClientProvider } from 'next-intl';
 import GuildPageLayout from '@/components/guild-page-layout';
+import messages from '@/messages/en-US.json';
 
 const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
 
@@ -42,13 +44,15 @@ describe('GuildPageLayout', () => {
     const htmlOverflow = document.documentElement.style.overflow;
     const bodyOverflow = document.body.style.overflow;
     const { unmount } = render(
-      <GuildPageLayout
-        guild={{ id: 'guild-1', name: 'Test server', icon: null, owner: true, permissions: '0' }}
-        user={{ id: 'user-1', username: 'tester', discriminator: '0', avatar: null }}
-        access={{ canConfigure: true, canModerate: true }}
-      >
-        <div>Configuration content</div>
-      </GuildPageLayout>,
+      <NextIntlClientProvider locale="en-US" messages={messages}>
+        <GuildPageLayout
+          guild={{ id: 'guild-1', name: 'Test server', icon: null, owner: true, permissions: '0' }}
+          user={{ id: 'user-1', username: 'tester', discriminator: '0', avatar: null }}
+          access={{ canConfigure: true, canModerate: true }}
+        >
+          <div>Configuration content</div>
+        </GuildPageLayout>
+      </NextIntlClientProvider>,
     );
 
     const main = screen.getByRole('main');

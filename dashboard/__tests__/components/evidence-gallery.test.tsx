@@ -1,13 +1,23 @@
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
-  render,
+  render as testingLibraryRender,
   screen,
   fireEvent,
   waitFor,
   cleanup,
 } from "@testing-library/react";
 import type { Evidence } from "@/lib/mod-types";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/messages/en-US.json";
+
+function render(ui: React.ReactNode) {
+  return testingLibraryRender(
+    <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
 
 // Hoisted mocks
 const { mockGetEvidenceDownloadUrl, mockAmendEvidence } = vi.hoisted(() => ({
@@ -300,7 +310,7 @@ describe("EvidenceGallery", () => {
     );
 
     fireEvent.click(screen.getByText("Amend"));
-    fireEvent.change(screen.getByPlaceholderText("Reason..."), {
+    fireEvent.change(screen.getByPlaceholderText("Reason…"), {
       target: { value: "Test reason" },
     });
     fireEvent.click(screen.getByText("Confirm"));

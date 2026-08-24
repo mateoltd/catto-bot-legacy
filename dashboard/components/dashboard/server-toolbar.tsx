@@ -1,4 +1,5 @@
 import { IconLayoutGrid, IconList, IconSearch } from '@tabler/icons-react';
+import { useTranslations } from 'next-intl';
 
 export type ServerViewMode = 'grid' | 'list';
 
@@ -15,10 +16,12 @@ export function ServerToolbar({
   viewMode,
   onViewModeChange,
 }: ServerToolbarProps) {
+  const t = useTranslations('Servers');
+
   return (
     <div className="flex items-center gap-2">
       <label className="relative flex-1" htmlFor="server-search">
-        <span className="sr-only">Search servers</span>
+        <span className="sr-only">{t('search')}</span>
         <IconSearch
           size={17}
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -28,7 +31,7 @@ export function ServerToolbar({
           type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search by server name"
+          placeholder={t('searchPlaceholder')}
           className="h-11 w-full border border-border bg-card pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground"
         />
       </label>
@@ -36,7 +39,7 @@ export function ServerToolbar({
         type="button"
         onClick={() => onViewModeChange(viewMode === 'grid' ? 'list' : 'grid')}
         className="flex h-11 w-11 items-center justify-center border border-border bg-card text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"
-        aria-label={viewMode === 'grid' ? 'Use list view' : 'Use grid view'}
+        aria-label={viewMode === 'grid' ? t('useListView') : t('useGridView')}
       >
         {viewMode === 'grid' ? <IconList size={18} /> : <IconLayoutGrid size={18} />}
       </button>

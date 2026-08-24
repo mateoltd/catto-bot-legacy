@@ -21,10 +21,12 @@ vi.mock('next/server', () => {
   class MockNextRequest {
     nextUrl: URL;
     url: string;
+    headers: Headers;
 
     constructor(url: string) {
       this.nextUrl = new URL(url);
       this.url = url;
+      this.headers = new Headers();
     }
   }
 
@@ -46,6 +48,7 @@ import { NextRequest } from 'next/server';
 describe('GET /api/auth/callback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Bot API unavailable')));
   });
 
   afterEach(() => {
@@ -120,5 +123,77 @@ describe('GET /api/auth/callback', () => {
       'http://localhost:3000/mod/guild-1/evidence'
     );
     expect(mockCookieStore.delete).toHaveBeenCalledWith('mod_auth_redirect');
+  });
+
+  it('seeds the dashboard locale from Discord on first authentication', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ user: { locale: 'es-419' } }),
+    );
+    mockCookieStore.get.mockReturnValue(undefined);
+    const req = new NextRequest(
+      'http://localhost:3000/api/auth/callback?sessionId=abc',
+    );
+
+    await GET(req);
+
+    expect(mockCookieStore.set).toHaveBeenCalledWith(
+      'CATTO_DASH_LOCALE',
+      'es-ES',
+      expect.objectContaining({ httpOnly: true, sameSite: 'lax', path: '/' }),
+    );
+  });
+
+  it('falls back to Accept-Language when the Discord locale lookup stalls', async () => {
+    vi.useFakeTimers();
+    let requestSignal: AbortSignal | null = null;
+
+    try {
+      vi.mocked(fetch).mockImplementation((_input, init) => {
+        requestSignal = init?.signal ?? null;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        });
+      });
+      mockCookieStore.get.mockReturnValue(undefined);
+      const req = new NextRequest(
+        'http://localhost:3000/api/auth/callback?sessionId=abc',
+      );
+      req.headers.set('accept-language', 'es-MX, en;q=0.8');
+
+      const responsePromise = GET(req);
+      await vi.advanceTimersByTimeAsync(1_500);
+      await responsePromise;
+
+      expect(requestSignal).toHaveProperty('aborted', true);
+      expect(mockCookieStore.set).toHaveBeenCalledWith(
+        'CATTO_DASH_LOCALE',
+        'es-ES',
+        expect.objectContaining({ httpOnly: true, sameSite: 'lax', path: '/' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not overwrite an explicit dashboard locale', async () => {
+    mockCookieStore.get.mockImplementation((name: string) =>
+      name === 'CATTO_DASH_LOCALE' ? { value: 'es-ES' } : undefined,
+    );
+    const req = new NextRequest(
+      'http://localhost:3000/api/auth/callback?sessionId=abc',
+    );
+
+    await GET(req);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(mockCookieStore.set).not.toHaveBeenCalledWith(
+      'CATTO_DASH_LOCALE',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 });

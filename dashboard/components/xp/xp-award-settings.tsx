@@ -1,6 +1,7 @@
 "use client";
 
 import * as SliderPrimitive from "@radix-ui/react-slider";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -54,14 +55,6 @@ const VOICE_XP_STOPS = [
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
-}
-
-function formatSeconds(seconds: number) {
-  if (seconds === 0) return "no wait";
-  if (seconds < 60) return `${seconds} seconds`;
-  if (seconds % 60 === 0)
-    return `${seconds / 60} ${seconds === 60 ? "minute" : "minutes"}`;
-  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
 function Rail({
@@ -281,10 +274,11 @@ function AwardHeader({
   estimate: React.ReactNode;
   estimateCaption: string;
 }) {
+  const t = useTranslations("XpAwards");
   return (
     <div className="grid border-b border-border lg:grid-cols-[minmax(0,1fr)_260px]">
       <div className="px-5 py-5 lg:px-6">
-        <h3 className="text-lg font-semibold text-foreground">XP awards</h3>
+        <h3 className="text-lg font-semibold text-foreground">{t("title")}</h3>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground [&_strong]:text-foreground">
           {rule}
         </p>
@@ -401,6 +395,16 @@ function TextAwardSettings({
   value: TextAwardValue;
   onChange: (change: Partial<TextAwardValue>) => void;
 }) {
+  const t = useTranslations("XpAwards");
+  const formatDuration = (seconds: number) => {
+    if (seconds === 0) return t("noWait");
+    if (seconds < 60) return t("seconds", { count: seconds });
+    if (seconds % 60 === 0) return t("minutes", { count: seconds / 60 });
+    return t("minutesSecondsShort", {
+      minutes: Math.floor(seconds / 60),
+      seconds: seconds % 60,
+    });
+  };
   const awardLabel =
     value.xpMode === "RANDOM"
       ? `${value.minXp}–${value.maxXp} XP`
@@ -429,45 +433,42 @@ function TextAwardSettings({
       : clamp(Math.floor(600 / value.cooldownSec) + 1, 2, 16);
   return (
     <AwardEngine
-      ariaLabel="Text XP award engine"
+      ariaLabel={t("textEngine")}
       rule={
-        <>
-          A message with{" "}
-          <strong>
-            {value.minMessageLength || "any number of"} characters
-          </strong>{" "}
-          can earn <strong>{awardLabel}</strong>, then waits{" "}
-          <strong>{formatSeconds(value.cooldownSec)}</strong> before earning
-          again.
-        </>
+        t.rich("textRule", {
+          length: value.minMessageLength || t("anyNumber"),
+          award: awardLabel,
+          wait: formatDuration(value.cooldownSec),
+          strong: (chunks) => <strong>{chunks}</strong>,
+        })
       }
       estimate={
         projectedMinimum === null
-          ? "No cooldown"
+          ? t("noCooldown")
           : `${projectedMinimum === projectedMaximum ? projectedMinimum : `${projectedMinimum}–${projectedMaximum}`} XP`
       }
       estimateCaption={
         projectedMinimum === null
-          ? "Award availability"
-          : "Estimated maximum in 10 active minutes"
+          ? t("awardAvailability")
+          : t("estimatedTextMaximum")
       }
       footer={
         <div className="flex flex-col justify-between gap-3 border-t border-border px-5 py-3 sm:flex-row sm:items-center lg:px-6">
           <div>
             <span className="text-sm font-medium text-foreground">
-              Burst guard
+              {t("burstGuard")}
             </span>
             <span className="ml-2 text-xs text-muted-foreground">
-              Optional ceiling for unusually fast activity.
+              {t("burstGuardDescription")}
             </span>
           </div>
           <div className="flex items-center gap-4">
             <ModeSwitch
-              label="Burst guard"
+              label={t("burstGuard")}
               value={value.maxXpPerMinute === null ? "OFF" : "ON"}
               options={[
-                { value: "OFF", label: "Uncapped" },
-                { value: "ON", label: "Limit" },
+                { value: "OFF", label: t("uncapped") },
+                { value: "ON", label: t("limit") },
               ]}
               onChange={(state) =>
                 onChange({
@@ -480,7 +481,7 @@ function TextAwardSettings({
             />
             {value.maxXpPerMinute !== null && (
               <ExactValue
-                label="Minute cap"
+                label={t("minuteCap")}
                 value={value.maxXpPerMinute}
                 onChange={(maxXpPerMinute) => onChange({ maxXpPerMinute })}
                 unit="XP/min"
@@ -495,64 +496,64 @@ function TextAwardSettings({
             role="alert"
             className="border-t border-destructive/50 px-5 py-2 text-xs text-destructive"
           >
-            Minimum XP is higher than maximum XP.
+            {t("minimumHigherThanMaximum")}
           </p>
         ) : undefined
       }
     >
       <NumericAwardStage
-        title="Message eligibility"
-        fieldLabel="Minimum message"
-        inputLabel="Message length"
-        railLabel="Minimum message length"
+        title={t("messageEligibility")}
+        fieldLabel={t("minimumMessage")}
+        inputLabel={t("messageLength")}
+        railLabel={t("minimumMessageLength")}
         value={value.minMessageLength}
         onChange={(minMessageLength) => onChange({ minMessageLength })}
-        unit="chars"
+        unit={t("charactersShort")}
         max={2000}
         stops={MESSAGE_LENGTH_STOPS}
-        startLabel="Anything"
-        endLabel="Long-form"
+        startLabel={t("anything")}
+        endLabel={t("longForm")}
         description={
           value.minMessageLength === 0
-            ? "Every message passes this gate."
+            ? t("everyMessagePasses")
             : value.minMessageLength <= 10
-              ? "Filters out reactions and very short replies."
+              ? t("filtersShortReplies")
               : value.minMessageLength <= 50
-                ? "Rewards conversational, substantive messages."
-                : "Only longer contributions pass this gate."
+                ? t("rewardsSubstantiveMessages")
+                : t("onlyLongerMessages")
         }
       />
       <NumericAwardStage
-        title="Award frequency"
-        fieldLabel="Time between awards"
-        inputLabel="Cooldown"
-        railLabel="Award cooldown"
+        title={t("awardFrequency")}
+        fieldLabel={t("timeBetweenAwards")}
+        inputLabel={t("cooldown")}
+        railLabel={t("awardCooldown")}
         value={value.cooldownSec}
         onChange={(cooldownSec) => onChange({ cooldownSec })}
-        unit="sec"
+        unit={t("secondsShort")}
         max={3600}
         step={5}
         stops={COOLDOWN_STOPS}
-        startLabel="Immediate"
-        endLabel="1 hour"
+        startLabel={t("immediate")}
+        endLabel={t("oneHour")}
       >
         <AwardTimeline
           markers={Array.from({ length: timelineMoments }, (_, index) => ({
             position: (index / Math.max(timelineMoments - 1, 1)) * 100,
           }))}
-          startLabel="Now"
-          endLabel="10 min"
-          ariaLabel={`${timelineMoments} possible award moments in ten minutes`}
+          startLabel={t("now")}
+          endLabel={t("tenMinutesShort")}
+          ariaLabel={t("possibleAwardMoments", { count: timelineMoments })}
         />
       </NumericAwardStage>
-      <FlowStage title="XP amount">
+      <FlowStage title={t("xpAmount")}>
         <div className="flex items-center justify-between gap-4">
           <ModeSwitch
-            label="Payout style"
+            label={t("payoutStyle")}
             value={value.xpMode}
             options={[
-              { value: "RANDOM", label: "Variable" },
-              { value: "FIXED", label: "Exact" },
+              { value: "RANDOM", label: t("variable") },
+              { value: "FIXED", label: t("exact") },
             ]}
             onChange={(xpMode) => onChange({ xpMode })}
           />
@@ -562,7 +563,7 @@ function TextAwardSettings({
             </span>
           ) : (
             <ExactValue
-              label="Fixed XP"
+              label={t("fixedXp")}
               value={value.fixedXp}
               onChange={(fixedXp) => onChange({ fixedXp })}
               unit="XP"
@@ -578,7 +579,7 @@ function TextAwardSettings({
             onValueChange={([minXp, maxXp]) => onChange({ minXp, maxXp })}
             min={0}
             max={payoutMax}
-            labels={["Minimum XP", "Maximum XP"]}
+            labels={[t("minimumXp"), t("maximumXp")]}
             startLabel="0 XP"
             endLabel={`${payoutMax} XP`}
           />
@@ -588,7 +589,7 @@ function TextAwardSettings({
             onValueChange={([fixedXp]) => onChange({ fixedXp })}
             min={0}
             max={payoutMax}
-            labels={["Fixed XP amount"]}
+            labels={[t("fixedXpAmount")]}
             startLabel="0 XP"
             endLabel={`${payoutMax} XP`}
           />
@@ -605,6 +606,7 @@ function VoiceAwardSettings({
   value: VoiceAwardValue;
   onChange: (change: Partial<VoiceAwardValue>) => void;
 }) {
+  const t = useTranslations("XpAwards");
   const exampleMinutes = Math.max(30, value.minSessionMinutes);
   const gate = clamp((value.minSessionMinutes / 60) * 100, 0, 100);
   const timelineMarkers =
@@ -619,76 +621,72 @@ function VoiceAwardSettings({
       : [{ position: gate }, { position: 100 }];
   return (
     <AwardEngine
-      ariaLabel="Voice XP award engine"
+      ariaLabel={t("voiceEngine")}
       rule={
-        <>
-          After{" "}
-          <strong>
-            {value.minSessionMinutes || "no minimum"}{" "}
-            {value.minSessionMinutes === 1 ? "minute" : "minutes"}
-          </strong>{" "}
-          in voice, members earn{" "}
-          <strong>{value.xpPerMinute} XP per minute</strong>, credited{" "}
-          <strong>
-            {value.xpMode === "PER_MINUTE"
-              ? "as they participate"
-              : "when they leave"}
-          </strong>
-          .
-        </>
+        t.rich("voiceRule", {
+          duration: value.minSessionMinutes
+            ? t("minutes", { count: value.minSessionMinutes })
+            : t("noMinimum"),
+          rate: t("xpPerMinute", { count: value.xpPerMinute }),
+          timing:
+            value.xpMode === "PER_MINUTE"
+              ? t("asTheyParticipate")
+              : t("whenTheyLeave"),
+          strong: (chunks) => <strong>{chunks}</strong>,
+        })
       }
       estimate={`${exampleMinutes * value.xpPerMinute} XP`}
-      estimateCaption={`Estimated reward for a ${exampleMinutes}-minute session`}
+      estimateCaption={t("estimatedVoiceReward", { minutes: exampleMinutes })}
     >
       <NumericAwardStage
-        title="Session eligibility"
-        fieldLabel="Session gate"
-        inputLabel="Session duration"
-        railLabel="Minimum voice session"
+        title={t("sessionEligibility")}
+        fieldLabel={t("sessionGate")}
+        inputLabel={t("sessionDuration")}
+        railLabel={t("minimumVoiceSession")}
         value={value.minSessionMinutes}
         onChange={(minSessionMinutes) => onChange({ minSessionMinutes })}
         unit="min"
         max={60}
         stops={SESSION_LENGTH_STOPS}
-        startLabel="Join"
-        endLabel="60 min"
+        startLabel={t("join")}
+        endLabel={t("sixtyMinutesShort")}
         description={
           value.minSessionMinutes === 0
-            ? "Participation starts counting immediately."
-            : `The first ${value.minSessionMinutes} ${value.minSessionMinutes === 1 ? "minute acts" : "minutes act"} as a quality gate.`
+            ? t("participationImmediate")
+            : t("qualityGate", { count: value.minSessionMinutes })
         }
       />
-      <FlowStage title="Credit timing">
+      <FlowStage title={t("creditTiming")}>
         <ModeSwitch
-          label="Credit timing"
+          label={t("creditTiming")}
           value={value.xpMode}
           options={[
-            { value: "PER_MINUTE", label: "While active" },
-            { value: "PER_SESSION", label: "On exit" },
+            { value: "PER_MINUTE", label: t("whileActive") },
+            { value: "PER_SESSION", label: t("onExit") },
           ]}
           onChange={(xpMode) => onChange({ xpMode })}
         />
         <AwardTimeline
           markers={timelineMarkers}
-          startLabel="Join"
-          endLabel="Exit"
+          startLabel={t("join")}
+          endLabel={t("exit")}
           ariaLabel={
             value.xpMode === "PER_MINUTE"
-              ? "XP accrues throughout the session"
-              : "XP is credited when the session ends"
+              ? t("voiceAccrues")
+              : t("voiceCreditedOnEnd")
           }
         />
         <p className="text-xs leading-5 text-muted-foreground">
           {value.xpMode === "PER_MINUTE"
-            ? "Frequent feedback makes voice activity feel immediately rewarding."
-            : "One clean payout keeps updates quiet during long sessions."}
+            ? t("frequentFeedback")
+            : t("singlePayout")}
         </p>
       </FlowStage>
       <NumericAwardStage
-        title="XP amount"
-        fieldLabel="Earning rate"
-        inputLabel="Earning rate"
-        railLabel="Voice XP per minute"
+        title={t("xpAmount")}
+        fieldLabel={t("earningRate")}
+        inputLabel={t("earningRate")}
+        railLabel={t("voiceXpPerMinute")}
         value={value.xpPerMinute}
         onChange={(xpPerMinute) => onChange({ xpPerMinute })}
         unit="XP/min"
@@ -696,7 +694,7 @@ function VoiceAwardSettings({
         stops={VOICE_XP_STOPS}
         startLabel="0 XP"
         endLabel="1,000 XP"
-        description={`A 60-minute session is worth ${value.xpPerMinute * 60} XP.`}
+        description={t("sixtyMinuteWorth", { xp: value.xpPerMinute * 60 })}
       />
     </AwardEngine>
   );

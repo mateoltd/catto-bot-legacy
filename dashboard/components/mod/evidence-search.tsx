@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { IconSearch, IconX } from '@/lib/mod-icons';
+import { useTranslations } from 'next-intl';
 
 interface EvidenceSearchProps {
   /** Controlled value (optional) */
@@ -19,9 +20,10 @@ export function EvidenceSearch({
   value: controlledValue,
   onChange,
   onSearch,
-  placeholder = 'Search evidence...',
+  placeholder,
   className = '',
 }: EvidenceSearchProps) {
+  const t = useTranslations('Moderation');
   const isControlled = controlledValue !== undefined;
   const [internalValue, setInternalValue] = useState('');
   const value = isControlled ? controlledValue : internalValue;
@@ -68,14 +70,14 @@ export function EvidenceSearch({
         type="text"
         value={value}
         onChange={handleChange}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('searchEvidenceShortPlaceholder')}
         className="w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2 pl-9 pr-9 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
       />
       {value && (
         <button
           type="button"
           onClick={handleClear}
-          aria-label="Clear search"
+          aria-label={t('clearSearch')}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
         >
           <IconX size={14} />

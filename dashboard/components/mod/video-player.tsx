@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { VideoTimestamp } from '@/lib/mod-types';
 import { addVideoTimestamp, removeVideoTimestamp } from '@/lib/services/mod.service';
 import { IconPlayerPlay, IconPlayerPause, IconNote, IconX, IconTrash } from '@/lib/mod-icons';
+import { useTranslations } from 'next-intl';
 
 interface VideoPlayerProps {
   src: string;
@@ -22,6 +23,7 @@ export function VideoPlayer({
   onTimestampChange,
   className = '',
 }: VideoPlayerProps) {
+  const t = useTranslations('Moderation');
   const [localTimestamps, setLocalTimestamps] = useState<VideoTimestamp[]>(timestamps);
 
   // Sync with prop changes
@@ -172,7 +174,7 @@ export function VideoPlayer({
             <button
               onClick={togglePlay}
               className="rounded p-1 text-white hover:bg-white/20"
-              aria-label={isPlaying ? 'Pause video' : 'Play video'}
+              aria-label={isPlaying ? t('pauseVideo') : t('playVideo')}
             >
               {isPlaying ? <IconPlayerPause size={20} /> : <IconPlayerPlay size={20} />}
             </button>
@@ -186,7 +188,7 @@ export function VideoPlayer({
             className="flex items-center gap-1 rounded px-2 py-1 text-xs text-white hover:bg-white/20"
           >
             <IconNote size={14} />
-            Add Note
+            {t('addNote')}
           </button>
         </div>
       </div>
@@ -196,12 +198,12 @@ export function VideoPlayer({
         <div className="absolute bottom-16 left-4 right-4 border border-[var(--mod-border)] bg-[var(--mono-900)] p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs text-[var(--mod-text-dim)]">
-              Add note at {formatTime(currentTime)}
+              {t('addNoteAtTime', { time: formatTime(currentTime) })}
             </span>
             <button
               onClick={() => setShowAddForm(false)}
               className="text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
-              aria-label="Close add form"
+              aria-label={t('closeAddForm')}
             >
               <IconX size={14} />
             </button>
@@ -210,7 +212,7 @@ export function VideoPlayer({
             type="text"
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Enter note..."
+            placeholder={t('enterNotePlaceholder')}
             className="mb-2 w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-2 py-1 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
             autoFocus
             onKeyDown={(e) => {
@@ -223,7 +225,7 @@ export function VideoPlayer({
             disabled={addingTimestamp || !newNote.trim()}
             className="border border-[var(--mono-500)] px-3 py-1 text-xs text-[var(--mono-white)] hover:bg-[var(--mono-800)] disabled:opacity-30"
           >
-            {addingTimestamp ? 'Adding...' : 'Add'}
+            {addingTimestamp ? t('adding') : t('add')}
           </button>
         </div>
       )}
@@ -238,20 +240,20 @@ export function VideoPlayer({
             <button
               onClick={() => setSelectedTimestamp(null)}
               className="text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
-              aria-label="Close timestamp popup"
+              aria-label={t('closeTimestampPopup')}
             >
               <IconX size={14} />
             </button>
           </div>
           <p className="mb-2 text-sm text-[var(--mod-text-muted)]">{selectedTimestamp.note}</p>
           <div className="flex items-center justify-between text-xs text-[var(--mod-text-dim)]">
-            <span>By {selectedTimestamp.addedByTag}</span>
+            <span>{t('byUser', { user: selectedTimestamp.addedByTag })}</span>
             <button
               onClick={handleRemoveTimestamp}
               className="flex items-center gap-1 text-red-400 hover:text-red-300"
             >
               <IconTrash size={12} />
-              Remove
+              {t('remove')}
             </button>
           </div>
         </div>

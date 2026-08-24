@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MultiSelectList } from '@/components/ui/multi-select-list';
 import { ChannelFilterList } from '@/components/ui/channel-filter-list';
 import { OptionSelector } from '@/components/ui/option-selector';
 import { UnsavedChangesBar } from '@/components/ui/unsaved-changes-bar';
+import messages from '@/messages/en-US.json';
+
+function Intl({ children }: { children: React.ReactNode }) {
+  return (
+    <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+      {children}
+    </NextIntlClientProvider>
+  );
+}
 
 describe('configuration controls', () => {
   it('changes the selected option and exposes radio state', () => {
@@ -23,7 +33,7 @@ describe('configuration controls', () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
     fireEvent.click(screen.getByRole('radio', { name: 'Table' }));
 
     expect(screen.getByRole('radio', { name: 'Table' })).toHaveAttribute('aria-checked', 'true');
@@ -45,13 +55,13 @@ describe('configuration controls', () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
     fireEvent.change(screen.getByLabelText('Filter channels'), { target: { value: 'Channel 7' } });
 
     expect(screen.queryByText('Channel 1')).not.toBeInTheDocument();
     expect(screen.getByText('Channel 7')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
-    expect(screen.getByText('0 selected')).toBeInTheDocument();
+    expect(screen.getByText('None selected')).toBeInTheDocument();
   });
 
   it('keeps allow and ignore policies mutually exclusive', () => {
@@ -69,8 +79,8 @@ describe('configuration controls', () => {
       );
     }
 
-    render(<Example />);
-    const policy = within(screen.getByRole('group', { name: 'General policy test policy' }));
+    render(<Intl><Example /></Intl>);
+    const policy = within(screen.getByRole('group', { name: 'Policy for General policy test' }));
     expect(policy.getByRole('button', { name: 'Allow' })).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(policy.getByRole('button', { name: 'Ignore' }));
@@ -82,11 +92,11 @@ describe('configuration controls', () => {
   it('only renders the save action for dirty state', () => {
     const onSave = vi.fn();
     const { rerender } = render(
-      <UnsavedChangesBar visible={false} onSave={onSave} />
+      <Intl><UnsavedChangesBar visible={false} onSave={onSave} /></Intl>
     );
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    rerender(<UnsavedChangesBar visible onSave={onSave} />);
+    rerender(<Intl><UnsavedChangesBar visible onSave={onSave} /></Intl>);
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(onSave).toHaveBeenCalledOnce();
   });

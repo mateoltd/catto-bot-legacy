@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   IconArrowsExchange,
   IconChevronDown,
@@ -32,6 +33,8 @@ export function AccountMenu({
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations('Account');
   const displayName = user.displayName || user.username;
   const avatarUrl = user.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=96`
@@ -75,12 +78,13 @@ export function AccountMenu({
         }`}
         aria-expanded={isOpen}
         aria-haspopup="menu"
+        aria-label={t('menuLabel', { name: displayName })}
       >
         {avatarUrl ? (
           <Image src={avatarUrl} alt="" width={28} height={28} className="h-7 w-7 shrink-0" />
         ) : (
           <span className="flex h-7 w-7 shrink-0 items-center justify-center bg-muted font-mono text-xs text-foreground">
-            {displayName.charAt(0).toLocaleUpperCase()}
+            {displayName.charAt(0).toLocaleUpperCase(locale)}
           </span>
         )}
         <span
@@ -118,7 +122,7 @@ export function AccountMenu({
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 <IconArrowsExchange size={15} />
-                Switch account
+                {t('switchAccount')}
               </button>
             )}
             <button
@@ -128,7 +132,7 @@ export function AccountMenu({
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-400 hover:bg-red-500/10"
             >
               <IconLogout size={15} />
-              Sign out
+              {t('signOut')}
             </button>
           </div>
         </div>

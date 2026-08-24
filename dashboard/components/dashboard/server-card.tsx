@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { IconArrowRight } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { useLocale } from 'next-intl';
 
 export interface ServerSummary {
   id: string;
@@ -26,6 +27,7 @@ export function ServerCard({
   disabled = false,
   onClick,
 }: ServerCardProps) {
+  const locale = useLocale();
   const iconUrl = server.icon
     ? `https://cdn.discordapp.com/icons/${server.id}/${server.icon}.png?size=96`
     : null;
@@ -52,7 +54,7 @@ export function ServerCard({
             compact ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm'
           }`}
         >
-          {server.name.charAt(0).toLocaleUpperCase()}
+          {server.name.charAt(0).toLocaleUpperCase(locale)}
         </div>
       )}
       <div className="min-w-0 flex-1">

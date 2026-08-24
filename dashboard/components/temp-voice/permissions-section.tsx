@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { useTranslations } from 'next-intl';
 
 interface PermissionsSectionProps {
   allowOwnerManagement: boolean;
@@ -14,16 +15,17 @@ export default function PermissionsSection({
   allowOwnerManagement,
   onUpdate,
 }: PermissionsSectionProps) {
+  const t = useTranslations('TempVoice');
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle>Owner Permissions</CardTitle>
+        <CardTitle>{t('ownerPermissions')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
           <div>
-            <label className="text-sm font-medium text-foreground">Allow Owner Management</label>
-            <p className="text-sm text-muted-foreground">Let owners rename, limit users, etc.</p>
+            <label className="text-sm font-medium text-foreground">{t('allowOwnerManagement')}</label>
+            <p className="text-sm text-muted-foreground">{t('allowOwnerManagementDescription')}</p>
           </div>
           <Switch
             checked={allowOwnerManagement}

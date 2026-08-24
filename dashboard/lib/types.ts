@@ -21,6 +21,7 @@ export interface DiscordUser {
   avatar: string | null;
   verified?: boolean;
   email?: string;
+  locale?: string;
 }
 
 export interface Channel {

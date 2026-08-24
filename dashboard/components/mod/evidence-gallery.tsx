@@ -34,6 +34,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { EvidenceComparison } from "./evidence-comparison";
 import { EvidenceHistory } from "./evidence-history";
 import { EvidenceViewer } from "./evidence-viewer";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface EvidenceGalleryProps {
   evidence: Evidence[];
@@ -60,39 +61,6 @@ function evidenceName(item: Evidence) {
   );
 }
 
-function formatBytes(bytes: number | null) {
-  if (!bytes) return null;
-  if (bytes < 1024 * 1024)
-    return `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function formatDay(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 /** Search results become case groups; a single case becomes a chronology. */
 export function EvidenceGallery({
   evidence,
@@ -103,6 +71,8 @@ export function EvidenceGallery({
   total = evidence.length,
   onEvidenceUpdated,
 }: EvidenceGalleryProps) {
+  const t = useTranslations("Moderation");
+  const format = useFormatter();
   const [activeId, setActiveId] = useState<string | null>(
     evidence[0]?.id ?? null,
   );
@@ -120,6 +90,21 @@ export function EvidenceGallery({
       : (evidence[0]?.id ?? null);
   const activeItem =
     evidence.find((item) => item.id === resolvedActiveId) ?? evidence[0];
+  const activeFileSize = (() => {
+    const bytes = activeItem?.sizeBytes;
+    if (!bytes) return null;
+    if (bytes < 1024 * 1024) {
+      const fractionDigits = bytes < 10240 ? 1 : 0;
+      return `${format.number(bytes / 1024, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      })} KB`;
+    }
+    return `${format.number(bytes / 1024 / 1024, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} MB`;
+  })();
   const hasSelection = selectedIds.size > 0;
   const canCompare = selectedIds.size === 2;
   const caseCount = new Set(evidence.map((item) => item.caseNumber)).size;
@@ -139,6 +124,30 @@ export function EvidenceGallery({
     [...selectedIds].every(
       (id) => evidence.find((item) => item.id === id)?.status === "FLAGGED",
     );
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "PENDING": return t("statusPending");
+      case "PROCESSING": return t("statusProcessing");
+      case "VERIFIED": return t("statusVerified");
+      case "FLAGGED": return t("statusFlagged");
+      case "REJECTED": return t("statusRejected");
+      default: return status;
+    }
+  };
+
+  const typeLabel = (type: string) => {
+    switch (type) {
+      case "IMAGE": return t("evidenceImage");
+      case "VIDEO": return t("evidenceVideo");
+      case "AUDIO": return t("evidenceAudio");
+      case "DOCUMENT": return t("evidenceDocument");
+      case "URL": return t("evidenceUrl");
+      case "DISCORD_URL": return t("evidenceDiscordLink");
+      case "MESSAGE_SNAPSHOT": return t("evidenceSnapshot");
+      default: return type;
+    }
+  };
 
   const toggleSelection = (id: string) => {
     setSelectedIds((previous) => {
@@ -164,7 +173,7 @@ export function EvidenceGallery({
       for (const id of selectedIds) {
         await amendEvidence(guildId, id, {
           action: flag ? "FLAGGED" : "UNFLAGGED",
-          reason: flag ? "Bulk flagged" : "Bulk unflagged",
+          reason: flag ? t("reasonBulkFlagged") : t("reasonBulkUnflagged"),
         });
       }
       onEvidenceUpdated?.();
@@ -208,7 +217,7 @@ export function EvidenceGallery({
   if (!activeItem) {
     return (
       <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-8 text-center text-sm text-[var(--mod-text-muted)]">
-        No evidence has been added yet.
+        {t("noEvidenceAdded")}
       </div>
     );
   }
@@ -221,30 +230,27 @@ export function EvidenceGallery({
   return (
     <>
       <section
-        aria-label="Evidence review workspace"
+        aria-label={t("evidenceReviewWorkspace")}
         className="overflow-hidden border border-[var(--mod-border)] bg-[var(--mod-surface)]"
       >
         {mode === "corpus" && (
           <header className="flex flex-col gap-3 border-b border-[var(--mod-border)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--mod-text-dim)]">
               <span className="font-medium text-[var(--mod-text)]">
-                Showing {evidence.length} of {total.toLocaleString()}
+                {t("showingItems", { shown: evidence.length, total: format.number(total) })}
               </span>
-              <span>across {caseCount} case groups on this page</span>
+              <span>{t("acrossCaseGroups", { count: caseCount })}</span>
               {Object.entries(statusCounts).map(([status, count]) => (
                 <span key={status} className="flex items-center gap-1.5">
                   <span
                     className={`h-1.5 w-1.5 ${STATUS_DOT[status as Evidence["status"]]}`}
                   />
-                  {count}{" "}
-                  {EVIDENCE_STATUS_META[
-                    status as Evidence["status"]
-                  ].label.toLowerCase()}
+                  {t("statusItemCount", { count, status: statusLabel(status) })}
                 </span>
               ))}
             </div>
             <span className="text-xs text-[var(--mod-text-dim)]">
-              Search results grouped by case
+              {t("resultsGroupedByCase")}
             </span>
           </header>
         )}
@@ -266,18 +272,18 @@ export function EvidenceGallery({
                   <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
                     <TypeIcon size={16} className={typeMeta.className} />
                     <span className="text-[var(--mod-text-muted)]">
-                      {typeMeta.label}
+                      {typeLabel(activeItem.type)}
                     </span>
                     <span
                       className={`border px-1.5 py-0.5 text-[10px] ${statusMeta.className}`}
                     >
-                      {statusMeta.label}
+                      {statusLabel(activeItem.status)}
                     </span>
                     <Link
                       href={`/mod/${guildId}/cases/${activeItem.caseNumber}`}
                       className="text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
                     >
-                      Case #{activeItem.caseNumber}
+                      {t("caseTitle", { caseNumber: activeItem.caseNumber })}
                     </Link>
                   </div>
                   <h3 className="truncate text-base font-medium text-[var(--mono-white)]">
@@ -287,7 +293,7 @@ export function EvidenceGallery({
                 <button
                   type="button"
                   onClick={() => toggleSelection(activeItem.id)}
-                  aria-label={`Select ${evidenceName(activeItem)}`}
+                  aria-label={t("selectEvidence", { name: evidenceName(activeItem) })}
                   className={`flex shrink-0 items-center gap-2 border px-2.5 py-1.5 text-xs ${
                     selectedIds.has(activeItem.id)
                       ? "border-[var(--mono-400)] bg-[var(--mono-700)] text-[var(--mono-white)]"
@@ -297,7 +303,7 @@ export function EvidenceGallery({
                   <span className="flex h-4 w-4 items-center justify-center border border-current">
                     {selectedIds.has(activeItem.id) && <IconCheck size={11} />}
                   </span>
-                  {selectedIds.has(activeItem.id) ? "Selected" : "Select"}
+                  {selectedIds.has(activeItem.id) ? t("selected") : t("select")}
                 </button>
               </div>
 
@@ -311,7 +317,7 @@ export function EvidenceGallery({
                     icon={<IconEye size={15} />}
                     onClick={() => setViewerId(activeItem.id)}
                   >
-                    Inspect
+                    {t("inspect")}
                   </ActionButton>
                 )}
                 {activeItem.storageKey && (
@@ -319,14 +325,14 @@ export function EvidenceGallery({
                     icon={<IconDownload size={15} />}
                     onClick={() => handleDownload(activeItem)}
                   >
-                    Download
+                    {t("download")}
                   </ActionButton>
                 )}
                 <ActionButton
                   icon={<IconHistory size={15} />}
                   onClick={() => setHistoryId(activeItem.id)}
                 >
-                  History
+                  {t("history")}
                 </ActionButton>
                 <ActionButton
                   icon={<IconPencil size={15} />}
@@ -336,43 +342,43 @@ export function EvidenceGallery({
                     )
                   }
                 >
-                  Amend
+                  {t("amend")}
                 </ActionButton>
               </div>
             </div>
 
             <aside className="bg-[var(--mono-950)]">
               <DossierRow
-                label="Added"
-                value={formatDate(activeItem.createdAt)}
+                label={t("added")}
+                value={format.dateTime(new Date(activeItem.createdAt), { dateStyle: "medium", timeStyle: "short" })}
               />
               <DossierRow
-                label="Submitted by"
+                label={t("submittedBy")}
                 value={activeItem.uploadedByTag}
               />
-              {formatBytes(activeItem.sizeBytes) && (
+              {activeFileSize && (
                 <DossierRow
-                  label="File size"
-                  value={formatBytes(activeItem.sizeBytes)!}
+                  label={t("fileSize")}
+                  value={activeFileSize}
                 />
               )}
               {activeItem.mimeType && (
-                <DossierRow label="Format" value={activeItem.mimeType} />
+                <DossierRow label={t("format")} value={activeItem.mimeType} />
               )}
 
               <div className="border-b border-[var(--mod-border)] p-4">
                 <p className="mb-2 text-xs text-[var(--mod-text-dim)]">
-                  Description
+                  {t("description")}
                 </p>
                 <p className="text-sm leading-5 text-[var(--mod-text)]">
-                  {activeItem.description || "No description was added."}
+                  {activeItem.description || t("noDescriptionAdded")}
                 </p>
               </div>
 
               {activeItem.tags.length > 0 && (
                 <div className="border-b border-[var(--mod-border)] p-4">
                   <p className="mb-2 text-xs text-[var(--mod-text-dim)]">
-                    Tags
+                    {t("tags")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {activeItem.tags.map((tag) => (
@@ -390,7 +396,7 @@ export function EvidenceGallery({
               <div className="p-4">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs text-[var(--mod-text-dim)]">
-                    Integrity
+                  {t("integrity")}
                   </span>
                   <span
                     className={
@@ -399,7 +405,7 @@ export function EvidenceGallery({
                         : "text-xs text-[var(--mod-text-dim)]"
                     }
                   >
-                    {activeItem.contentHash ? "Hash recorded" : "No file hash"}
+                    {activeItem.contentHash ? t("hashRecorded") : t("noFileHash")}
                   </span>
                 </div>
                 {activeItem.contentHash && (
@@ -433,14 +439,14 @@ export function EvidenceGallery({
         <div className="fixed inset-x-3 bottom-3 z-40 border border-[var(--mono-500)] bg-[var(--mono-900)] p-2 shadow-2xl sm:left-1/2 sm:right-auto sm:w-auto sm:-translate-x-1/2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2 text-xs text-[var(--mod-text-muted)]">
-              {selectedIds.size} selected
+              {t("selectedCount", { count: selectedIds.size })}
             </span>
             {canCompare && (
               <ActionButton
                 icon={<IconCompare size={14} />}
                 onClick={() => setShowComparison(true)}
               >
-                Compare
+                {t("compare")}
               </ActionButton>
             )}
             <Toggle
@@ -450,28 +456,28 @@ export function EvidenceGallery({
               onPressedChange={handleBulkFlag}
               disabled={bulkSubmitting}
               className="flex h-8 items-center gap-1.5 px-2.5"
-              aria-label="Flag selected"
+              aria-label={t("flagSelected")}
             >
               <IconFlag size={14} />
-              {allSelectedFlagged ? "Unflag" : "Flag"}
+              {allSelectedFlagged ? t("unflag") : t("flag")}
             </Toggle>
             <ActionButton
               icon={<IconDownload size={14} />}
               onClick={handleBulkDownload}
             >
-              Download
+              {t("download")}
             </ActionButton>
             <ActionButton
               icon={<IconNote size={14} />}
               onClick={() => setBulkAction("note")}
             >
-              Note
+              {t("note")}
             </ActionButton>
             <button
               type="button"
               onClick={() => setSelectedIds(new Set())}
               className="p-2 text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
-              aria-label="Clear selection"
+              aria-label={t("clearSelection")}
             >
               <IconX size={14} />
             </button>
@@ -548,6 +554,32 @@ function EvidenceIndex({
   mode: "corpus" | "case";
   onActivate: (id: string) => void;
 }) {
+  const t = useTranslations("Moderation");
+  const format = useFormatter();
+
+  const typeLabel = (type: string) => {
+    switch (type) {
+      case "IMAGE": return t("evidenceImage");
+      case "VIDEO": return t("evidenceVideo");
+      case "AUDIO": return t("evidenceAudio");
+      case "DOCUMENT": return t("evidenceDocument");
+      case "URL": return t("evidenceUrl");
+      case "DISCORD_URL": return t("evidenceDiscordLink");
+      case "MESSAGE_SNAPSHOT": return t("evidenceSnapshot");
+      default: return type;
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "PENDING": return t("statusPending");
+      case "PROCESSING": return t("statusProcessing");
+      case "VERIFIED": return t("statusVerified");
+      case "FLAGGED": return t("statusFlagged");
+      case "REJECTED": return t("statusRejected");
+      default: return status;
+    }
+  };
   const groups = useMemo(() => {
     const byCase = new Map<number, Evidence[]>();
     for (const item of evidence) {
@@ -565,7 +597,7 @@ function EvidenceIndex({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     const days = chronology.reduce<Map<string, Evidence[]>>((result, item) => {
-      const day = formatDay(item.createdAt);
+      const day = format.dateTime(new Date(item.createdAt), { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
       const items = result.get(day) ?? [];
       items.push(item);
       result.set(day, items);
@@ -574,7 +606,7 @@ function EvidenceIndex({
 
     return (
       <nav
-        aria-label={`Evidence register for case ${caseNumber}`}
+        aria-label={t("evidenceRegisterForCase", { caseNumber })}
         className="max-h-[320px] overflow-y-auto border-b border-[var(--mod-border)] bg-[var(--mono-950)] lg:max-h-[720px] lg:border-b-0 lg:border-r"
       >
         {[...days.entries()].map(([day, items]) => (
@@ -610,13 +642,13 @@ function EvidenceIndex({
                       {evidenceName(item)}
                     </span>
                     <span className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--mod-text-dim)]">
-                      <span>{EVIDENCE_TYPE_META[item.type].label}</span>
+                      <span>{typeLabel(item.type)}</span>
                       <span aria-hidden="true">·</span>
                       <time dateTime={item.createdAt}>
-                        {formatTime(item.createdAt)}
+                        {format.dateTime(new Date(item.createdAt), { hour: "2-digit", minute: "2-digit" })}
                       </time>
                       <span aria-hidden="true">·</span>
-                      <span>{EVIDENCE_STATUS_META[item.status].label}</span>
+                      <span>{statusLabel(item.status)}</span>
                     </span>
                   </span>
                   {selectedIds.has(item.id) && (
@@ -633,12 +665,11 @@ function EvidenceIndex({
 
   return (
     <nav
-      aria-label="Evidence results grouped by case"
+      aria-label={t("evidenceResultsGroupedByCase")}
       className="max-h-[360px] overflow-y-auto border-b border-[var(--mod-border)] bg-[var(--mono-950)] lg:max-h-[720px] lg:border-b-0 lg:border-r"
     >
       <div className="sticky top-0 z-10 border-b border-[var(--mod-border)] bg-[var(--mono-950)] px-4 py-3 text-xs text-[var(--mod-text-dim)]">
-        {groups.length} case group{groups.length === 1 ? "" : "s"} on this
-        result page
+        {t("caseGroupsOnPage", { count: groups.length })}
       </div>
       {groups.map(([caseNumber, items]) => (
         <section
@@ -650,10 +681,10 @@ function EvidenceIndex({
               href={`/mod/${guildId}/cases/${caseNumber}`}
               className="font-mono text-xs font-medium text-[var(--mono-white)] hover:underline"
             >
-              Case #{caseNumber}
+              {t("caseTitle", { caseNumber })}
             </Link>
             <span className="text-[10px] text-[var(--mod-text-dim)]">
-              {items.length} match{items.length === 1 ? "" : "es"}
+              {t("matchCount", { count: items.length })}
             </span>
           </div>
           {items.map((item) => {
@@ -698,6 +729,8 @@ function EvidenceFocusPreview({
   evidence: Evidence;
   guildId: string;
 }) {
+  const t = useTranslations("Moderation");
+  const format = useFormatter();
   const needsViewUrl = Boolean(
     evidence.storageKey &&
     evidence.type !== "URL" &&
@@ -779,22 +812,22 @@ function EvidenceFocusPreview({
                     {message.authorTag}
                   </span>
                   <span className="text-[10px] text-[var(--mod-text-dim)]">
-                    {formatDate(message.createdAt)}
+                    {format.dateTime(new Date(message.createdAt), { dateStyle: "short", timeStyle: "short" })}
                   </span>
                 </div>
                 <p className="line-clamp-2 text-sm text-[var(--mod-text-muted)]">
-                  {message.content || "Attachment"}
+                  {message.content || t("attachment")}
                 </p>
               </div>
             ))
           ) : (
             <p className="p-8 text-center text-sm text-[var(--mod-text-dim)]">
-              Snapshot preview unavailable.
+              {t("snapshotPreviewUnavailable")}
             </p>
           )}
           {messages.length > 3 && (
             <p className="border-t border-[var(--mod-border)] px-4 py-2 text-xs text-[var(--mod-text-dim)]">
-              +{messages.length - 3} more messages
+              {t("moreMessages", { count: messages.length - 3 })}
             </p>
           )}
         </div>
@@ -805,7 +838,7 @@ function EvidenceFocusPreview({
   if (isLoading) {
     return (
       <div className="flex min-h-[310px] flex-1 items-center justify-center text-sm text-[var(--mod-text-dim)]">
-        Preparing preview…
+        {t("preparingPreview")}
       </div>
     );
   }
@@ -816,7 +849,7 @@ function EvidenceFocusPreview({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={viewUrl}
-          alt={evidence.originalFilename ?? "Evidence image"}
+          alt={evidence.originalFilename ?? t("evidenceImage")}
           className="max-h-[430px] max-w-full object-contain"
         />
       </div>
@@ -848,8 +881,8 @@ function EvidenceFocusPreview({
       <PreviewIcon size={40} className="text-[var(--mod-text-dim)]" />
       <p className="max-w-md text-sm text-[var(--mod-text-muted)]">
         {evidence.type === "DOCUMENT"
-          ? "Open the inspector to review or download this document."
-          : "No inline preview is available."}
+          ? t("openInspectorForDocument")
+          : t("noInlinePreview")}
       </p>
     </div>
   );
@@ -902,6 +935,7 @@ function InlineAmendForm({
   onAmended: () => void;
   onEvidenceUpdated?: () => void;
 }) {
+  const t = useTranslations("Moderation");
   const [action, setAction] = useState("NOTE_ADDED");
   const [reason, setReason] = useState("");
   const [newValue, setNewValue] = useState("");
@@ -928,7 +962,7 @@ function InlineAmendForm({
     try {
       await amendEvidence(guildId, evidenceId, {
         action: pressed ? "FLAGGED" : "UNFLAGGED",
-        reason: pressed ? "Flagged" : "Unflagged",
+        reason: pressed ? t("reasonFlagged") : t("reasonUnflagged"),
       });
       setFlagged(pressed);
       onEvidenceUpdated?.();
@@ -942,7 +976,7 @@ function InlineAmendForm({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <span className="text-sm font-medium text-[var(--mono-white)]">
-            Amend Evidence
+            {t("amendEvidence")}
           </span>
           <Toggle
             variant="mod"
@@ -950,9 +984,9 @@ function InlineAmendForm({
             pressed={flagged}
             onPressedChange={handleToggleFlag}
             disabled={flagSubmitting}
-            aria-label="Toggle flag"
+            aria-label={t("toggleFlag")}
           >
-            <IconFlag size={14} /> {flagged ? "Flagged" : "Flag"}
+            <IconFlag size={14} /> {flagged ? t("statusFlagged") : t("flag")}
           </Toggle>
         </div>
         <Select value={action} onValueChange={setAction}>
@@ -961,10 +995,10 @@ function InlineAmendForm({
           </SelectTrigger>
           <SelectContent variant="mod">
             <SelectItem value="NOTE_ADDED" variant="mod">
-              Add Note
+              {t("addNote")}
             </SelectItem>
             <SelectItem value="DESCRIPTION_UPDATED" variant="mod">
-              Update Description
+              {t("updateDescription")}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -975,14 +1009,14 @@ function InlineAmendForm({
             type="text"
             value={newValue}
             onChange={(event) => setNewValue(event.target.value)}
-            placeholder="New description..."
+            placeholder={t("newDescriptionPlaceholder")}
             className="mb-2 w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-xs text-[var(--mono-white)] outline-none"
           />
         )}
         <textarea
           value={reason}
           onChange={(event) => setReason(event.target.value)}
-          placeholder="Reason..."
+          placeholder={t("reasonPlaceholder")}
           rows={2}
           className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-xs text-[var(--mono-white)] outline-none"
         />
@@ -994,14 +1028,14 @@ function InlineAmendForm({
           disabled={submitting}
           className="border border-[var(--mono-500)] px-3 py-2 text-xs text-[var(--mono-white)] hover:bg-[var(--mono-800)] disabled:opacity-30"
         >
-          {submitting ? "Saving…" : "Confirm"}
+          {submitting ? t("saving") : t("confirm")}
         </button>
         <button
           type="button"
           onClick={onClose}
           className="px-3 py-2 text-xs text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
         >
-          Cancel
+          {t("cancel")}
         </button>
       </div>
     </div>
@@ -1019,6 +1053,7 @@ function BulkNoteModal({
   onClose: () => void;
   submitting: boolean;
 }) {
+  const t = useTranslations("Moderation");
   const [note, setNote] = useState("");
   return (
     <div
@@ -1030,12 +1065,12 @@ function BulkNoteModal({
         onClick={(event) => event.stopPropagation()}
       >
         <h3 className="mb-3 text-sm font-medium text-[var(--mono-white)]">
-          Add note to {count} item{count === 1 ? "" : "s"}
+          {t("addNoteToItems", { count })}
         </h3>
         <textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="Note..."
+          placeholder={t("notePlaceholder")}
           rows={3}
           className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] outline-none"
         />
@@ -1046,14 +1081,14 @@ function BulkNoteModal({
             disabled={submitting || !note.trim()}
             className="border border-[var(--mono-500)] px-4 py-1.5 text-xs text-[var(--mono-white)] hover:bg-[var(--mono-800)] disabled:opacity-30"
           >
-            {submitting ? "Adding…" : "Add note"}
+            {submitting ? t("adding") : t("addNote")}
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-1.5 text-xs text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
           >
-            Cancel
+            {t("cancel")}
           </button>
         </div>
       </div>

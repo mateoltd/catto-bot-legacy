@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useTempVoiceConfig } from '@/hooks/use-temp-voice-config';
 import { useGuildData } from '@/hooks/use-guild-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,6 +23,7 @@ interface TempVoiceConfigFormProps {
 }
 
 export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProps) {
+  const t = useTranslations('TempVoice');
   const {
     config,
     channels,
@@ -107,7 +109,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
           <CardContent className="py-12">
             <div className="flex items-center justify-center gap-3">
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-muted-foreground">Loading temp voice configuration...</span>
+              <span className="text-muted-foreground">{t('loading')}</span>
             </div>
           </CardContent>
         </Card>
@@ -141,9 +143,9 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       {/* Page Header */}
       <div>
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Temporary Voice Channels</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
           <p className="text-muted-foreground mt-1">
-            Let users create their own temporary voice channels
+            {t('description')}
           </p>
         </div>
       </div>
@@ -165,7 +167,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
             />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-destructive">Error</h3>
+            <h3 className="text-sm font-medium text-destructive">{t('errorTitle')}</h3>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
           </div>
         </div>
@@ -182,8 +184,8 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-success">Success</h3>
-            <p className="text-sm text-success/80 mt-1">Configuration saved successfully!</p>
+            <h3 className="text-sm font-medium text-success">{t('successTitle')}</h3>
+            <p className="text-sm text-success/80 mt-1">{t('saved')}</p>
           </div>
         </div>
       )}
@@ -194,7 +196,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
           <Card variant="glass">
             <CardContent className="py-4">
               <div className="text-2xl font-bold text-primary">{stats.stats.activeChannels}</div>
-              <div className="text-sm text-muted-foreground">Active Channels</div>
+              <div className="text-sm text-muted-foreground">{t('activeChannels')}</div>
             </CardContent>
           </Card>
           <Card variant="glass">
@@ -202,13 +204,13 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
               <div className="text-2xl font-bold text-primary">
                 {stats.stats.totalChannelsCreated}
               </div>
-              <div className="text-sm text-muted-foreground">Total Created</div>
+              <div className="text-sm text-muted-foreground">{t('totalCreated')}</div>
             </CardContent>
           </Card>
           <Card variant="glass">
             <CardContent className="py-4">
               <div className="text-2xl font-bold text-primary">{stats.stats.totalMembers}</div>
-              <div className="text-sm text-muted-foreground">Total Members</div>
+              <div className="text-sm text-muted-foreground">{t('totalMembers')}</div>
             </CardContent>
           </Card>
         </div>
@@ -278,15 +280,15 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       {/* Danger Zone */}
       <Card variant="glass" className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions</CardDescription>
+          <CardTitle className="text-destructive">{t('dangerZone')}</CardTitle>
+          <CardDescription>{t('irreversibleActions')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-destructive/5 border border-destructive/20">
             <div>
-              <p className="text-sm font-medium text-foreground">Delete Temp Voice Configuration</p>
+              <p className="text-sm font-medium text-foreground">{t('deleteConfiguration')}</p>
               <p className="text-sm text-muted-foreground">
-                Remove the bot&apos;s configuration for temp voice channels
+                {t('deleteConfigurationDescription')}
               </p>
             </div>
             {confirmDelete ? (
@@ -297,21 +299,20 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
                   onClick={() => setConfirmDelete(false)}
                   disabled={saving}
                 >
-                  Cancel
+                  {t('cancel')}
                 </Button>
                 <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
-                  {saving ? 'Deleting...' : 'Confirm Delete'}
+                  {saving ? t('deleting') : t('confirmDelete')}
                 </Button>
               </div>
             ) : (
               <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-                Delete
+                {t('delete')}
               </Button>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Note: This only removes the bot configuration. You&apos;ll need to manually delete any
-            categories and channels created by the bot from Discord Server Settings.
+            {t('deleteNote')}
           </p>
         </CardContent>
       </Card>

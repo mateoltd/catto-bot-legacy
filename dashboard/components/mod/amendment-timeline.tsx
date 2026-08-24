@@ -2,14 +2,7 @@
 
 import type { EvidenceAmendment } from '@/lib/mod-types';
 import { AMENDMENT_ACTION_ICONS, IconNote } from '@/lib/mod-icons';
-
-const ACTION_LABELS: Record<string, string> = {
-  NOTE_ADDED: 'Note Added',
-  DESCRIPTION_UPDATED: 'Description Updated',
-  FLAGGED: 'Flagged',
-  UNFLAGGED: 'Unflagged',
-  STATUS_CHANGED: 'Status Changed',
-};
+import { useFormatter, useTranslations } from 'next-intl';
 
 const NODE_COLORS: Record<string, string> = {
   FLAGGED: 'var(--mod-warning)',
@@ -24,10 +17,25 @@ interface AmendmentTimelineProps {
 }
 
 export function AmendmentTimeline({ amendments }: AmendmentTimelineProps) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
+
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'NOTE_ADDED': return t('amendmentNoteAdded');
+      case 'DESCRIPTION_UPDATED': return t('amendmentDescriptionUpdated');
+      case 'TAGS_UPDATED': return t('amendmentTagsUpdated');
+      case 'FLAGGED': return t('amendmentFlagged');
+      case 'UNFLAGGED': return t('amendmentUnflagged');
+      case 'STATUS_CHANGED': return t('amendmentStatusChanged');
+      default: return action;
+    }
+  };
+
   if (amendments.length === 0) {
     return (
       <div className="py-6 text-center text-sm text-[var(--mod-text-muted)]">
-        No amendments recorded.
+        {t('noAmendments')}
       </div>
     );
   }
@@ -42,7 +50,7 @@ export function AmendmentTimeline({ amendments }: AmendmentTimelineProps) {
 
       {amendments.map((amendment, index) => {
         const ActionIcon = AMENDMENT_ACTION_ICONS[amendment.action] ?? IconNote;
-        const label = ACTION_LABELS[amendment.action] ?? amendment.action;
+        const label = actionLabel(amendment.action);
         const nodeColor = NODE_COLORS[amendment.action] ?? 'var(--mono-800)';
 
         return (
@@ -60,12 +68,12 @@ export function AmendmentTimeline({ amendments }: AmendmentTimelineProps) {
                 <ActionIcon size={13} style={{ color: nodeColor }} />
                 <span className="text-xs font-medium text-[var(--mono-white)]">{label}</span>
                 <span className="ml-auto shrink-0 text-[10px] text-[var(--mod-text-dim)]">
-                  {new Date(amendment.createdAt).toLocaleString()}
+                  {format.dateTime(new Date(amendment.createdAt), { dateStyle: 'short', timeStyle: 'short' })}
                 </span>
               </div>
 
               <p className="text-[11px] text-[var(--mod-text-dim)]">
-                by {amendment.amendedByTag}
+                {t('byUser', { user: amendment.amendedByTag })}
               </p>
 
               {amendment.reason && (
@@ -76,14 +84,14 @@ export function AmendmentTimeline({ amendments }: AmendmentTimelineProps) {
 
               {amendment.previousValue && (
                 <div className="mt-1 bg-[var(--mono-950)] px-2 py-1 text-[11px]">
-                  <span className="text-[var(--mod-text-dim)]">Previous: </span>
+                  <span className="text-[var(--mod-text-dim)]">{t('previousValue')}: </span>
                   <span className="text-red-400 line-through">{amendment.previousValue}</span>
                 </div>
               )}
 
               {amendment.newValue && (
                 <div className="mt-0.5 bg-[var(--mono-950)] px-2 py-1 text-[11px]">
-                  <span className="text-[var(--mod-text-dim)]">New: </span>
+                  <span className="text-[var(--mod-text-dim)]">{t('newValue')}: </span>
                   <span className="text-green-400">{amendment.newValue}</span>
                 </div>
               )}

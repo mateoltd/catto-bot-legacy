@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useMemo, type ReactNode } from 'react';
+import { useFormatter, useTranslations } from 'next-intl';
 import useSWR from 'swr';
 import { getCases } from '@/lib/services/mod.service';
 import { useGuildInfo } from '@/hooks/use-guild-info';
@@ -16,13 +17,6 @@ import {
   Cell,
 } from 'recharts';
 
-const ACTION_LABELS: Record<string, string> = {
-  BAN: 'Ban', UNBAN: 'Unban', KICK: 'Kick', TIMEOUT: 'Timeout',
-  WARN: 'Warning', SOFTBAN: 'Softban', TEMPBAN: 'Tempban',
-  MUTE_TEXT: 'Mute (Text)', MUTE_VOICE: 'Mute (Voice)', MUTE_BOTH: 'Mute',
-  UNMUTE_TEXT: 'Unmute (Text)', UNMUTE_VOICE: 'Unmute (Voice)', UNMUTE_BOTH: 'Unmute',
-};
-
 const ACTION_COLORS: Record<string, string> = {
   BAN: '#ef4444',
   WARN: '#eab308',
@@ -36,9 +30,22 @@ interface TooltipEntry {
 }
 
 export default function GuildModOverview() {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const params = useParams();
   const guildId = params.guildId as string;
   const guildInfo = useGuildInfo(guildId);
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'BAN': return t('actionBan'); case 'UNBAN': return t('actionUnban');
+      case 'KICK': return t('actionKick'); case 'TIMEOUT': return t('actionTimeout');
+      case 'WARN': return t('actionWarning'); case 'SOFTBAN': return t('actionSoftban');
+      case 'TEMPBAN': return t('actionTempban'); case 'MUTE_TEXT': return t('actionMuteText');
+      case 'MUTE_VOICE': return t('actionMuteVoice'); case 'MUTE_BOTH': return t('actionMute');
+      case 'UNMUTE_TEXT': return t('actionUnmuteText'); case 'UNMUTE_VOICE': return t('actionUnmuteVoice');
+      case 'UNMUTE_BOTH': return t('actionUnmute'); default: return action;
+    }
+  };
 
   const { data: casesData, isLoading: loading } = useSWR(
     ['overview-cases', guildId],
@@ -68,9 +75,9 @@ export default function GuildModOverview() {
       total,
       open,
       recent,
-      topAction: topAction ? ACTION_LABELS[topAction[0]] || topAction[0] : '—',
+      topAction: topAction ? actionLabel(topAction[0]) : '—',
     };
-  }, [cases, casesData?.total]);
+  }, [cases, casesData?.total, t]);
 
   // Cases over time (last 30 days)
   const timelineData = useMemo(() => {
@@ -101,9 +108,9 @@ export default function GuildModOverview() {
     for (const c of cases) {
       if (c.action.startsWith('UNMUTE_')) continue;
       if (c.action.startsWith('MUTE_')) {
-        counts['Mutes'] = (counts['Mutes'] || 0) + 1;
+        counts[t('actionMutes')] = (counts[t('actionMutes')] || 0) + 1;
       } else {
-        const label = ACTION_LABELS[c.action] || c.action;
+        const label = actionLabel(c.action);
         counts[label] = (counts[label] || 0) + 1;
       }
     }
@@ -111,7 +118,7 @@ export default function GuildModOverview() {
       .map(([action, count]) => ({ action, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
-  }, [cases]);
+  }, [cases, t]);
 
   // Recent activity (last 10)
   const recentCases = useMemo(() => {
@@ -123,7 +130,7 @@ export default function GuildModOverview() {
   if (loading) {
     return (
       <div className="py-12 text-center text-[var(--mod-text-dim)]" style={{ fontFamily: 'var(--font-mono)' }}>
-        Loading dashboard...
+        {t('loadingDashboard')}
       </div>
     );
   }
@@ -131,18 +138,18 @@ export default function GuildModOverview() {
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">
-        {guildInfo?.name ?? 'Unknown Server'}
+        {guildInfo?.name ?? t('unknownServer')}
       </h1>
       <p className="mb-8 text-sm text-[var(--mod-text-muted)]" style={{ fontFamily: 'var(--font-mono)' }}>
-        Moderation overview
+        {t('overview')}
       </p>
 
       {/* Quick stats row */}
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="TOTAL CASES" value={stats.total} />
-        <StatCard label="OPEN CASES" value={stats.open} />
-        <StatCard label="RECENT (7D)" value={stats.recent} />
-        <StatCard label="TOP ACTION" value={stats.topAction} />
+        <StatCard label={t('totalCases')} value={format.number(stats.total)} />
+        <StatCard label={t('openCases')} value={format.number(stats.open)} />
+        <StatCard label={t('recentSevenDays')} value={format.number(stats.recent)} />
+        <StatCard label={t('topAction')} value={stats.topAction} />
       </div>
 
       {/* Charts row */}
@@ -153,7 +160,7 @@ export default function GuildModOverview() {
             className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--mod-text-dim)]"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            CASES OVER TIME (30 DAYS)
+            {t('casesOverTime')}
           </h3>
           {timelineData.some((d) => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -171,13 +178,13 @@ export default function GuildModOverview() {
                   axisLine={false}
                   allowDecimals={false}
                 />
-                <Tooltip content={<ModChartTooltip />} />
+                <Tooltip content={<ModChartTooltip valueLabel={t('casesLower')} />} />
                 <Bar dataKey="count" fill="#888888" radius={0} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex h-[200px] items-center justify-center text-sm text-[var(--mod-text-dim)]">
-              No cases in the last 30 days
+              {t('noCasesThirtyDays')}
             </div>
           )}
         </div>
@@ -188,7 +195,7 @@ export default function GuildModOverview() {
             className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--mod-text-dim)]"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            ACTION BREAKDOWN
+            {t('actionBreakdown')}
           </h3>
           {actionData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -209,10 +216,10 @@ export default function GuildModOverview() {
                   width={80}
                   interval={0}
                 />
-                <Tooltip content={<ModChartTooltip />} />
+                <Tooltip content={<ModChartTooltip valueLabel={t('casesLower')} />} />
                 <Bar dataKey="count" radius={0}>
                   {actionData.map((entry, i) => {
-                    const key = Object.entries(ACTION_LABELS).find(([, v]) => v === entry.action)?.[0];
+                    const key = Object.keys(ACTION_COLORS).find((action) => actionLabel(action) === entry.action);
                     const color = (key && ACTION_COLORS[key]) || MONO_FILLS[i % MONO_FILLS.length];
                     return <Cell key={entry.action} fill={color} />;
                   })}
@@ -221,7 +228,7 @@ export default function GuildModOverview() {
             </ResponsiveContainer>
           ) : (
             <div className="flex h-[200px] items-center justify-center text-sm text-[var(--mod-text-dim)]">
-              No cases to analyze
+              {t('noCasesAnalyze')}
             </div>
           )}
         </div>
@@ -233,7 +240,7 @@ export default function GuildModOverview() {
           className="mb-4 text-xs uppercase tracking-[0.2em] text-[var(--mod-text-dim)]"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          RECENT ACTIVITY
+          {t('recentActivity')}
         </h3>
         {recentCases.length > 0 ? (
           <div className="space-y-1">
@@ -251,19 +258,19 @@ export default function GuildModOverview() {
                     #{c.caseNumber}
                   </span>
                   <span className="text-[var(--mono-white)]">
-                    {ACTION_LABELS[c.action] ?? c.action}
+                    {actionLabel(c.action)}
                   </span>
                   <span className="text-[var(--mod-text-muted)]">{c.targetTag}</span>
                 </div>
                 <span className="text-xs text-[var(--mod-text-dim)]" style={{ fontFamily: 'var(--font-mono)' }}>
-                  {new Date(c.createdAt).toLocaleDateString()}
+                  {format.dateTime(new Date(c.createdAt), { dateStyle: 'short' })}
                 </span>
               </Link>
             ))}
           </div>
         ) : (
           <div className="py-4 text-center text-sm text-[var(--mod-text-dim)]">
-            No cases found
+            {t('noCasesFound')}
           </div>
         )}
       </div>
@@ -294,10 +301,12 @@ function ModChartTooltip({
   active,
   payload,
   label,
+  valueLabel,
 }: {
   active?: boolean;
   payload?: TooltipEntry[];
   label?: ReactNode;
+  valueLabel: string;
 }) {
   if (!active || !payload?.length) return null;
 
@@ -309,7 +318,7 @@ function ModChartTooltip({
       <p className="text-xs text-[var(--mono-white)]">{label}</p>
       {payload.map((entry, index) => (
         <p key={`${entry.dataKey}-${index}`} className="text-xs text-[var(--mono-300)]">
-          {entry.dataKey}: {entry.value}
+          {valueLabel}: {entry.value}
         </p>
       ))}
     </div>

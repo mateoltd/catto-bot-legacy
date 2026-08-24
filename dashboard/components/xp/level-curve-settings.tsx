@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -19,8 +20,6 @@ interface LevelCurveSettingsProps {
   onChange: (change: Partial<LevelCurveValue>) => void;
   earningRate?: number;
 }
-
-const formatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 function epochMultiplier(level: number) {
   if (level <= 5) return 0.95;
@@ -50,6 +49,8 @@ function FormulaEditor({
   voice: boolean;
   earningRate: number;
 }) {
+  const t = useTranslations("LevelCurve");
+  const format = useFormatter();
   type HandleKey = "formulaOffset" | "formulaBase" | "formulaExponent";
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ key: HandleKey; scaleMax: number } | null>(null);
@@ -107,35 +108,43 @@ function FormulaEditor({
     )
     .join(" ");
   const handles: Array<{ key: HandleKey; level: number; label: string }> = [
-    { key: "formulaOffset", level: 10, label: "Early" },
-    { key: "formulaBase", level: 50, label: "Middle" },
-    { key: "formulaExponent", level: 90, label: "Late" },
+    { key: "formulaOffset", level: 10, label: t("early") },
+    { key: "formulaBase", level: 50, label: t("middle") },
+    { key: "formulaExponent", level: 90, label: t("late") },
   ];
 
   const formatActivity = (xp: number, compact = false) => {
-    if (earningRate <= 0) return "Unavailable";
+    if (earningRate <= 0) return t("unavailable");
     const amount = Math.max(1, Math.ceil(xp / earningRate));
-    if (!voice)
-      return `${compact ? "~" : "About "}${formatter.format(amount)} ${compact ? "messages" : "qualifying messages"}`;
-    if (amount < 60)
-      return `${compact ? "~" : "About "}${formatter.format(amount)} active min`;
+    const formattedAmount = format.number(amount, { maximumFractionDigits: 0 });
+    if (!voice) return compact
+      ? t("messagesCompact", { amount: formattedAmount })
+      : t("qualifyingMessages", { amount: formattedAmount });
+    if (amount < 60) return compact
+      ? t("activeMinutesCompact", { amount: formattedAmount })
+      : t("activeMinutes", { amount: formattedAmount });
     const hours = amount / 60;
-    return `${compact ? "~" : "About "}${hours >= 10 ? Math.round(hours) : hours.toFixed(1)} voice hr`;
+    const formattedHours = format.number(hours, { maximumFractionDigits: hours >= 10 ? 0 : 1 });
+    return compact
+      ? t("voiceHoursCompact", { amount: formattedHours })
+      : t("voiceHours", { amount: formattedHours });
   };
 
   const formatAxisActivity = (xp: number) => {
-    if (earningRate <= 0) return "Unavailable";
+    if (earningRate <= 0) return t("unavailable");
     const amount = Math.max(1, Math.ceil(xp / earningRate));
     if (!voice) {
-      const compact = new Intl.NumberFormat("en-US", {
+      const compact = format.number(amount, {
         notation: "compact",
         maximumFractionDigits: 1,
-      }).format(amount);
-      return `~${compact} msgs`;
+      });
+      return t("axisMessages", { amount: compact });
     }
-    if (amount < 60) return `~${amount} min`;
+    if (amount < 60) return t("axisMinutes", { amount });
     const hours = amount / 60;
-    return `~${hours >= 10 ? Math.round(hours) : hours.toFixed(1)} hr`;
+    return t("axisHours", {
+      amount: format.number(hours, { maximumFractionDigits: hours >= 10 ? 0 : 1 }),
+    });
   };
 
   const applyTarget = (key: HandleKey, targetCost: number) => {
@@ -200,14 +209,12 @@ function FormulaEditor({
     <div>
       <div className="flex flex-col justify-between gap-2 border-b border-border px-5 py-4 sm:flex-row sm:items-center lg:px-6">
         <p className="text-sm text-foreground">
-          Drag the curve handles up for slower leveling or down for faster
-          leveling.
+          {t("dragHelp")}
         </p>
         <p className="text-xs text-muted-foreground">
-          Vertical scale:{" "}
-          {voice
-            ? "active voice time per level"
-            : "qualifying messages per level"}
+          {t("verticalScale", {
+            activity: voice ? t("voiceTimePerLevel") : t("messagesPerLevel"),
+          })}
         </p>
       </div>
       <div className="h-[320px] overflow-hidden px-3 py-4 sm:px-5">
@@ -216,7 +223,7 @@ function FormulaEditor({
           viewBox={`0 0 ${chart.width} ${chart.height}`}
           className="h-full w-full touch-none overflow-hidden text-foreground"
           role="group"
-          aria-label="Interactive XP requirement curve"
+          aria-label={t("interactiveCurve")}
         >
           {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
             const y = chart.top + (1 - fraction) * chartHeight;
@@ -265,7 +272,7 @@ function FormulaEditor({
                 opacity="0.55"
                 fontSize="10"
               >
-                Level {level}
+                {t("level", { level })}
               </text>
             </g>
           ))}
@@ -307,7 +314,7 @@ function FormulaEditor({
                   strokeWidth="2"
                   role="slider"
                   tabIndex={0}
-                  aria-label={`${handle.label} progression handle`}
+                  aria-label={t("progressionHandle", { phase: handle.label })}
                   aria-valuemin={0}
                   aria-valuemax={Math.round(scaleMax)}
                   aria-valuenow={cost}
@@ -381,10 +388,10 @@ function FormulaEditor({
               )}
             >
               <span className="text-xs text-muted-foreground">
-                {handle.label} levels
+                {t("phaseLevels", { phase: handle.label })}
               </span>
               <strong className="ml-2 text-xs font-medium text-foreground">
-                {formatActivity(cost)} / level
+                {t("activityPerLevel", { activity: formatActivity(cost) })}
               </strong>
             </div>
           );
@@ -392,14 +399,14 @@ function FormulaEditor({
       </div>
       <details className="border-t border-border px-5 py-3 text-xs text-muted-foreground lg:px-6">
         <summary className="cursor-pointer text-xs text-foreground">
-          Exact formula settings
+          {t("exactFormulaSettings")}
         </summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           {(
             [
-              ["formulaBase", "Curve weight", 0.1],
-              ["formulaExponent", "Exponent", 0.1],
-              ["formulaOffset", "Linear offset", 1],
+              ["formulaBase", t("curveWeight"), 0.1],
+              ["formulaExponent", t("exponent"), 0.1],
+              ["formulaOffset", t("linearOffset"), 1],
             ] as const
           ).map(([key, label, step]) => (
             <label
@@ -424,8 +431,10 @@ function FormulaEditor({
           ))}
         </div>
         <p className="mt-3">
-          XP per level = curve weight × level<sup>exponent</sup> + linear offset
-          × level + 100.{voice && " Voice pacing multipliers are included."}
+          {t.rich("formulaDescription", {
+            sup: (chunks) => <sup>{chunks}</sup>,
+          })}
+          {voice && ` ${t("voiceMultipliersIncluded")}`}
         </p>
       </details>
     </div>
@@ -439,6 +448,7 @@ function ThresholdEditor({
   thresholds: number[];
   onChange: (thresholds: number[]) => void;
 }) {
+  const t = useTranslations("LevelCurve");
   const [draft, setDraft] = useState("");
   const isAscending = thresholds.every(
     (threshold, index) =>
@@ -457,15 +467,15 @@ function ThresholdEditor({
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="border border-border bg-background/30">
         <div className="grid grid-cols-[54px_minmax(0,1fr)_44px] border-b border-border bg-muted/30 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-          <span>Level</span>
-          <span>Total XP required</span>
-          <span className="sr-only">Remove</span>
+          <span>{t("levelHeading")}</span>
+          <span>{t("totalXpRequired")}</span>
+          <span className="sr-only">{t("remove")}</span>
         </div>
         {thresholds.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-sm text-foreground">No level thresholds yet</p>
+            <p className="text-sm text-foreground">{t("noThresholds")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Add level 1 using the quick entry panel.
+              {t("addFirstLevelHelp")}
             </p>
           </div>
         ) : (
@@ -490,7 +500,7 @@ function ThresholdEditor({
                     onChange(updated);
                   }}
                   className="h-10 min-w-0 border-x border-border bg-transparent px-3 font-mono text-sm text-foreground outline-none focus:bg-muted/40"
-                  aria-label={`Level ${index + 1} XP threshold`}
+                  aria-label={t("levelXpThreshold", { level: index + 1 })}
                 />
                 <button
                   type="button"
@@ -500,7 +510,7 @@ function ThresholdEditor({
                       thresholds.filter((_, itemIndex) => itemIndex !== index),
                     )
                   }
-                  aria-label={`Remove level ${index + 1}`}
+                  aria-label={t("removeLevel", { level: index + 1 })}
                 >
                   <Trash2 aria-hidden="true" className="size-3.5" />
                 </button>
@@ -512,9 +522,9 @@ function ThresholdEditor({
 
       <div className="h-fit border border-border bg-background/30">
         <div className="border-b border-border px-3 py-2.5">
-          <p className="text-sm font-medium text-foreground">Add next level</p>
+          <p className="text-sm font-medium text-foreground">{t("addNextLevel")}</p>
           <p className="text-xs text-muted-foreground">
-            Thresholds must increase.
+            {t("thresholdsMustIncrease")}
           </p>
         </div>
         <div className="p-3">
@@ -522,7 +532,7 @@ function ThresholdEditor({
             className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
             htmlFor="next-level-threshold"
           >
-            Level {thresholds.length + 1} total XP
+            {t("levelTotalXp", { level: thresholds.length + 1 })}
           </label>
           <div className="mt-2 grid grid-cols-[minmax(0,1fr)_40px] border border-border">
             <input
@@ -546,14 +556,13 @@ function ThresholdEditor({
               onClick={addThreshold}
               disabled={!canAdd}
               className="grid place-items-center border-l border-border text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label={`Add level ${thresholds.length + 1}`}
+              aria-label={t("addLevel", { level: thresholds.length + 1 })}
             >
               <Plus aria-hidden="true" className="size-4" />
             </button>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            {thresholds.length} {thresholds.length === 1 ? "level" : "levels"}{" "}
-            configured
+            {t("levelsConfigured", { count: thresholds.length })}
           </p>
         </div>
       </div>
@@ -563,7 +572,7 @@ function ThresholdEditor({
           role="alert"
           className="border border-destructive/50 px-3 py-2 text-xs text-destructive lg:col-span-2"
         >
-          Every threshold must be greater than the one before it.
+          {t("thresholdOrderError")}
         </p>
       )}
     </div>
@@ -576,29 +585,30 @@ export function LevelCurveSettings({
   onChange,
   earningRate = variant === "voice" ? 5 : 15,
 }: LevelCurveSettingsProps) {
+  const t = useTranslations("LevelCurve");
   return (
     <section
       className="border border-border bg-card"
-      aria-label="Level progression designer"
+      aria-label={t("designer")}
     >
       <div className="flex flex-col justify-between gap-4 border-b border-border px-5 py-5 sm:flex-row sm:items-end lg:px-6">
         <div>
           <h3 className="text-xl font-semibold text-foreground">
-            Level Progression
+            {t("title")}
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Adjust how much activity each new level requires.
+            {t("description")}
           </p>
         </div>
         <div
           className="flex items-center gap-5"
           role="radiogroup"
-          aria-label="Level curve type"
+          aria-label={t("curveType")}
         >
           {(
             [
-              ["FORMULA", "Guided curve"],
-              ["TABLE", "Exact levels"],
+              ["FORMULA", t("guidedCurve")],
+              ["TABLE", t("exactLevels")],
             ] as const
           ).map(([mode, label]) => {
             const active = value.levelCurveType === mode;

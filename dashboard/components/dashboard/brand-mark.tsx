@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 interface BrandMarkProps {
@@ -7,8 +8,10 @@ interface BrandMarkProps {
 }
 
 export function BrandMark({ compact = false, href = '/guilds' }: BrandMarkProps) {
+  const t = useTranslations('Navigation');
+
   return (
-    <Link href={href} className="inline-flex items-center" aria-label="Catto dashboard">
+    <Link href={href} className="inline-flex items-center" aria-label={t('dashboardLabel')}>
       <span
         className={cn(
           'font-mono font-semibold uppercase text-foreground',

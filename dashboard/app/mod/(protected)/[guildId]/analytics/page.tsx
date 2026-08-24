@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useFormatter, useTranslations } from 'next-intl';
 import useSWR from 'swr';
 import {
   LineChart,
@@ -15,8 +16,6 @@ import {
   Cell,
 } from 'recharts';
 import { getEvidenceAnalytics, getCaseAnalytics } from '@/lib/services/mod.service';
-import type { EvidenceAnalytics, CaseAnalytics } from '@/lib/mod-types';
-import { EVIDENCE_TYPE_META } from '@/lib/mod-types';
 
 type Period = '7d' | '30d' | '90d';
 
@@ -26,9 +25,51 @@ const CHART_COLORS = [
   '#ec4899', '#f43f5e', '#f97316', '#eab308',
 ];
 
+function parseBucketDate(value: string | number) {
+  if (typeof value === 'string') {
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (dateOnly) {
+      return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+    }
+  }
+
+  return new Date(value);
+}
+
 export default function AnalyticsPage() {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const { guildId } = useParams() as { guildId: string };
   const [period, setPeriod] = useState<Period>('30d');
+  const evidenceTypeLabel = (type: string) => {
+    switch (type) {
+      case 'IMAGE': return t('evidenceImage'); case 'VIDEO': return t('evidenceVideo');
+      case 'AUDIO': return t('evidenceAudio'); case 'DOCUMENT': return t('evidenceDocument');
+      case 'URL': return t('evidenceUrl'); case 'DISCORD_URL': return t('evidenceDiscordLink');
+      case 'MESSAGE_SNAPSHOT': return t('evidenceSnapshot'); default: return type;
+    }
+  };
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'BAN': return t('actionBan'); case 'UNBAN': return t('actionUnban');
+      case 'KICK': return t('actionKick'); case 'TIMEOUT': return t('actionTimeout');
+      case 'WARN': return t('actionWarning'); case 'SOFTBAN': return t('actionSoftban');
+      case 'TEMPBAN': return t('actionTempban'); case 'MUTE_TEXT': return t('actionMuteText');
+      case 'MUTE_VOICE': return t('actionMuteVoice'); case 'MUTE_BOTH': return t('actionMute');
+      case 'UNMUTE_TEXT': return t('actionUnmuteText'); case 'UNMUTE_VOICE': return t('actionUnmuteVoice');
+      case 'UNMUTE_BOTH': return t('actionUnmute'); default: return action.replace(/_/g, ' ');
+    }
+  };
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const negative = bytes < 0;
+    const abs = Math.abs(bytes);
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const index = Math.min(Math.floor(Math.log(abs) / Math.log(k)), sizes.length - 1);
+    const value = abs / Math.pow(k, index);
+    return `${negative ? '-' : ''}${format.number(value, { maximumFractionDigits: 1 })} ${sizes[index]}`;
+  };
 
   const { data: evidenceAnalytics, isLoading: evidenceLoading } = useSWR(
     ['evidence-analytics', guildId, period],
@@ -49,7 +90,7 @@ export default function AnalyticsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[var(--mono-white)]">Analytics</h1>
+        <h1 className="text-2xl font-bold text-[var(--mono-white)]">{t('analytics')}</h1>
         <div className="flex gap-1">
           {(['7d', '30d', '90d'] as Period[]).map((p) => (
             <button
@@ -61,22 +102,22 @@ export default function AnalyticsPage() {
                   : 'border border-[var(--mod-border)] text-[var(--mod-text-dim)] hover:text-[var(--mod-text-muted)]'
               }`}
             >
-              {p}
+              {t('periodDays', { days: Number.parseInt(p, 10) })}
             </button>
           ))}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="py-12 text-center text-[var(--mod-text-dim)]">Loading analytics...</div>
+        <div className="py-12 text-center text-[var(--mod-text-dim)]">{t('loadingAnalytics')}</div>
       ) : !hasAnyData ? (
         <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-12 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-[var(--mod-border)] bg-[var(--mono-900)]">
             <span className="text-lg text-[var(--mod-text-dim)]">/</span>
           </div>
-          <h3 className="mb-2 text-sm font-medium text-[var(--mono-white)]">No data yet</h3>
+          <h3 className="mb-2 text-sm font-medium text-[var(--mono-white)]">{t('noData')}</h3>
           <p className="mx-auto max-w-xs text-xs text-[var(--mod-text-dim)]">
-            Analytics will appear here once moderation cases and evidence are created in this server.
+            {t('noDataDescription')}
           </p>
         </div>
       ) : (
@@ -84,35 +125,35 @@ export default function AnalyticsPage() {
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <StatCard
-              label="Total Evidence"
-              value={totalEvidence}
+              label={t('totalEvidence')}
+              value={format.number(totalEvidence)}
             />
             <StatCard
-              label="Total Cases"
-              value={totalCases}
+              label={t('totalCases')}
+              value={format.number(totalCases)}
             />
             <StatCard
-              label="Storage Used"
+              label={t('storageUsed')}
               value={formatBytes(evidenceAnalytics?.storageUsage?.totalBytes ?? 0)}
             />
             <StatCard
-              label="Flagged Rate"
-              value={`${((evidenceAnalytics?.flaggedRate ?? 0) * 100).toFixed(1)}%`}
+              label={t('flaggedRate')}
+              value={format.number(evidenceAnalytics?.flaggedRate ?? 0, { style: 'percent', maximumFractionDigits: 1 })}
             />
           </div>
 
           {/* Charts */}
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Evidence volume over time */}
-            <ChartCard title="Evidence Volume">
+            <ChartCard title={t('evidenceVolume')}>
               {!evidenceAnalytics?.volumeOverTime?.length ? (
-                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">No evidence data for this period.</p>
+                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">{t('noEvidencePeriod')}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={evidenceAnalytics.volumeOverTime}>
                     <XAxis
                       dataKey="date"
-                      tickFormatter={(d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      tickFormatter={(date) => format.dateTime(parseBucketDate(date), { month: 'short', day: 'numeric' })}
                       tick={{ fill: 'var(--mod-text-dim)', fontSize: 10 }}
                       axisLine={{ stroke: 'var(--mod-border)' }}
                     />
@@ -135,15 +176,15 @@ export default function AnalyticsPage() {
             </ChartCard>
 
             {/* Cases volume over time */}
-            <ChartCard title="Case Volume">
+            <ChartCard title={t('caseVolume')}>
               {!caseAnalytics?.volumeOverTime?.length ? (
-                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">No case data for this period.</p>
+                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">{t('noCasePeriod')}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={caseAnalytics.volumeOverTime}>
                     <XAxis
                       dataKey="date"
-                      tickFormatter={(d) => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      tickFormatter={(date) => format.dateTime(parseBucketDate(date), { month: 'short', day: 'numeric' })}
                       tick={{ fill: 'var(--mod-text-dim)', fontSize: 10 }}
                       axisLine={{ stroke: 'var(--mod-border)' }}
                     />
@@ -166,16 +207,16 @@ export default function AnalyticsPage() {
             </ChartCard>
 
             {/* Evidence by type */}
-            <ChartCard title="Evidence by Type">
+            <ChartCard title={t('evidenceByType')}>
               {!evidenceAnalytics?.byType || Object.keys(evidenceAnalytics.byType).length === 0 ? (
-                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">No evidence types to display.</p>
+                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">{t('noEvidenceTypes')}</p>
               ) : (
                 <div className="flex items-center gap-4">
                   <ResponsiveContainer width={120} height={120}>
                     <PieChart>
                       <Pie
                         data={Object.entries(evidenceAnalytics.byType).map(([type, count]) => ({
-                          name: EVIDENCE_TYPE_META[type as keyof typeof EVIDENCE_TYPE_META]?.label ?? type,
+                          name: evidenceTypeLabel(type),
                           value: count,
                         }))}
                         innerRadius={30}
@@ -196,7 +237,7 @@ export default function AnalyticsPage() {
                           style={{ background: CHART_COLORS[idx % CHART_COLORS.length] }}
                         />
                         <span className="text-[var(--mod-text-muted)]">
-                          {EVIDENCE_TYPE_META[type as keyof typeof EVIDENCE_TYPE_META]?.label ?? type}
+                          {evidenceTypeLabel(type)}
                         </span>
                         <span className="ml-auto text-[var(--mod-text-dim)]">{count}</span>
                       </div>
@@ -207,9 +248,9 @@ export default function AnalyticsPage() {
             </ChartCard>
 
             {/* Top uploaders */}
-            <ChartCard title="Top Uploaders">
+            <ChartCard title={t('topUploaders')}>
               {!evidenceAnalytics?.topUploaders?.length ? (
-                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">No uploads recorded yet.</p>
+                <p className="py-6 text-center text-xs text-[var(--mod-text-dim)]">{t('noUploads')}</p>
               ) : (
                 <div className="space-y-2">
                   {evidenceAnalytics.topUploaders.slice(0, 5).map((uploader, idx) => (
@@ -229,7 +270,7 @@ export default function AnalyticsPage() {
           {/* Cases by Action breakdown */}
           {caseAnalytics?.byAction && (
             <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
-              <h3 className="mb-3 text-sm font-medium text-[var(--mono-white)]">Cases by Action</h3>
+              <h3 className="mb-3 text-sm font-medium text-[var(--mono-white)]">{t('casesByAction')}</h3>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 {Object.entries(caseAnalytics.byAction)
                   .sort(([, a], [, b]) => b - a)
@@ -240,7 +281,7 @@ export default function AnalyticsPage() {
                     >
                       <div className="text-lg font-bold text-[var(--mono-white)]">{count}</div>
                       <div className="text-[10px] uppercase tracking-wider text-[var(--mod-text-dim)]">
-                        {action.replace(/_/g, ' ')}
+                        {actionLabel(action)}
                       </div>
                     </div>
                   ))}
@@ -269,15 +310,4 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
       {children}
     </div>
   );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const negative = bytes < 0;
-  const abs = Math.abs(bytes);
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  const i = Math.min(Math.floor(Math.log(abs) / Math.log(k)), sizes.length - 1);
-  const value = parseFloat((abs / Math.pow(k, i)).toFixed(1));
-  return `${negative ? '-' : ''}${value} ${sizes[i]}`;
 }

@@ -1,7 +1,17 @@
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render as testingLibraryRender, screen, fireEvent, cleanup } from '@testing-library/react';
 import type { Evidence } from '@/lib/mod-types';
+import { NextIntlClientProvider } from 'next-intl';
+import messages from '@/messages/en-US.json';
+
+function render(ui: React.ReactNode) {
+  return testingLibraryRender(
+    <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
 
 // ── Hoisted mocks ──
 const { mockGetEvidenceViewUrl, mockGetEvidenceHistory, mockAmendEvidence, mockUseSWR } =
@@ -261,7 +271,7 @@ describe('EvidenceViewer', () => {
 
     // Switch to amend tab
     fireEvent.click(screen.getByText('Amend'));
-    expect(screen.getByText('Submit Amendment')).toBeInTheDocument();
+    expect(screen.getByText('Submit amendment')).toBeInTheDocument();
 
     // Switch back to details
     fireEvent.click(screen.getByText('Details'));
@@ -315,7 +325,7 @@ describe('EvidenceViewer', () => {
 
     renderViewer({ type: 'IMAGE', storageKey: 'key.png' });
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
   });
 
   it('shows error state when URL fetch fails', () => {

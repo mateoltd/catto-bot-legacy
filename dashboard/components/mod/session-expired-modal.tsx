@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
 import { onSessionExpired } from '@/lib/auth-events';
 import { IconAlertTriangle } from '@/lib/mod-icons';
 
@@ -35,6 +36,7 @@ function getServerSnapshot() {
 
 export function SessionExpiredModal() {
   const isExpired = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const t = useTranslations('Session');
 
   if (!isExpired) return null;
 
@@ -56,21 +58,20 @@ export function SessionExpiredModal() {
             <IconAlertTriangle size={20} className="text-amber-400" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-[var(--mono-white)]">Session Expired</h2>
-            <p className="text-sm text-[var(--mod-text-muted)]">Please log in again to continue</p>
+            <h2 className="text-base font-semibold text-[var(--mono-white)]">{t('expiredTitle')}</h2>
+            <p className="text-sm text-[var(--mod-text-muted)]">{t('expiredSubtitle')}</p>
           </div>
         </div>
 
         <p className="mb-6 text-sm text-[var(--mod-text-muted)]">
-          Your session has expired or is no longer valid. Click below to authenticate with Discord
-          and resume your work.
+          {t('expiredDescription')}
         </p>
 
         <button
           onClick={handleLogin}
           className="w-full border border-[var(--mod-border)] bg-[var(--mono-800)] px-4 py-2.5 text-sm font-medium text-[var(--mono-white)] transition-colors hover:bg-[var(--mono-700)]"
         >
-          Log in with Discord
+          {t('login')}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
+import { useTranslations } from 'next-intl';
 import { useLoggingConfig } from '@/hooks/use-logging-config';
 import { useGuildData } from '@/hooks/use-guild-data';
 import { loggingService, type LogType } from '@/lib/services/logging.service';
@@ -48,6 +49,7 @@ const LOG_TYPE_ICONS: Record<string, string> = {
 };
 
 export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
+  const t = useTranslations('Logging');
   const { config, loading, saving, error, updateConfig, setIgnoredChannels, refetch, setConfig } =
     useLoggingConfig(guildId);
   const { channels, loading: loadingChannels } = useGuildData(guildId);
@@ -72,7 +74,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
     'leaves',
     'members',
   ]);
-  const [categoryName, setCategoryName] = useState('Admin Logs');
+  const [categoryName, setCategoryName] = useState(t('defaultCategoryName'));
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
 
@@ -80,6 +82,28 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
   const [togglingLogTypes, setTogglingLogTypes] = useState<Set<LogType>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const logTypeCopy = (key: string) => {
+    switch (key) {
+      case 'messages': return { name: t('typeMessages'), description: t('typeMessagesDescription') };
+      case 'voice': return { name: t('typeVoice'), description: t('typeVoiceDescription') };
+      case 'voiceState': return { name: t('typeVoiceState'), description: t('typeVoiceStateDescription') };
+      case 'joins': return { name: t('typeJoins'), description: t('typeJoinsDescription') };
+      case 'leaves': return { name: t('typeLeaves'), description: t('typeLeavesDescription') };
+      case 'members': return { name: t('typeMembers'), description: t('typeMembersDescription') };
+      case 'roles': return { name: t('typeRoles'), description: t('typeRolesDescription') };
+      case 'channels': return { name: t('typeChannels'), description: t('typeChannelsDescription') };
+      case 'server': return { name: t('typeServer'), description: t('typeServerDescription') };
+      case 'emojis': return { name: t('typeEmojis'), description: t('typeEmojisDescription') };
+      case 'stickers': return { name: t('typeStickers'), description: t('typeStickersDescription') };
+      case 'webhooks': return { name: t('typeWebhooks'), description: t('typeWebhooksDescription') };
+      case 'events': return { name: t('typeEvents'), description: t('typeEventsDescription') };
+      case 'stage': return { name: t('typeStage'), description: t('typeStageDescription') };
+      case 'polls': return { name: t('typePolls'), description: t('typePollsDescription') };
+      case 'tickets': return { name: t('typeTickets'), description: t('typeTicketsDescription') };
+      case 'transcripts': return { name: t('typeTranscripts'), description: t('typeTranscriptsDescription') };
+      default: return null;
+    }
+  };
 
   const localIgnoredChannels = ignoredChannelsDraft ?? config?.ignoredChannels ?? [];
   const hasChanges = config
@@ -171,7 +195,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
           <CardContent className="py-12">
             <div className="flex items-center justify-center gap-3">
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-muted-foreground">Loading logging configuration...</span>
+              <span className="text-muted-foreground">{t('loading')}</span>
             </div>
           </CardContent>
         </Card>
@@ -183,7 +207,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
   if (config && !config.setup) {
     const handleSetup = async () => {
       if (selectedLogTypes.length === 0) {
-        setSetupError('Please select at least one log type');
+        setSetupError(t('selectOneTypeError'));
         return;
       }
 
@@ -199,7 +223,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
         refetch();
         mutateLogTypes();
       } catch (err) {
-        setSetupError(err instanceof Error ? err.message : 'Failed to setup logging');
+        setSetupError(err instanceof Error ? err.message : t('setupFailed'));
       } finally {
         setIsSettingUp(false);
       }
@@ -217,9 +241,9 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Event Logging</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
           <p className="text-muted-foreground mt-1">
-            Track and log server events to dedicated channels
+            {t('description')}
           </p>
         </div>
 
@@ -239,7 +263,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
               />
             </svg>
             <div>
-              <h3 className="text-sm font-medium text-destructive">Setup Error</h3>
+              <h3 className="text-sm font-medium text-destructive">{t('setupError')}</h3>
               <p className="text-sm text-destructive/80 mt-1">{setupError}</p>
             </div>
           </div>
@@ -247,36 +271,35 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
 
         <Card variant="glass">
           <CardHeader>
-            <CardTitle>Setup Logging System</CardTitle>
+            <CardTitle>{t('setupTitle')}</CardTitle>
             <CardDescription>
-              Select which events you want to log. This will create a private category with
-              dedicated channels for each log type.
+              {t('setupDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Category Name */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Category Name
+                {t('categoryName')}
               </label>
               <Input
                 value={categoryName}
                 onChange={(e) => setCategoryName(e.target.value)}
-                placeholder="Admin Logs"
+                placeholder={t('defaultCategoryName')}
                 className="max-w-xs"
               />
               <p className="text-xs text-muted-foreground mt-1.5">
-                The name for the log channels category
+                {t('categoryNameDescription')}
               </p>
             </div>
 
             {/* Quick Select */}
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={selectAllCore}>
-                Select Core
+                {t('selectCore')}
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={selectAll}>
-                Select All
+                {t('selectAll')}
               </Button>
               <Button
                 type="button"
@@ -284,33 +307,39 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
                 size="sm"
                 onClick={() => setSelectedLogTypes([])}
               >
-                Clear
+                {t('clear')}
               </Button>
             </div>
 
             {/* Core Log Types */}
             <div>
-              <h4 className="text-sm font-medium text-foreground mb-3">Core Logs</h4>
+              <h4 className="text-sm font-medium text-foreground mb-3">{t('coreLogs')}</h4>
               <MultiSelectList
                 items={logTypes
                   .filter((type) => type.category === 'core')
-                  .map((type) => ({ value: type.key, label: type.name, description: type.description }))}
+                  .map((type) => {
+                    const copy = logTypeCopy(type.key);
+                    return { value: type.key, label: copy?.name ?? type.name, description: copy?.description ?? type.description };
+                  })}
                 value={selectedLogTypes}
                 onValueChange={(value) => setSelectedLogTypes(value as LogType[])}
-                searchPlaceholder="Filter core logs…"
+                searchPlaceholder={t('filterCoreLogs')}
               />
             </div>
 
             {/* Advanced Log Types */}
             <div>
-              <h4 className="text-sm font-medium text-foreground mb-3">Advanced Logs</h4>
+              <h4 className="text-sm font-medium text-foreground mb-3">{t('advancedLogs')}</h4>
               <MultiSelectList
                 items={logTypes
                   .filter((type) => type.category === 'advanced')
-                  .map((type) => ({ value: type.key, label: type.name, description: type.description }))}
+                  .map((type) => {
+                    const copy = logTypeCopy(type.key);
+                    return { value: type.key, label: copy?.name ?? type.name, description: copy?.description ?? type.description };
+                  })}
                 value={selectedLogTypes}
                 onValueChange={(value) => setSelectedLogTypes(value as LogType[])}
-                searchPlaceholder="Filter advanced logs…"
+                searchPlaceholder={t('filterAdvancedLogs')}
               />
             </div>
 
@@ -318,8 +347,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
             <div className="pt-4 border-t border-border/50">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {selectedLogTypes.length} log type{selectedLogTypes.length !== 1 ? 's' : ''}{' '}
-                  selected
+                  {t('selectedTypeCount', { count: selectedLogTypes.length })}
                 </p>
                 <Button
                   variant="neon"
@@ -329,7 +357,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
                   {isSettingUp ? (
                     <>
                       <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Setting up...
+                      {t('settingUp')}
                     </>
                   ) : (
                     <>
@@ -346,14 +374,13 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                         />
                       </svg>
-                      Setup Logging
+                      {t('setupButton')}
                     </>
                   )}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                This will create a private category and channels in your server. Make sure the bot
-                has &quot;Manage Channels&quot; and &quot;Manage Webhooks&quot; permissions.
+                {t('setupPermissionNote')}
               </p>
             </div>
           </CardContent>
@@ -367,9 +394,9 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       {/* Page Header */}
       <div>
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Event Logging</h2>
+          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
           <p className="text-muted-foreground mt-1">
-            Track and log server events to dedicated channels
+            {t('description')}
           </p>
         </div>
       </div>
@@ -391,7 +418,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
             />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-destructive">Error</h3>
+            <h3 className="text-sm font-medium text-destructive">{t('errorTitle')}</h3>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
           </div>
         </div>
@@ -408,8 +435,8 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-success">Success</h3>
-            <p className="text-sm text-success/80 mt-1">Configuration saved successfully!</p>
+            <h3 className="text-sm font-medium text-success">{t('successTitle')}</h3>
+            <p className="text-sm text-success/80 mt-1">{t('saved')}</p>
           </div>
         </div>
       )}
@@ -417,14 +444,14 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       {/* General Settings */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
+          <CardTitle>{t('generalSettings')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Enabled Toggle */}
           <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
             <div>
-              <label className="text-sm font-medium text-foreground">Enable Logging System</label>
-              <p className="text-sm text-muted-foreground">Master toggle for all logging events</p>
+              <label className="text-sm font-medium text-foreground">{t('enableSystem')}</label>
+              <p className="text-sm text-muted-foreground">{t('enableSystemDescription')}</p>
             </div>
             <Switch
               checked={config?.enabled ?? false}
@@ -438,8 +465,8 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       {/* Ignored Channels */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>Ignored Channels</CardTitle>
-          <CardDescription>Events from these channels will not be logged</CardDescription>
+          <CardTitle>{t('ignoredChannels')}</CardTitle>
+          <CardDescription>{t('ignoredChannelsDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingChannels ? (
@@ -451,14 +478,14 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
               items={channels.map((channel) => ({ value: channel.id, label: channel.name, prefix: '#' }))}
               value={localIgnoredChannels}
               onValueChange={setLocalIgnoredChannels}
-              emptyLabel="No channels available"
-              searchPlaceholder="Filter channels…"
+              emptyLabel={t('noChannels')}
+              searchPlaceholder={t('filterChannels')}
             />
           )}
           <p className="text-xs text-muted-foreground mt-2">
             {localIgnoredChannels.length === 0
-              ? 'No channels are being ignored'
-              : `${localIgnoredChannels.length} channel${localIgnoredChannels.length === 1 ? '' : 's'} will be ignored`}
+              ? t('noIgnoredChannels')
+              : t('ignoredChannelCount', { count: localIgnoredChannels.length })}
           </p>
         </CardContent>
       </Card>
@@ -466,9 +493,9 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       {/* Log Types Status */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>Log Types</CardTitle>
+          <CardTitle>{t('logTypes')}</CardTitle>
           <CardDescription>
-            Toggle log types on or off. Enabling a log type will create a channel if needed.
+            {t('logTypesDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -479,6 +506,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
           ) : (
             <div className="divide-y divide-border border border-border bg-input">
               {logTypes.map((logType) => {
+                const copy = logTypeCopy(logType.key);
                 const isEnabled = logType.enabled;
                 const isToggling = togglingLogTypes.has(logType.key as LogType);
                 return (
@@ -510,11 +538,11 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
                         <p
                           className={`text-sm font-medium ${isEnabled ? 'text-foreground' : 'text-muted-foreground'}`}
                         >
-                          {logType.name}
+                          {copy?.name ?? logType.name}
                         </p>
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
-                        {logType.description}
+                        {copy?.description ?? logType.description}
                       </p>
                     </div>
                     <div className="flex-shrink-0">
@@ -547,15 +575,15 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       {/* Danger Zone - Delete Logging */}
       <Card variant="glass" className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions for the logging system</CardDescription>
+          <CardTitle className="text-destructive">{t('dangerZone')}</CardTitle>
+          <CardDescription>{t('dangerZoneDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between p-4 bg-destructive/5 border border-destructive/20">
             <div>
-              <p className="text-sm font-medium text-foreground">Delete Logging System</p>
+              <p className="text-sm font-medium text-foreground">{t('deleteSystem')}</p>
               <p className="text-sm text-muted-foreground">
-                Remove all log channels and the category from your server
+                {t('deleteSystemDescription')}
               </p>
             </div>
             {confirmDelete ? (
@@ -566,7 +594,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
                   onClick={() => setConfirmDelete(false)}
                   disabled={isDeleting}
                 >
-                  Cancel
+                  {t('cancel')}
                 </Button>
                 <Button
                   variant="destructive"
@@ -577,16 +605,16 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
                   {isDeleting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Deleting...
+                      {t('deleting')}
                     </>
                   ) : (
-                    'Confirm Delete'
+                    t('confirmDelete')
                   )}
                 </Button>
               </div>
             ) : (
               <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-                Delete
+                {t('delete')}
               </Button>
             )}
           </div>

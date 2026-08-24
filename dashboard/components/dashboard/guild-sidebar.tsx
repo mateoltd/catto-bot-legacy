@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { GuildNavigationLink } from '@/components/dashboard/guild-navigation-link';
 import { ServerAccessBadges } from '@/components/dashboard/server-access-badges';
 import {
@@ -23,6 +24,8 @@ interface GuildSidebarProps {
 
 export function GuildSidebar({ guild, access, account, onNavigate }: GuildSidebarProps) {
   const pathname = usePathname();
+  const locale = useLocale();
+  const t = useTranslations('Navigation');
   const iconUrl = guild.icon
     ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=96`
     : null;
@@ -35,7 +38,7 @@ export function GuildSidebar({ guild, access, account, onNavigate }: GuildSideba
             <Image src={iconUrl} alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
           ) : (
             <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-muted font-mono text-sm text-foreground">
-              {guild.name.charAt(0).toLocaleUpperCase()}
+              {guild.name.charAt(0).toLocaleUpperCase(locale)}
             </div>
           )}
           <div className="min-w-0">
@@ -50,7 +53,7 @@ export function GuildSidebar({ guild, access, account, onNavigate }: GuildSideba
       </div>
 
       <nav className="flex-1 overflow-y-auto p-2">
-        {getGuildNavigation(guild.id, access).map((section) => (
+        {getGuildNavigation(guild.id, access, t).map((section) => (
           <div key={section.label} className="mb-4">
             <p className="mb-1 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
               {section.label}

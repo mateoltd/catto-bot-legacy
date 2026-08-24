@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +8,15 @@ import {
   type LevelCurveValue,
 } from "@/components/xp/level-curve-settings";
 import { XPAwardSettings } from "@/components/xp/xp-award-settings";
+import messages from "@/messages/en-US.json";
+
+function Intl({ children }: { children: React.ReactNode }) {
+  return (
+    <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+      {children}
+    </NextIntlClientProvider>
+  );
+}
 
 describe("XP settings", () => {
   it("edits the text award strategy and reflects it in the live rule", () => {
@@ -32,7 +42,7 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
     expect(screen.getAllByText(/10–20 XP/)).not.toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Exact" }));
@@ -67,7 +77,7 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
 
     expect(screen.getByLabelText("Voice XP award engine")).toBeInTheDocument();
     expect(screen.getByLabelText("Session duration")).toHaveValue(1);
@@ -118,7 +128,7 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
     fireEvent.change(screen.getByLabelText("Level 3 total XP"), {
       target: { value: "475" },
     });
@@ -156,7 +166,7 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
 
     const curve = screen.getByLabelText("Interactive XP requirement curve");
     expect(curve).toBeInTheDocument();

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
 
 interface ModerationSectionProps {
   enableNameModeration: boolean;
@@ -18,6 +19,7 @@ export default function ModerationSection({
   blockedKeywords,
   onUpdate,
 }: ModerationSectionProps) {
+  const t = useTranslations('TempVoice');
   const handleKeywordsChange = (value: string) => {
     const keywords = value
       .split(',')
@@ -29,19 +31,19 @@ export default function ModerationSection({
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle>Name Moderation</CardTitle>
+        <CardTitle>{t('nameModeration')}</CardTitle>
         <CardDescription>
-          Filter inappropriate channel names automatically
+          {t('nameModerationDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
           <div>
             <label className="text-sm font-medium text-foreground">
-              Enable Name Moderation
+              {t('enableNameModeration')}
             </label>
             <p className="text-sm text-muted-foreground">
-              Automatically check channel names against blocked keywords
+              {t('enableNameModerationDescription')}
             </p>
           </div>
           <Switch
@@ -53,15 +55,15 @@ export default function ModerationSection({
         {enableNameModeration && (
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Blocked Keywords
+              {t('blockedKeywords')}
             </label>
             <Input
               value={blockedKeywords.join(', ')}
               onChange={(e) => handleKeywordsChange(e.target.value)}
-              placeholder="word1, word2, word3"
+              placeholder={t('blockedKeywordsPlaceholder')}
             />
             <p className="text-xs text-muted-foreground mt-1.5">
-              Comma-separated list of keywords that will be blocked in channel names
+              {t('blockedKeywordsDescription')}
             </p>
           </div>
         )}
