@@ -107,7 +107,7 @@ export default function GuildPageLayout({
           ))}
         </nav>
 
-        <div className="grid min-h-0 w-full flex-1 md:grid-cols-[224px_minmax(0,1fr)]">
+        <div className="grid min-h-0 w-full flex-1 md:grid-cols-[208px_minmax(0,1fr)]">
           <aside className="hidden min-h-0 border-r border-border bg-card md:flex md:flex-col">
             <GuildSidebar
               guild={guild}

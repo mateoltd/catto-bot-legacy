@@ -24,7 +24,7 @@ export function DashboardTopbar({
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <div
         className={cn(
-          'flex h-12 w-full items-center justify-between px-4 sm:px-6',
+          'flex h-10 w-full items-center justify-between px-4 sm:px-6',
           contentClassName,
         )}
       >

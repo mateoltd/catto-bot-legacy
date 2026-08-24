@@ -194,7 +194,7 @@ export default function GuildModLayout({
     return (
       <div className="min-h-screen bg-[var(--mod-bg)]">
         {topbar}
-        <div className="flex min-h-[calc(100vh-3rem)] items-center justify-center">
+        <div className="flex min-h-[calc(100vh-2.5rem)] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="h-5 w-5 animate-spin border-2 border-[var(--mod-text-dim)] border-t-[var(--mono-white)]" />
             <p
@@ -213,7 +213,7 @@ export default function GuildModLayout({
     return (
       <div className="min-h-screen bg-[var(--mod-bg)]">
         {topbar}
-        <div className="flex min-h-[calc(100vh-3rem)] items-center justify-center">
+        <div className="flex min-h-[calc(100vh-2.5rem)] items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="text-3xl text-[var(--mod-text-dim)]">
               <IconShieldCheck size={48} />
@@ -249,8 +249,8 @@ export default function GuildModLayout({
   return (
     <div className="min-h-screen bg-[var(--mod-bg)]">
       {topbar}
-      <div className="flex min-h-[calc(100vh-3rem)]">
-        <aside className="sticky top-12 hidden h-[calc(100vh-3rem)] w-56 flex-col border-r border-[var(--mod-border)] bg-[var(--mod-surface)] md:flex">
+      <div className="flex min-h-[calc(100vh-2.5rem)]">
+        <aside className="sticky top-10 hidden h-[calc(100vh-2.5rem)] w-52 flex-col border-r border-[var(--mod-border)] bg-[var(--mod-surface)] md:flex">
           {sidebarContent}
         </aside>
 
@@ -260,7 +260,7 @@ export default function GuildModLayout({
               className="fixed inset-0 z-40 bg-black/60 md:hidden"
               onClick={closeSidebar}
             />
-            <aside className="fixed inset-y-0 left-0 z-50 flex w-56 flex-col border-r border-[var(--mod-border)] bg-[var(--mod-surface)] md:hidden">
+            <aside className="fixed inset-y-0 left-0 z-50 flex w-52 flex-col border-r border-[var(--mod-border)] bg-[var(--mod-surface)] md:hidden">
               <div className="flex justify-end p-2">
                 <button
                   type="button"
