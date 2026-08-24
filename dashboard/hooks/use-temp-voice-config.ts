@@ -22,11 +22,7 @@ export interface LocalTempVoiceConfig {
   defaultLocked: boolean;
   defaultHidden: boolean;
   ownerLeaveStrategy: OwnerLeaveStrategy;
-  autoDeleteEmpty: boolean;
   deleteEmptyAfterMs: number;
-  autoDeleteOwnerLeave: boolean;
-  deleteOwnerLeaveAfterMs: number;
-  allowOwnerTransfer: boolean;
   allowOwnerManagement: boolean;
   enableNameModeration: boolean;
   blockedKeywords: string[];
@@ -42,11 +38,7 @@ function buildLocalConfig(config: TempVoiceConfig | null): LocalTempVoiceConfig 
     defaultLocked: config?.defaultLocked ?? false,
     defaultHidden: config?.defaultHidden ?? false,
     ownerLeaveStrategy: config?.ownerLeaveStrategy || 'TRANSFER',
-    autoDeleteEmpty: config?.autoDeleteEmpty ?? true,
     deleteEmptyAfterMs: config?.deleteEmptyAfterMs || 60000,
-    autoDeleteOwnerLeave: config?.autoDeleteOwnerLeave ?? false,
-    deleteOwnerLeaveAfterMs: config?.deleteOwnerLeaveAfterMs || 300000,
-    allowOwnerTransfer: config?.allowOwnerTransfer ?? true,
     allowOwnerManagement: config?.allowOwnerManagement ?? true,
     enableNameModeration: config?.enableNameModeration ?? false,
     blockedKeywords: config?.blockedKeywords ?? [],
@@ -116,11 +108,7 @@ export function useTempVoiceConfig(guildId: string) {
       server.defaultLocked !== localConfig.defaultLocked ||
       server.defaultHidden !== localConfig.defaultHidden ||
       server.ownerLeaveStrategy !== localConfig.ownerLeaveStrategy ||
-      server.autoDeleteEmpty !== localConfig.autoDeleteEmpty ||
       server.deleteEmptyAfterMs !== localConfig.deleteEmptyAfterMs ||
-      server.autoDeleteOwnerLeave !== localConfig.autoDeleteOwnerLeave ||
-      server.deleteOwnerLeaveAfterMs !== localConfig.deleteOwnerLeaveAfterMs ||
-      server.allowOwnerTransfer !== localConfig.allowOwnerTransfer ||
       server.allowOwnerManagement !== localConfig.allowOwnerManagement ||
       server.enableNameModeration !== localConfig.enableNameModeration ||
       JSON.stringify(server.blockedKeywords) !== JSON.stringify(localConfig.blockedKeywords)

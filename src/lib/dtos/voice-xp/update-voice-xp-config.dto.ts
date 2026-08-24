@@ -13,11 +13,11 @@ import {
   Min,
   Max,
   Length,
-  ArrayMinSize,
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsDiscordId, IsDiscordIdArray } from '#lib/validation/decorators/discord.decorators.js';
+import { HasThresholdsForTableCurve } from '#lib/validation/decorators/xp.decorators.js';
 
 export enum VoiceXPMode {
   PER_MINUTE = 'PER_MINUTE',
@@ -177,7 +177,7 @@ export class UpdateVoiceXPConfigDto {
 
   @IsArray()
   @IsOptional()
-  @ArrayMinSize(1, { message: 'tableThresholds must contain at least one value' })
+  @HasThresholdsForTableCurve()
   @Type(() => Number)
   tableThresholds?: number[];
 }

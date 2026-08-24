@@ -185,8 +185,17 @@ describe('UpdateXPConfigDto', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects empty table thresholds', async () => {
+    it('accepts empty table thresholds for formula curves', async () => {
       const result = await validateDto(UpdateXPConfigDto, {
+        levelCurveType: LevelCurveType.FORMULA,
+        tableThresholds: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects empty table thresholds for table curves', async () => {
+      const result = await validateDto(UpdateXPConfigDto, {
+        levelCurveType: LevelCurveType.TABLE,
         tableThresholds: [],
       });
       expect(result.success).toBe(false);
@@ -214,6 +223,7 @@ describe('UpdateXPConfigDto', () => {
         formulaBase: 100,
         formulaExponent: 1.2,
         formulaOffset: 0,
+        tableThresholds: [],
       };
 
       const result = await validateDto(UpdateXPConfigDto, validConfig);

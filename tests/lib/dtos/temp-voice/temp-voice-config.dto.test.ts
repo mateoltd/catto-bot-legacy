@@ -233,6 +233,22 @@ describe('UpdateTempVoiceConfigDto', () => {
     expect(result.success).toBe(true);
   });
 
+  it('preserves every supported dashboard setting', async () => {
+    const dashboardSettings = {
+      defaultLocked: true,
+      defaultHidden: true,
+      ownerLeaveStrategy: 'DELETE',
+      allowOwnerManagement: false,
+      enableNameModeration: true,
+      blockedKeywords: ['spam', 'scam'],
+    };
+
+    const result = await validateDto(UpdateTempVoiceConfigDto, dashboardSettings);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject(dashboardSettings);
+  });
+
   it('validates provided fields', async () => {
     const result = await validateDto(UpdateTempVoiceConfigDto, {
       userLimit: 150, // Invalid

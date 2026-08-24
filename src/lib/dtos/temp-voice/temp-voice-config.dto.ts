@@ -18,6 +18,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsDiscordId, IsDiscordIdArray } from '#lib/validation/decorators/discord.decorators.js';
+import { OwnerLeaveStrategy } from '#modules/temp-voice/constants.js';
 
 export enum NamingScheme {
   USERNAME = 'username',
@@ -67,10 +68,24 @@ export class CreateTempVoiceConfigDto {
 
   @IsBoolean()
   @Type(() => Boolean)
+  defaultLocked: boolean = false;
+
+  @IsBoolean()
+  @Type(() => Boolean)
+  defaultHidden: boolean = false;
+
+  @IsEnum(OwnerLeaveStrategy, {
+    message: 'ownerLeaveStrategy must be TRANSFER, KEEP, or DELETE',
+  })
+  ownerLeaveStrategy: OwnerLeaveStrategy = OwnerLeaveStrategy.TRANSFER;
+
+  @IsBoolean()
+  @Type(() => Boolean)
   autoDeleteEmpty: boolean = true;
 
   @IsNumber()
   @Min(0, { message: 'deleteEmptyAfterMs must be >= 0' })
+  @Max(300000, { message: 'deleteEmptyAfterMs must be <= 300000 (5 minutes)' })
   @Type(() => Number)
   deleteEmptyAfterMs: number = 60000;
 
@@ -90,6 +105,14 @@ export class CreateTempVoiceConfigDto {
   @IsBoolean()
   @Type(() => Boolean)
   allowOwnerManagement: boolean = true;
+
+  @IsBoolean()
+  @Type(() => Boolean)
+  enableNameModeration: boolean = false;
+
+  @IsArray()
+  @IsString({ each: true })
+  blockedKeywords: string[] = [];
 
   @IsNumber()
   @Min(1, { message: 'maxChannelsPerUser must be between 1 and 10' })
@@ -155,11 +178,28 @@ export class UpdateTempVoiceConfigDto {
   @IsBoolean()
   @IsOptional()
   @Type(() => Boolean)
+  defaultLocked?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Type(() => Boolean)
+  defaultHidden?: boolean;
+
+  @IsEnum(OwnerLeaveStrategy, {
+    message: 'ownerLeaveStrategy must be TRANSFER, KEEP, or DELETE',
+  })
+  @IsOptional()
+  ownerLeaveStrategy?: OwnerLeaveStrategy;
+
+  @IsBoolean()
+  @IsOptional()
+  @Type(() => Boolean)
   autoDeleteEmpty?: boolean;
 
   @IsNumber()
   @IsOptional()
   @Min(0, { message: 'deleteEmptyAfterMs must be >= 0' })
+  @Max(300000, { message: 'deleteEmptyAfterMs must be <= 300000 (5 minutes)' })
   @Type(() => Number)
   deleteEmptyAfterMs?: number;
 
@@ -183,6 +223,16 @@ export class UpdateTempVoiceConfigDto {
   @IsOptional()
   @Type(() => Boolean)
   allowOwnerManagement?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Type(() => Boolean)
+  enableNameModeration?: boolean;
+
+  @IsArray()
+  @IsOptional()
+  @IsString({ each: true })
+  blockedKeywords?: string[];
 
   @IsNumber()
   @IsOptional()

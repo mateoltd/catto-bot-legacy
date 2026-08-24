@@ -18,6 +18,25 @@ describe('UpdateVoiceXPConfigDto', () => {
     expect(tableResult.success).toBe(true);
   });
 
+  it('accepts an empty threshold list for formula curves', async () => {
+    const result = await validateDto(UpdateVoiceXPConfigDto, {
+      levelCurveType: VoiceLevelCurveType.FORMULA,
+      tableThresholds: [],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an empty threshold list for table curves', async () => {
+    const result = await validateDto(UpdateVoiceXPConfigDto, {
+      levelCurveType: VoiceLevelCurveType.TABLE,
+      tableThresholds: [],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errors?.some((error) => error.field === 'tableThresholds')).toBe(true);
+  });
+
   it('accepts legacy curve type values for backward compatibility', async () => {
     const legacyTypes: Array<keyof typeof VoiceLevelCurveType> = [
       'LINEAR',

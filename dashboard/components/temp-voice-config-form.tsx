@@ -68,11 +68,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       defaultLocked: localConfig.defaultLocked,
       defaultHidden: localConfig.defaultHidden,
       ownerLeaveStrategy: localConfig.ownerLeaveStrategy,
-      autoDeleteEmpty: localConfig.autoDeleteEmpty,
       deleteEmptyAfterMs: localConfig.deleteEmptyAfterMs,
-      autoDeleteOwnerLeave: localConfig.autoDeleteOwnerLeave,
-      deleteOwnerLeaveAfterMs: localConfig.deleteOwnerLeaveAfterMs,
-      allowOwnerTransfer: localConfig.allowOwnerTransfer,
       allowOwnerManagement: localConfig.allowOwnerManagement,
       enableNameModeration: localConfig.enableNameModeration,
       blockedKeywords: localConfig.blockedKeywords,
@@ -256,15 +252,11 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       />
 
       <DeletionSection
-        autoDeleteEmpty={localConfig.autoDeleteEmpty}
         deleteEmptyAfterMs={localConfig.deleteEmptyAfterMs}
-        autoDeleteOwnerLeave={localConfig.autoDeleteOwnerLeave}
-        deleteOwnerLeaveAfterMs={localConfig.deleteOwnerLeaveAfterMs}
         onUpdate={(updates) => setLocalConfig((prev) => ({ ...prev, ...updates }))}
       />
 
       <PermissionsSection
-        allowOwnerTransfer={localConfig.allowOwnerTransfer}
         allowOwnerManagement={localConfig.allowOwnerManagement}
         onUpdate={(updates) => setLocalConfig((prev) => ({ ...prev, ...updates }))}
       />
