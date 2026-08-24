@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OptionSelector } from '@/components/ui/option-selector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { TempVoiceSetupRequest } from '@/lib/services/temp-voice.service';
 import type { Channel } from '@/lib/types';
 
@@ -161,18 +162,21 @@ export default function SetupWizard({
                   Loading channels...
                 </div>
               ) : voiceChannels.length > 0 ? (
-                <select
+                <Select
                   value={selectedChannelId}
-                  onChange={(e) => setSelectedChannelId(e.target.value)}
-                  className="w-full border border-border bg-input px-4 py-3 text-foreground outline-none"
+                  onValueChange={setSelectedChannelId}
                 >
-                  <option value="">Select a voice channel...</option>
-                  {voiceChannels.map((channel) => (
-                    <option key={channel.id} value={channel.id}>
-                      {channel.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a voice channel..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {voiceChannels.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id}>
+                        {channel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <p className="text-sm text-muted-foreground py-2">
                   No voice channels found in this server.

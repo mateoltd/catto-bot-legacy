@@ -7,6 +7,7 @@ import type { VoiceXPConfig } from '@/lib/services/voice-xp.service';
 import { voiceXPService } from '@/lib/services/voice-xp.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ColorField } from '@/components/ui/color-field';
 import { ChannelFilterList } from '@/components/ui/channel-filter-list';
@@ -358,23 +359,27 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Announcement Channel (Optional)
                   </label>
-                  <select
-                    value={config.announceChannelId || ''}
-                    onChange={(e) =>
+                  <Select
+                    value={config.announceChannelId || '_none'}
+                    onValueChange={(value) =>
                       setConfig((prev) => ({
                         ...prev,
-                        announceChannelId: e.target.value || null,
+                        announceChannelId: value === '_none' ? null : value,
                       }))
                     }
-                    className="w-full px-4 py-3 bg-input border border-border text-foreground outline-none"
                   >
-                    <option value="">No announcement channel</option>
-                    {textChannels.map((channel) => (
-                      <option key={channel.id} value={channel.id}>
-                        # {channel.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">No announcement channel</SelectItem>
+                      {textChannels.map((channel) => (
+                        <SelectItem key={channel.id} value={channel.id}>
+                          # {channel.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground mt-1.5">
                     Set a channel to enable voice level-up announcements
                   </p>

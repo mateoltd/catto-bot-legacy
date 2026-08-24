@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { TempVoiceConfig } from '@/lib/services/temp-voice.service';
 import type { Channel } from '@/lib/types';
 
@@ -63,25 +64,24 @@ export default function JoinChannelsSection({
             <label className="block text-sm font-medium text-foreground mb-2">
               Add Join Channel
             </label>
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  onAddJoinChannel(e.target.value);
-                  e.target.value = '';
-                }
-              }}
-              className="w-full border border-border bg-input px-4 py-3 text-foreground outline-none"
+            <Select
+              value=""
+              onValueChange={onAddJoinChannel}
               disabled={saving}
             >
-              <option value="">Select a voice channel...</option>
-              {voiceChannels
-                .filter((c) => !config.joinChannelIds.includes(c.id))
-                .map((channel) => (
-                  <option key={channel.id} value={channel.id}>
-                    {channel.name}
-                  </option>
-                ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a voice channel..." />
+              </SelectTrigger>
+              <SelectContent>
+                {voiceChannels
+                  .filter((c) => !config.joinChannelIds.includes(c.id))
+                  .map((channel) => (
+                    <SelectItem key={channel.id} value={channel.id}>
+                      {channel.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </CardContent>

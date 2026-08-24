@@ -12,6 +12,7 @@ import type {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { MultiSelectList } from '@/components/ui/multi-select-list';
 import { UnsavedChangesBar } from '@/components/ui/unsaved-changes-bar';
@@ -401,17 +402,21 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">XP Type</label>
-                <select
+                <Select
                   value={editForm.xpType}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, xpType: e.target.value as XpType }))
+                  onValueChange={(value) =>
+                    setEditForm((prev) => ({ ...prev, xpType: value as XpType }))
                   }
-                  className="w-full border border-border bg-input px-4 py-2 text-foreground outline-none"
                 >
-                  <option value="TEXT">Text XP</option>
-                  <option value="VOICE">Voice XP</option>
-                  <option value="BOTH">Both</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TEXT">Text XP</SelectItem>
+                    <SelectItem value="VOICE">Voice XP</SelectItem>
+                    <SelectItem value="BOTH">Both</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
@@ -427,12 +432,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Reward Type
                 </label>
-                <select
+                <Select
                   value={editForm.rewardType}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setEditForm((prev) => ({
                       ...prev,
-                      rewardType: e.target.value as RewardType,
+                      rewardType: value as RewardType,
                       roleId: '',
                       removeRoleIds: [],
                       channelIds: [],
@@ -440,14 +445,18 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                       message: '',
                     }))
                   }
-                  className="w-full border border-border bg-input px-4 py-2 text-foreground outline-none"
                 >
-                  {SUPPORTED_REWARD_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_REWARD_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground mt-1">
                   {SUPPORTED_REWARD_TYPES.find((t) => t.value === editForm.rewardType)?.description}
                 </p>
@@ -461,19 +470,28 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     {editForm.rewardType === 'ROLE_REMOVE' ? 'Role to Remove' : 'Role to Award'}
                   </label>
-                  <select
-                    value={editForm.roleId}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, roleId: e.target.value }))}
-                    className="w-full border border-border bg-input px-4 py-2 text-foreground outline-none"
+                  <Select
+                    value={editForm.roleId || '_none'}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        roleId: value === '_none' ? '' : value,
+                      }))
+                    }
                     disabled={loadingRoles}
                   >
-                    <option value="">Select a role...</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Select a role...</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
