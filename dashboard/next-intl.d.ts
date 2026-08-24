@@ -6,4 +6,3 @@ declare module 'next-intl' {
     Messages: DashboardMessages;
   }
 }
-
