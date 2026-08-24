@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { IconPlayerPlay, IconPlayerPause } from '@/lib/mod-icons';
+import { useTranslations } from 'next-intl';
 
 interface AudioPlayerProps {
   src: string;
@@ -16,6 +17,7 @@ function formatTime(seconds: number): string {
 }
 
 export function AudioPlayer({ src }: AudioPlayerProps) {
+  const t = useTranslations('Moderation');
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<import('wavesurfer.js').default | null>(null);
   const [ready, setReady] = useState(false);
@@ -104,6 +106,7 @@ export function AudioPlayer({ src }: AudioPlayerProps) {
         <button
           onClick={togglePlay}
           disabled={!ready}
+          aria-label={playing ? t('pauseAudio') : t('playAudio')}
           className="flex h-8 w-8 items-center justify-center border border-[var(--mod-border)] text-[var(--mono-white)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
         >
           {playing ? <IconPlayerPause size={16} /> : <IconPlayerPlay size={16} />}
@@ -116,6 +119,7 @@ export function AudioPlayer({ src }: AudioPlayerProps) {
         <button
           onClick={cycleSpeed}
           disabled={!ready}
+          aria-label={t('playbackSpeed', { speed: SPEED_OPTIONS[speedIndex] })}
           className="ml-auto border border-[var(--mod-border)] px-2 py-0.5 text-xs text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
           style={{ fontFamily: 'var(--font-mono)' }}
         >

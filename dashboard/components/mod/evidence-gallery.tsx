@@ -165,7 +165,7 @@ export function EvidenceGallery({
       for (const id of selectedIds) {
         await amendEvidence(guildId, id, {
           action: flag ? "FLAGGED" : "UNFLAGGED",
-          reason: flag ? "Bulk flagged" : "Bulk unflagged",
+          reason: flag ? t("reasonBulkFlagged") : t("reasonBulkUnflagged"),
         });
       }
       onEvidenceUpdated?.();
@@ -954,7 +954,7 @@ function InlineAmendForm({
     try {
       await amendEvidence(guildId, evidenceId, {
         action: pressed ? "FLAGGED" : "UNFLAGGED",
-        reason: pressed ? "Flagged" : "Unflagged",
+        reason: pressed ? t("reasonFlagged") : t("reasonUnflagged"),
       });
       setFlagged(pressed);
       onEvidenceUpdated?.();

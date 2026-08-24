@@ -2,22 +2,25 @@
 
 import type { MessageSnapshot, MessageSnapshotEntry } from '@/lib/mod-types';
 import { IconFile } from '@/lib/mod-icons';
+import { useFormatter, useTranslations } from 'next-intl';
 
 interface SnapshotViewerProps {
   snapshot: MessageSnapshot;
 }
 
 export function SnapshotViewer({ snapshot }: SnapshotViewerProps) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const messages = snapshot.snapshotData;
 
   return (
     <div className="space-y-0">
       {/* Snapshot header */}
       <div className="mb-3 flex items-center gap-3 text-xs text-[var(--mod-text-dim)]">
-        <span>Channel: {snapshot.channelId}</span>
-        <span>{snapshot.messageCount} message{snapshot.messageCount !== 1 ? 's' : ''}</span>
-        <span>Captured by {snapshot.capturedByTag}</span>
-        <span>{new Date(snapshot.createdAt).toLocaleString()}</span>
+        <span>{t('channelId', { channelId: snapshot.channelId })}</span>
+        <span>{t('messageCount', { count: snapshot.messageCount })}</span>
+        <span>{t('capturedBy', { user: snapshot.capturedByTag })}</span>
+        <span>{format.dateTime(new Date(snapshot.createdAt), { dateStyle: 'short', timeStyle: 'short' })}</span>
       </div>
 
       {/* Messages */}
@@ -29,14 +32,16 @@ export function SnapshotViewer({ snapshot }: SnapshotViewerProps) {
 
       {/* Integrity info */}
       <div className="mt-2 text-xs text-[var(--mod-text-dim)]">
-        <span className="font-mono">Hash: {snapshot.contentHash.slice(0, 16)}...</span>
-        <span className="ml-3">Signed & Verified</span>
+        <span className="font-mono">{t('hashValue', { hash: `${snapshot.contentHash.slice(0, 16)}…` })}</span>
+        <span className="ml-3">{t('signedAndVerified')}</span>
       </div>
     </div>
   );
 }
 
 function SnapshotMessage({ message }: { message: MessageSnapshotEntry }) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   return (
     <div className="flex gap-3 px-4 py-3">
       {/* Avatar */}
@@ -60,8 +65,8 @@ function SnapshotMessage({ message }: { message: MessageSnapshotEntry }) {
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-medium text-[var(--mono-white)]">{message.authorTag}</span>
           <span className="text-xs text-[var(--mod-text-dim)]">
-            {new Date(message.createdAt).toLocaleString()}
-            {message.editedAt && ' (edited)'}
+            {format.dateTime(new Date(message.createdAt), { dateStyle: 'short', timeStyle: 'short' })}
+            {message.editedAt && ` ${t('edited')}`}
           </span>
         </div>
 
@@ -92,7 +97,7 @@ function SnapshotMessage({ message }: { message: MessageSnapshotEntry }) {
           <div className="mt-1 flex gap-1">
             {message.stickers.map((s, i) => (
               <span key={i} className="text-xs text-[var(--mod-text-dim)]">
-                [Sticker: {s.name}]
+                {t('stickerName', { name: s.name })}
               </span>
             ))}
           </div>

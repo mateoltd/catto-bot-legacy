@@ -8,6 +8,7 @@ import {
   addUrlEvidence,
   computeSHA256,
 } from '@/lib/services/mod.service';
+import { useTranslations } from 'next-intl';
 
 interface EvidenceUploadProps {
   guildId: string;
@@ -23,6 +24,7 @@ interface FileUploadState {
 }
 
 export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: EvidenceUploadProps) {
+  const t = useTranslations('Moderation');
   const [files, setFiles] = useState<FileUploadState[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [urlDescription, setUrlDescription] = useState('');
@@ -73,7 +75,7 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
         });
         if (!uploadResponse.ok) {
           const body = await uploadResponse.text().catch(() => '');
-          throw new Error(`Upload failed (${uploadResponse.status}): ${body.slice(0, 200)}`);
+          throw new Error(t('uploadFailedStatus', { status: uploadResponse.status, detail: body.slice(0, 200) }));
         }
 
         update({ status: 'confirming', progress: 70 });
@@ -88,13 +90,13 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
       } catch (err) {
         update({
           status: 'error',
-          error: err instanceof Error ? err.message : 'Upload failed',
+          error: err instanceof Error ? err.message : t('uploadFailed'),
         });
       }
     }
 
     onUploadComplete();
-  }, [guildId, caseNumber, files.length, onUploadComplete]);
+  }, [guildId, caseNumber, files.length, onUploadComplete, t]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -121,7 +123,7 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
       setUrlDescription('');
       onUploadComplete();
     } catch (err) {
-      setUrlError(err instanceof Error ? err.message : 'Failed to add URL evidence');
+      setUrlError(err instanceof Error ? err.message : t('failedAddUrlEvidence'));
     } finally {
       setUrlLoading(false);
     }
@@ -146,10 +148,10 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
         }`}
       >
         <p className="text-sm text-[var(--mod-text-muted)]">
-          Drop files here or click to browse
+          {t('dropFilesOrBrowse')}
         </p>
         <p className="mt-1 text-xs text-[var(--mod-text-dim)]">
-          Images, videos, audio, documents
+          {t('supportedEvidenceFiles')}
         </p>
         <input
           ref={fileInputRef}
@@ -185,18 +187,19 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
                     />
                   </div>
                   <span className="shrink-0 text-xs text-[var(--mod-text-dim)]">
-                    {fs.status === 'pending' && 'Queued'}
-                    {fs.status === 'scanning' && 'Scanning...'}
-                    {fs.status === 'uploading' && 'Uploading...'}
-                    {fs.status === 'confirming' && 'Verifying...'}
-                    {fs.status === 'done' && 'Done'}
-                    {fs.status === 'error' && (fs.error ?? 'Error')}
+                    {fs.status === 'pending' && t('queued')}
+                    {fs.status === 'scanning' && t('scanning')}
+                    {fs.status === 'uploading' && t('uploading')}
+                    {fs.status === 'confirming' && t('verifying')}
+                    {fs.status === 'done' && t('done')}
+                    {fs.status === 'error' && (fs.error ?? t('error'))}
                   </span>
                 </div>
               </div>
               {(fs.status === 'done' || fs.status === 'error') && (
                 <button
                   onClick={() => removeFile(i)}
+                  aria-label={t('removeFile', { filename: fs.file.name })}
                   className="shrink-0 text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
                 >
                   <IconX size={14} />
@@ -209,20 +212,20 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
 
       {/* URL input */}
       <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
-        <p className="mb-2 text-sm font-medium text-[var(--mono-white)]">Add URL Evidence</p>
+        <p className="mb-2 text-sm font-medium text-[var(--mono-white)]">{t('addUrlEvidence')}</p>
         <div className="space-y-2">
           <input
             type="url"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="https://..."
+            placeholder="https://…"
             className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
           />
           <input
             type="text"
             value={urlDescription}
             onChange={(e) => setUrlDescription(e.target.value)}
-            placeholder="Description (optional)"
+            placeholder={t('descriptionOptional')}
             className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
           />
           {urlError && <p className="text-xs text-red-400">{urlError}</p>}
@@ -231,7 +234,7 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
             disabled={urlLoading || !urlInput.trim()}
             className="border border-[var(--mod-border)] px-4 py-1.5 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
           >
-            {urlLoading ? 'Adding...' : 'Add URL'}
+            {urlLoading ? t('adding') : t('addUrl')}
           </button>
         </div>
       </div>

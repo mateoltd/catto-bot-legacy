@@ -18,6 +18,7 @@ import { TagSelector } from './tag-selector';
 import { useEscapeClose } from '@/hooks/use-escape-close';
 import { useSwipe } from '@/hooks/use-swipe';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useFormatter, useTranslations } from 'next-intl';
 
 interface EvidenceViewerProps {
   guildId: string;
@@ -42,6 +43,8 @@ export function EvidenceViewer({
   onPrev,
   onNext,
 }: EvidenceViewerProps) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   // Derive sync values from props (no useEffect needed for URL/snapshot types)
   const syncViewUrl = useMemo(() => {
     if (evidence.type === 'URL' || evidence.type === 'DISCORD_URL') return evidence.url;
@@ -81,9 +84,9 @@ export function EvidenceViewer({
   const viewUrl = syncViewUrl ?? asyncViewUrl ?? null;
   const loading = needsAsyncLoad ? asyncLoading : false;
   const error = urlError
-    ? 'Failed to load evidence.'
+    ? t('failedToLoadEvidence')
     : needsAsyncLoad && !asyncLoading && !asyncViewUrl
-      ? 'Could not generate view URL.'
+      ? t('couldNotGenerateViewUrl')
       : null;
 
   // History (only fetches when history tab is active)
@@ -109,7 +112,7 @@ export function EvidenceViewer({
     try {
       await amendEvidence(guildId, evidenceId, {
         action: pressed ? 'FLAGGED' : 'UNFLAGGED',
-        reason: pressed ? 'Flagged' : 'Unflagged',
+        reason: pressed ? t('reasonFlagged') : t('reasonUnflagged'),
       });
       setFlagged(pressed);
       mutateHistory();
@@ -145,6 +148,22 @@ export function EvidenceViewer({
 
   const typeMeta = EVIDENCE_TYPE_META[evidence.type];
   const TypeIcon = EVIDENCE_TYPE_ICONS[evidence.type];
+  const typeLabel = evidence.type === 'IMAGE' ? t('evidenceImage')
+    : evidence.type === 'VIDEO' ? t('evidenceVideo')
+      : evidence.type === 'AUDIO' ? t('evidenceAudio')
+        : evidence.type === 'DOCUMENT' ? t('evidenceDocument')
+          : evidence.type === 'URL' ? t('evidenceUrl')
+            : evidence.type === 'DISCORD_URL' ? t('evidenceDiscordLink')
+              : t('evidenceSnapshot');
+
+  const tabLabel = (tab: ViewerTab) => {
+    switch (tab) {
+      case 'details': return t('details');
+      case 'history': return t('history');
+      case 'access-log': return t('accessLog');
+      case 'amend': return t('amend');
+    }
+  };
 
   return (
     <div
@@ -159,7 +178,7 @@ export function EvidenceViewer({
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TypeIcon size={20} className={typeMeta.className} />
-            <h2 className="text-lg font-semibold text-[var(--mono-white)]">{typeMeta.label}</h2>
+            <h2 className="text-lg font-semibold text-[var(--mono-white)]">{typeLabel}</h2>
             {evidence.originalFilename && (
               <span className="text-sm text-[var(--mod-text-dim)]">
                 — {evidence.originalFilename}
@@ -171,13 +190,15 @@ export function EvidenceViewer({
               <button
                 onClick={onDownload}
                 className="p-1 text-[var(--mod-text-dim)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] hover:text-[var(--mono-white)]"
-                title="Download"
+                title={t('download')}
+                aria-label={t('download')}
               >
                 <IconDownload size={18} />
               </button>
             )}
             <button
               onClick={onClose}
+              aria-label={t('close')}
               className="p-1 text-[var(--mod-text-dim)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] hover:text-[var(--mono-white)]"
             >
               <IconX size={18} />
@@ -189,7 +210,7 @@ export function EvidenceViewer({
         <div className="min-h-[200px]" {...(isMobile ? swipeHandlers : {})}>
           {loading && (
             <div className="flex h-[200px] items-center justify-center text-[var(--mod-text-dim)]">
-              Loading...
+              {t('loading')}
             </div>
           )}
 
@@ -197,7 +218,7 @@ export function EvidenceViewer({
             <div className="flex h-[200px] items-center justify-center text-red-400">{error}</div>
           )}
 
-          {!loading && !error && renderContent(evidence, viewUrl, guildId)}
+          {!loading && !error && <EvidenceContent evidence={evidence} viewUrl={viewUrl} guildId={guildId} />}
         </div>
 
         {/* Tabbed bottom section */}
@@ -213,7 +234,7 @@ export function EvidenceViewer({
                     : 'text-[var(--mod-text-dim)] hover:text-[var(--mod-text-muted)]'
                 }`}
               >
-                {tab === 'access-log' ? 'Access Log' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tabLabel(tab)}
               </button>
             ))}
           </div>
@@ -223,16 +244,16 @@ export function EvidenceViewer({
             {activeTab === 'details' && (
               <div>
                 <div className="flex flex-wrap gap-4 text-xs text-[var(--mod-text-dim)]">
-                  <span>Uploaded by {evidence.uploadedByTag}</span>
-                  <span>{new Date(evidence.createdAt).toLocaleString()}</span>
-                  {evidence.sizeBytes && <span>{(evidence.sizeBytes / 1024).toFixed(1)} KB</span>}
+                  <span>{t('uploadedByUser', { user: evidence.uploadedByTag })}</span>
+                  <span>{format.dateTime(new Date(evidence.createdAt), { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  {evidence.sizeBytes && <span>{t('kilobytes', { size: format.number(evidence.sizeBytes / 1024, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}</span>}
                   {evidence.contentHash && (
                     <span className="font-mono">
-                      SHA-256: {evidence.contentHash.slice(0, 16)}...
+                      {t('sha256Value', { hash: `${evidence.contentHash.slice(0, 16)}…` })}
                     </span>
                   )}
                   {evidence.status === 'VERIFIED' && (
-                    <span className="text-green-400">Signed & Verified</span>
+                    <span className="text-green-400">{t('signedAndVerified')}</span>
                   )}
                 </div>
                 {evidence.description && (
@@ -244,7 +265,7 @@ export function EvidenceViewer({
                 {evidence.tags && evidence.tags.length > 0 && (
                   <div className="mt-3">
                     <label className="mb-1 block text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                      Tags
+                      {t('tags')}
                     </label>
                     <div className="flex flex-wrap gap-1">
                       {evidence.tags.map((tag) => (
@@ -266,7 +287,7 @@ export function EvidenceViewer({
               <div>
                 {historyLoading ? (
                   <div className="py-4 text-center text-sm text-[var(--mod-text-dim)]">
-                    Loading history...
+                    {t('loadingHistory')}
                   </div>
                 ) : (
                   <AmendmentTimeline amendments={amendments} />
@@ -284,7 +305,7 @@ export function EvidenceViewer({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                    Action
+                    {t('action')}
                   </label>
                   <Toggle
                     variant="mod"
@@ -292,10 +313,10 @@ export function EvidenceViewer({
                     pressed={flagged}
                     onPressedChange={handleToggleFlag}
                     disabled={flagSubmitting}
-                    aria-label="Toggle flag"
+                    aria-label={t('toggleFlag')}
                   >
                     <IconFlag size={14} />
-                    {flagged ? 'Flagged' : 'Flag'}
+                    {flagged ? t('statusFlagged') : t('flag')}
                   </Toggle>
                 </div>
                 <div>
@@ -304,9 +325,9 @@ export function EvidenceViewer({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent variant="mod">
-                      <SelectItem value="NOTE_ADDED" variant="mod">Add Note</SelectItem>
-                      <SelectItem value="DESCRIPTION_UPDATED" variant="mod">Update Description</SelectItem>
-                      <SelectItem value="TAGS_UPDATED" variant="mod">Update Tags</SelectItem>
+                      <SelectItem value="NOTE_ADDED" variant="mod">{t('addNote')}</SelectItem>
+                      <SelectItem value="DESCRIPTION_UPDATED" variant="mod">{t('updateDescription')}</SelectItem>
+                      <SelectItem value="TAGS_UPDATED" variant="mod">{t('updateTags')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -314,13 +335,13 @@ export function EvidenceViewer({
                 {amendAction === 'DESCRIPTION_UPDATED' && (
                   <div>
                     <label className="mb-1 block text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                      New Value
+                      {t('newValue')}
                     </label>
                     <input
                       type="text"
                       value={amendNewValue}
                       onChange={(e) => setAmendNewValue(e.target.value)}
-                      placeholder="New description..."
+                      placeholder={t('newDescriptionPlaceholder')}
                       className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
                     />
                   </div>
@@ -329,7 +350,7 @@ export function EvidenceViewer({
                 {amendAction === 'TAGS_UPDATED' && (
                   <div>
                     <label className="mb-1 block text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                      Tags
+                      {t('tags')}
                     </label>
                     <TagSelector value={amendTags} onChange={setAmendTags} />
                   </div>
@@ -337,12 +358,12 @@ export function EvidenceViewer({
 
                 <div>
                   <label className="mb-1 block text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                    Reason
+                    {t('reason')}
                   </label>
                   <textarea
                     value={amendReason}
                     onChange={(e) => setAmendReason(e.target.value)}
-                    placeholder="Reason for amendment..."
+                    placeholder={t('reasonForAmendmentPlaceholder')}
                     rows={2}
                     className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
                   />
@@ -353,7 +374,7 @@ export function EvidenceViewer({
                   disabled={amendSubmitting}
                   className="border border-[var(--mono-500)] px-4 py-1.5 text-sm text-[var(--mono-white)] transition-[background-color] duration-75 hover:bg-[var(--mono-800)] disabled:opacity-30"
                 >
-                  {amendSubmitting ? 'Submitting...' : 'Submit Amendment'}
+                  {amendSubmitting ? t('submitting') : t('submitAmendment')}
                 </button>
               </div>
             )}
@@ -364,7 +385,8 @@ export function EvidenceViewer({
   );
 }
 
-function renderContent(evidence: Evidence, viewUrl: string | null, guildId: string) {
+function EvidenceContent({ evidence, viewUrl, guildId }: { evidence: Evidence; viewUrl: string | null; guildId: string }) {
+  const t = useTranslations('Moderation');
   const { type } = evidence;
 
   // URL types
@@ -385,7 +407,7 @@ function renderContent(evidence: Evidence, viewUrl: string | null, guildId: stri
         </a>
         {type === 'DISCORD_URL' && (
           <p className="text-xs text-yellow-400">
-            Discord links may become unavailable if messages are deleted.
+            {t('discordLinksMayExpire')}
           </p>
         )}
       </div>
@@ -400,7 +422,7 @@ function renderContent(evidence: Evidence, viewUrl: string | null, guildId: stri
   if (!viewUrl) {
     return (
       <div className="flex h-[200px] items-center justify-center text-[var(--mod-text-dim)]">
-        No preview available.
+        {t('noPreviewAvailable')}
       </div>
     );
   }
@@ -411,7 +433,7 @@ function renderContent(evidence: Evidence, viewUrl: string | null, guildId: stri
       <div className="flex justify-center">
         <img
           src={viewUrl}
-          alt={evidence.originalFilename ?? 'Evidence image'}
+          alt={evidence.originalFilename ?? t('evidenceImage')}
           className="max-h-[60vh] object-contain"
         />
       </div>
@@ -445,7 +467,7 @@ function renderContent(evidence: Evidence, viewUrl: string | null, guildId: stri
     <div className="flex flex-col items-center gap-4 py-8">
       <IconFile size={40} className="text-[var(--mono-400)]" />
       <p className="text-sm text-[var(--mod-text-muted)]">
-        {evidence.originalFilename ?? 'Document'}
+        {evidence.originalFilename ?? t('evidenceDocument')}
       </p>
       <a
         href={viewUrl}
@@ -453,7 +475,7 @@ function renderContent(evidence: Evidence, viewUrl: string | null, guildId: stri
         rel="noopener noreferrer"
         className="border border-[var(--mod-border)] px-4 py-2 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)]"
       >
-        Download
+        {t('download')}
       </a>
     </div>
   );

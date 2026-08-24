@@ -1,10 +1,20 @@
 import { useState } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render as testingLibraryRender, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NextIntlClientProvider } from 'next-intl';
 
 import { ColorField } from '@/components/ui/color-field';
+import messages from '@/messages/en-US.json';
 
 afterEach(cleanup);
+
+function render(ui: React.ReactNode) {
+  return testingLibraryRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>
+  );
+}
 
 function ControlledColorField({ onChange = vi.fn() }: { onChange?: (value: string) => void }) {
   const [value, setValue] = useState('#336699');

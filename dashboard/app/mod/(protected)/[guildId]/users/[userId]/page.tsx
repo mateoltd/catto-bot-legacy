@@ -550,6 +550,14 @@ function XPStatsCard({
 
 function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
   const t = useTranslations('Moderation');
+  const rewardStatusLabel = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return t('active');
+      case 'REVOKED': return t('revoked');
+      case 'EXPIRED': return t('expired');
+      default: return status;
+    }
+  };
   return (
     <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
@@ -579,10 +587,10 @@ function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
               </div>
               <span
                 className={`text-[10px] ${
-                  claim.status === 'CLAIMED' ? 'text-green-300/70' : 'text-[var(--mod-text-dim)]'
+                  claim.status === 'ACTIVE' ? 'text-green-300/70' : 'text-[var(--mod-text-dim)]'
                 }`}
               >
-                {claim.status === 'CLAIMED' ? t('claimed') : claim.status}
+                {rewardStatusLabel(claim.status)}
               </span>
             </div>
           ))}

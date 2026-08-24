@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import type { Evidence } from '@/lib/mod-types';
-import { EVIDENCE_TYPE_META } from '@/lib/mod-types';
 import { getEvidenceViewUrl } from '@/lib/services/mod.service';
 import { IconX, IconColumns, IconRows } from '@/lib/mod-icons';
 import { useEscapeClose } from '@/hooks/use-escape-close';
+import { useFormatter, useTranslations } from 'next-intl';
 
 interface EvidenceComparisonProps {
   guildId: string;
@@ -17,6 +17,8 @@ interface EvidenceComparisonProps {
 type ViewMode = 'split' | 'toggle';
 
 export function EvidenceComparison({ guildId, items, onClose }: EvidenceComparisonProps) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -37,6 +39,18 @@ export function EvidenceComparison({ guildId, items, onClose }: EvidenceComparis
     items[1].url ?? url2,
   ];
 
+  const evidenceTypeLabel = (type: Evidence['type']) => {
+    switch (type) {
+      case 'IMAGE': return t('evidenceImage');
+      case 'VIDEO': return t('evidenceVideo');
+      case 'AUDIO': return t('evidenceAudio');
+      case 'DOCUMENT': return t('evidenceDocument');
+      case 'URL': return t('evidenceUrl');
+      case 'DISCORD_URL': return t('evidenceDiscordLink');
+      case 'MESSAGE_SNAPSHOT': return t('evidenceSnapshot');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={onClose}>
       <div
@@ -45,24 +59,27 @@ export function EvidenceComparison({ guildId, items, onClose }: EvidenceComparis
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--mod-border)] px-4 py-3">
-          <h2 className="text-lg font-semibold text-[var(--mono-white)]">Compare Evidence</h2>
+          <h2 className="text-lg font-semibold text-[var(--mono-white)]">{t('compareEvidence')}</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setViewMode('split')}
               className={`p-2 ${viewMode === 'split' ? 'text-[var(--mono-white)]' : 'text-[var(--mod-text-dim)]'} hover:text-[var(--mono-white)]`}
-              title="Side by side"
+              title={t('sideBySide')}
+              aria-label={t('sideBySide')}
             >
               <IconColumns size={18} />
             </button>
             <button
               onClick={() => setViewMode('toggle')}
               className={`p-2 ${viewMode === 'toggle' ? 'text-[var(--mono-white)]' : 'text-[var(--mod-text-dim)]'} hover:text-[var(--mono-white)]`}
-              title="Toggle view"
+              title={t('toggleView')}
+              aria-label={t('toggleView')}
             >
               <IconRows size={18} />
             </button>
             <button
               onClick={onClose}
+              aria-label={t('close')}
               className="p-2 text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
             >
               <IconX size={18} />
@@ -92,7 +109,7 @@ export function EvidenceComparison({ guildId, items, onClose }: EvidenceComparis
                         : 'text-[var(--mod-text-dim)] hover:text-[var(--mod-text-muted)]'
                     }`}
                   >
-                    {item.originalFilename ?? item.description ?? `Evidence ${idx + 1}`}
+                    {item.originalFilename ?? item.description ?? t('evidenceNumber', { number: idx + 1 })}
                   </button>
                 ))}
               </div>
@@ -109,11 +126,11 @@ export function EvidenceComparison({ guildId, items, onClose }: EvidenceComparis
             {items.map((item, idx) => (
               <div key={item.id} className="text-[var(--mod-text-dim)]">
                 <div className="mb-1 font-medium text-[var(--mono-white)]">
-                  {EVIDENCE_TYPE_META[item.type].label}
+                  {evidenceTypeLabel(item.type)}
                 </div>
-                <div>Uploaded: {new Date(item.createdAt).toLocaleString()}</div>
-                <div>By: {item.uploadedByTag}</div>
-                {item.sizeBytes && <div>Size: {(item.sizeBytes / 1024).toFixed(1)} KB</div>}
+                <div>{t('uploadedDate', { date: format.dateTime(new Date(item.createdAt), { dateStyle: 'short', timeStyle: 'short' }) })}</div>
+                <div>{t('byUser', { user: item.uploadedByTag })}</div>
+                {item.sizeBytes && <div>{t('sizeKilobytes', { size: format.number(item.sizeBytes / 1024, { maximumFractionDigits: 1 }) })}</div>}
               </div>
             ))}
           </div>
@@ -124,6 +141,7 @@ export function EvidenceComparison({ guildId, items, onClose }: EvidenceComparis
 }
 
 function ComparisonPane({ item, url }: { item: Evidence; url: string | null }) {
+  const t = useTranslations('Moderation');
   if (item.type === 'URL' || item.type === 'DISCORD_URL') {
     return (
       <div className="flex h-full flex-col items-center justify-center p-4">
@@ -137,7 +155,7 @@ function ComparisonPane({ item, url }: { item: Evidence; url: string | null }) {
             {item.url}
           </a>
         ) : (
-          <span className="text-sm text-[var(--mod-text-dim)]">No URL provided</span>
+          <span className="text-sm text-[var(--mod-text-dim)]">{t('noUrlProvided')}</span>
         )}
       </div>
     );
@@ -146,7 +164,7 @@ function ComparisonPane({ item, url }: { item: Evidence; url: string | null }) {
   if (!url) {
     return (
       <div className="flex h-full items-center justify-center text-[var(--mod-text-dim)]">
-        Loading...
+        {t('loading')}
       </div>
     );
   }
@@ -156,7 +174,7 @@ function ComparisonPane({ item, url }: { item: Evidence; url: string | null }) {
       <div className="flex h-full items-center justify-center overflow-auto p-4">
         <img
           src={url}
-          alt={item.originalFilename ?? 'Evidence'}
+          alt={item.originalFilename ?? t('evidenceReview')}
           className="max-h-full max-w-full object-contain"
         />
       </div>
@@ -173,7 +191,7 @@ function ComparisonPane({ item, url }: { item: Evidence; url: string | null }) {
 
   return (
     <div className="flex h-full items-center justify-center text-[var(--mod-text-dim)]">
-      Preview not available for {EVIDENCE_TYPE_META[item.type].label}
+      {t('previewNotAvailable')}
     </div>
   );
 }

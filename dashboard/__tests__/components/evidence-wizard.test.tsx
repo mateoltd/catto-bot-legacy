@@ -1,6 +1,8 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as testingLibraryRender, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "@/messages/en-US.json";
 
 const serviceMocks = vi.hoisted(() => ({
   initiateUpload: vi.fn(),
@@ -23,6 +25,14 @@ vi.mock("@/components/mod/og-card", () => ({ OGCard: () => null }));
 vi.mock("@/components/mod/nsfw-scanner", () => ({ NsfwScanner: () => null }));
 
 const { EvidenceWizard } = await import("@/components/mod/evidence-wizard");
+
+function render(ui: React.ReactNode) {
+  return testingLibraryRender(
+    <NextIntlClientProvider locale="en-US" messages={messages}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
 
 describe("EvidenceWizard", () => {
   beforeEach(() => {

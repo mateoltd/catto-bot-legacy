@@ -50,4 +50,15 @@ describe('dashboard locale configuration', () => {
     expect(english('Rewards.announcementPlaceholderEdit')).toContain('{level}');
     expect(spanish('TempVoice.customPatternPlaceholder')).toContain('{username}');
   });
+
+  it('translates the evidence review and upload workflows into Spanish', () => {
+    const spanish = createTranslator({ locale: 'es-ES', messages: spanishMessages });
+
+    expect(spanish('Moderation.compareEvidence')).toBe('Comparar pruebas');
+    expect(spanish('Moderation.filesQueued', { count: 2 })).toBe(
+      '2 archivos en cola. Añade más si lo necesitas.'
+    );
+    expect(spanish('Moderation.chainOfCustody', { count: 1 })).toContain('1 registro');
+    expect(spanish('ColorField.saturationAndBrightness')).toBe('Saturación y brillo');
+  });
 });

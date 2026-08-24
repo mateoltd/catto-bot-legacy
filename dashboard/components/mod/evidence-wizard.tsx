@@ -23,6 +23,7 @@ import { TagSelector } from "./tag-selector";
 import { OGCard } from "./og-card";
 import { scanImage, isImageFile, type NsfwResult } from "@/lib/nsfw";
 import { NsfwScanner } from "./nsfw-scanner";
+import { useFormatter, useTranslations } from "next-intl";
 
 // ─── Props & Constants ───
 
@@ -294,6 +295,8 @@ export function EvidenceWizard({
   caseNumber,
   onUploadComplete,
 }: EvidenceWizardProps) {
+  const t = useTranslations("Moderation");
+  const format = useFormatter();
   const [state, dispatch] = useReducer(wizardReducer, INITIAL_STATE);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -502,7 +505,7 @@ export function EvidenceWizard({
         if (!uploadResponse.ok) {
           const body = await uploadResponse.text().catch(() => "");
           throw new Error(
-            `Upload failed (${uploadResponse.status}): ${body.slice(0, 200)}`,
+            t("uploadFailedStatus", { status: uploadResponse.status, detail: body.slice(0, 200) }),
           );
         }
 
@@ -534,7 +537,7 @@ export function EvidenceWizard({
           index: i,
           patch: {
             status: "error",
-            error: err instanceof Error ? err.message : "Upload failed",
+            error: err instanceof Error ? err.message : t("uploadFailed"),
           },
         });
       }
@@ -599,7 +602,7 @@ export function EvidenceWizard({
                     : "text-[var(--mod-text-dim)]"
               }`}
             >
-              {s}. {s === 1 ? "Add" : s === 2 ? "Review" : "Details"}
+              {s}. {s === 1 ? t("wizardAdd") : s === 2 ? t("wizardReview") : t("details")}
             </div>
           ))}
         </div>
@@ -623,18 +626,17 @@ export function EvidenceWizard({
               )}
             </div>
             <h3 className="mb-1 text-lg font-semibold text-[var(--mono-white)]">
-              {state.completedCount > 0 ? "Upload complete" : "Upload failed"}
+              {state.completedCount > 0 ? t("uploadComplete") : t("uploadFailed")}
             </h3>
             <p className="mb-6 text-sm text-[var(--mod-text-muted)]">
               {urlMode
                 ? state.completedCount > 0
-                  ? "Link added successfully"
-                  : "The link could not be added"
-                : `${state.completedCount} file${state.completedCount !== 1 ? "s" : ""} uploaded successfully`}
+                  ? t("linkAddedSuccessfully")
+                  : t("linkCouldNotBeAdded")
+                : t("filesUploadedSuccessfully", { count: state.completedCount })}
               {state.completedErrors > 0 && (
                 <span className="text-red-400">
-                  {" "}
-                  &middot; {state.completedErrors} failed
+                  {" "}&middot; {t("failedCount", { count: state.completedErrors })}
                 </span>
               )}
             </p>
@@ -668,8 +670,8 @@ export function EvidenceWizard({
                         }
                       >
                         {progress.status === "done"
-                          ? "Added"
-                          : (progress.error ?? "Failed")}
+                          ? t("added")
+                          : (progress.error ?? t("failed"))}
                       </span>
                     </div>
                   );
@@ -682,7 +684,7 @@ export function EvidenceWizard({
                 className="flex items-center gap-1 border border-[var(--mono-500)] px-4 py-2 text-sm text-[var(--mono-white)] transition-[background-color] duration-75 hover:bg-[var(--mono-800)]"
               >
                 <IconPlus size={16} />
-                Upload More
+                {t("uploadMore")}
               </button>
             </div>
           </div>
@@ -692,7 +694,7 @@ export function EvidenceWizard({
         {!state.completed && state.step === 1 && (
           <div>
             <p className="mb-4 text-sm text-[var(--mod-text-muted)]">
-              Add a mixed batch of files, paste a capture, or attach a link.
+              {t("mixedEvidenceDescription")}
             </p>
 
             {/* Camera quick-capture (mobile only) */}
@@ -703,7 +705,7 @@ export function EvidenceWizard({
                   className="mb-3 flex w-full items-center justify-center gap-2 border border-[var(--mono-500)] bg-[var(--mono-850)] p-4 text-sm font-medium text-[var(--mono-white)] transition-[background-color] duration-75 hover:bg-[var(--mono-800)]"
                 >
                   <IconCamera size={20} />
-                  Quick Photo
+                  {t("quickPhoto")}
                 </button>
                 <input
                   ref={cameraInputRef}
@@ -737,17 +739,17 @@ export function EvidenceWizard({
               }`}
             >
               <p className="text-base font-medium text-[var(--mono-white)]">
-                Drop all evidence files here
+                {t("dropAllEvidenceFiles")}
               </p>
               <p className="mt-1 text-xs text-[var(--mod-text-dim)]">
-                Images, video, audio and documents can be mixed in one batch.
+                {t("mixedFileTypesDescription")}
               </p>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="mt-4 border border-[var(--mono-500)] px-4 py-2 text-sm text-[var(--mono-white)] hover:bg-[var(--mono-800)]"
               >
-                Choose files
+                {t("chooseFiles")}
               </button>
               <input
                 ref={fileInputRef}
@@ -770,14 +772,14 @@ export function EvidenceWizard({
                 className="flex flex-1 items-center justify-center gap-2 border-r border-[var(--mod-border)] px-4 py-3 text-sm text-[var(--mod-text-muted)] hover:bg-[var(--mod-surface-hover)]"
               >
                 <IconClipboard size={16} />
-                Paste image
+                {t("pasteImage")}
               </button>
               <button
                 type="button"
                 onClick={() => dispatch({ type: "BEGIN_URL" })}
                 className="flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm text-[var(--mod-text-muted)] hover:bg-[var(--mod-surface-hover)]"
               >
-                Add a link →
+                {t("addLink")} →
               </button>
             </div>
           </div>
@@ -787,8 +789,7 @@ export function EvidenceWizard({
         {!state.completed && state.step === 2 && fileMode && (
           <div>
             <p className="mb-3 text-sm text-[var(--mod-text-muted)]">
-              {state.files.length} file{state.files.length === 1 ? "" : "s"}{" "}
-              queued. Add more if needed.
+              {t("filesQueued", { count: state.files.length })}
             </p>
 
             {/* Drop zone */}
@@ -809,7 +810,7 @@ export function EvidenceWizard({
               }`}
             >
               <p className="text-sm text-[var(--mod-text-muted)]">
-                Drop files here or click to browse
+                {t("dropFilesOrBrowse")}
               </p>
               <input
                 ref={fileInputRef}
@@ -831,7 +832,7 @@ export function EvidenceWizard({
               className="mt-2 flex w-full items-center justify-center gap-2 border border-dashed border-[var(--mod-border)] px-3 py-2 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:border-[var(--mod-border-hover)] hover:bg-[var(--mod-surface-hover)]"
             >
               <IconClipboard size={16} />
-              Paste from clipboard
+              {t("pasteFromClipboard")}
             </button>
 
             {/* File list */}
@@ -856,12 +857,13 @@ export function EvidenceWizard({
                       {entry.file.name}
                     </span>
                     <span className="shrink-0 text-xs text-[var(--mod-text-dim)]">
-                      {(entry.file.size / 1024).toFixed(1)} KB
+                      {t("kilobytes", { size: format.number(entry.file.size / 1024, { maximumFractionDigits: 1 }) })}
                     </span>
                     <button
                       onClick={() =>
                         dispatch({ type: "REMOVE_FILE", index: i })
                       }
+                      aria-label={t("removeFile", { filename: entry.file.name })}
                       className="shrink-0 text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
                     >
                       <IconX size={14} />
@@ -876,9 +878,7 @@ export function EvidenceWizard({
         {!state.completed && state.step === 2 && urlMode && (
           <div>
             <p className="mb-3 text-sm text-[var(--mod-text-muted)]">
-              Enter the{" "}
-              {state.selectedType === "DISCORD_URL" ? "Discord message" : ""}{" "}
-              URL:
+              {state.selectedType === "DISCORD_URL" ? t("enterDiscordMessageUrl") : t("enterUrl")}
             </p>
             <input
               type="url"
@@ -888,8 +888,8 @@ export function EvidenceWizard({
               }
               placeholder={
                 state.selectedType === "DISCORD_URL"
-                  ? "https://discord.com/channels/..."
-                  : "https://..."
+                  ? "https://discord.com/channels/…"
+                  : "https://…"
               }
               className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
             />
@@ -911,7 +911,7 @@ export function EvidenceWizard({
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                Description
+                {t("description")}
               </label>
               <textarea
                 value={state.description}
@@ -921,7 +921,7 @@ export function EvidenceWizard({
                     description: e.target.value,
                   })
                 }
-                placeholder="Describe the evidence..."
+                placeholder={t("describeEvidencePlaceholder")}
                 rows={3}
                 className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
               />
@@ -929,7 +929,7 @@ export function EvidenceWizard({
 
             <div>
               <label className="mb-1 block text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                Tags
+                {t("tags")}
               </label>
               <TagSelector
                 value={state.tags}
@@ -943,6 +943,7 @@ export function EvidenceWizard({
                 <div className="mb-2 flex items-center gap-2">
                   <button
                     onClick={() => dispatch({ type: "TOGGLE_APPLY_DESC_ALL" })}
+                    aria-label={t("applyDescriptionToAll")}
                     className={`flex h-4 w-4 items-center justify-center border transition-[background-color,border-color] duration-75 ${
                       state.applyDescToAll
                         ? "border-[var(--mono-500)] bg-[var(--mono-700)]"
@@ -957,7 +958,7 @@ export function EvidenceWizard({
                     )}
                   </button>
                   <span className="text-xs text-[var(--mod-text-muted)]">
-                    Apply description to all files
+                    {t("applyDescriptionToAll")}
                   </span>
                 </div>
 
@@ -978,7 +979,7 @@ export function EvidenceWizard({
                               description: e.target.value,
                             })
                           }
-                          placeholder="Description for this file..."
+                          placeholder={t("fileDescriptionPlaceholder")}
                           className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-xs text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
                         />
                       </div>
@@ -991,7 +992,7 @@ export function EvidenceWizard({
             {/* NSFW scanning indicator */}
             {state.nsfwScanning && (
               <div className="border border-[var(--mod-border)] bg-[var(--mono-950)] p-4 text-center text-sm text-[var(--mod-text-muted)]">
-                Scanning images for NSFW content...
+                {t("scanningImagesForNsfw")}
               </div>
             )}
 
@@ -1003,7 +1004,7 @@ export function EvidenceWizard({
                     key={flag.fileIndex}
                     result={flag.result}
                     filename={
-                      state.files[flag.fileIndex]?.file.name ?? "Unknown"
+                      state.files[flag.fileIndex]?.file.name ?? t("unknown")
                     }
                     onConfirmSafe={() =>
                       dispatch({
@@ -1043,12 +1044,12 @@ export function EvidenceWizard({
                       />
                     </div>
                     <span className="shrink-0 text-[var(--mod-text-dim)]">
-                      {p.status === "pending" && "Queued"}
-                      {p.status === "uploading" && "Uploading"}
-                      {p.status === "hashing" && "Hashing"}
-                      {p.status === "confirming" && "Verifying"}
-                      {p.status === "done" && "Done"}
-                      {p.status === "error" && (p.error ?? "Error")}
+                      {p.status === "pending" && t("queued")}
+                      {p.status === "uploading" && t("uploading")}
+                      {p.status === "hashing" && t("hashing")}
+                      {p.status === "confirming" && t("verifying")}
+                      {p.status === "done" && t("done")}
+                      {p.status === "error" && (p.error ?? t("error"))}
                     </span>
                   </div>
                 ))}
@@ -1067,7 +1068,7 @@ export function EvidenceWizard({
             className="flex items-center gap-1 px-3 py-1.5 text-sm text-[var(--mod-text-muted)] hover:text-[var(--mono-white)] disabled:opacity-30"
           >
             <IconChevronLeft size={16} />
-            Back
+            {t("back")}
           </button>
           <div className="flex gap-2">
             {state.step < 3 && (
@@ -1076,7 +1077,7 @@ export function EvidenceWizard({
                 disabled={!canAdvance()}
                 className="flex items-center gap-1 border border-[var(--mod-border)] px-4 py-1.5 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
               >
-                Next
+                {t("next")}
                 <IconChevronRight size={16} />
               </button>
             )}
@@ -1092,10 +1093,10 @@ export function EvidenceWizard({
               >
                 <IconPlus size={16} />
                 {state.nsfwScanning
-                  ? "Scanning..."
+                  ? t("scanning")
                   : state.uploading
-                    ? `Uploading ${state.files.length} item${state.files.length === 1 ? "" : "s"}...`
-                    : `Upload ${urlMode ? "link" : `${state.files.length} item${state.files.length === 1 ? "" : "s"}`}`}
+                    ? t("uploadingItems", { count: state.files.length })
+                    : urlMode ? t("uploadLink") : t("uploadItems", { count: state.files.length })}
               </button>
             )}
           </div>

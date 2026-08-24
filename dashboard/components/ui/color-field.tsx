@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
+import { useTranslations } from 'next-intl';
 
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -79,6 +80,7 @@ function normalizeDraft(value: string) {
 }
 
 export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
+  const t = useTranslations('ColorField');
   const normalized = HEX_COLOR.test(value) ? value.toUpperCase() : '#000000';
   const [draft, setDraft] = React.useState(normalized);
   const [hsv, setHsv] = React.useState<HsvColor>(() => hexToHsv(normalized));
@@ -134,7 +136,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
             type="button"
             className="relative flex h-10 w-12 shrink-0 items-center justify-center border-0 border-r border-border focus-visible:z-10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-[-3px] focus-visible:outline-foreground"
             style={{ backgroundColor: normalized }}
-            aria-label={`Choose color, current value ${normalized}`}
+            aria-label={t('chooseCurrent', { color: normalized })}
           >
             <span
               className="h-3 w-3 border border-white/70 bg-black/25 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
@@ -155,7 +157,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
             />
             <div className="min-w-0">
               <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Selected color
+                {t('selectedColor')}
               </p>
               <output className="font-mono text-sm text-foreground" aria-live="polite">
                 {normalized}
@@ -195,7 +197,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
                   event.preventDefault();
                   commitHsv(next);
                 }}
-                aria-label="Saturation and brightness"
+                aria-label={t('saturationAndBrightness')}
                 aria-describedby={instructionsId}
               >
                 <span
@@ -215,16 +217,16 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
                 />
               </button>
               <p id={instructionsId} className="sr-only">
-                Use left and right arrow keys for saturation. Use up and down arrow keys for
-                brightness. Hold Shift to change by ten percent. Current values are{' '}
-                {Math.round(hsv.saturation)}% saturation and {Math.round(hsv.brightness)}%
-                brightness.
+                {t('keyboardInstructions', {
+                  saturation: Math.round(hsv.saturation),
+                  brightness: Math.round(hsv.brightness),
+                })}
               </p>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                <label id={`${instructionsId}-hue`}>Hue</label>
+                <label id={`${instructionsId}-hue`}>{t('hue')}</label>
                 <span className="font-mono tabular-nums">{Math.round(hsv.hue)}°</span>
               </div>
               <SliderPrimitive.Root
@@ -246,7 +248,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
                   <SliderPrimitive.Range className="hidden" />
                 </SliderPrimitive.Track>
                 <SliderPrimitive.Thumb
-                  aria-label="Hue"
+                  aria-label={t('hue')}
                   className="block h-5 w-2 border border-foreground bg-background shadow-[0_0_0_1px_rgba(0,0,0,0.5)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-foreground"
                 />
               </SliderPrimitive.Root>
@@ -254,7 +256,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
 
             <div className="space-y-2">
               <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Quick colors
+                {t('quickColors')}
               </p>
               <div className="grid grid-cols-6 gap-1.5">
                 {SWATCHES.map((swatch) => (
@@ -267,7 +269,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
                     )}
                     style={{ backgroundColor: swatch }}
                     onClick={() => selectHex(swatch)}
-                    aria-label={`Use color ${swatch}`}
+                    aria-label={t('useColor', { color: swatch })}
                     aria-pressed={normalized === swatch}
                   />
                 ))}
@@ -292,7 +294,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
         spellCheck={false}
         autoComplete="off"
         inputMode="text"
-        aria-label="Hex color"
+        aria-label={t('hexColor')}
         aria-invalid={!isDraftValid}
         aria-describedby={!isDraftValid ? errorId : undefined}
         className={cn(
@@ -301,7 +303,7 @@ export function ColorField({ value, onValueChange, id }: ColorFieldProps) {
         )}
       />
       <span id={errorId} className="sr-only" aria-live="polite">
-        {!isDraftValid ? 'Enter a six-digit hexadecimal color.' : ''}
+        {!isDraftValid ? t('invalidHex') : ''}
       </span>
     </div>
   );
