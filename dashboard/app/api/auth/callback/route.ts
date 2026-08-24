@@ -9,11 +9,17 @@ import {
 } from '@/i18n/config';
 import { botApiUrl } from '@/lib/server/bot-api';
 
+const LOCALE_LOOKUP_TIMEOUT_MS = 1_500;
+
 async function getInitialLocale(request: NextRequest, sessionId: string) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), LOCALE_LOOKUP_TIMEOUT_MS);
+
   try {
     const response = await fetch(botApiUrl('/api/users/@me'), {
       headers: { Cookie: `DASHBOARD_AUTH=${sessionId}` },
       cache: 'no-store',
+      signal: controller.signal,
     });
     if (response.ok) {
       const payload = (await response.json()) as { user?: { locale?: unknown } };
@@ -25,6 +31,8 @@ async function getInitialLocale(request: NextRequest, sessionId: string) {
     }
   } catch {
     // Locale detection is non-critical; browser preferences remain available.
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   return matchAcceptLanguage(request.headers.get('accept-language')) ?? DEFAULT_LOCALE;

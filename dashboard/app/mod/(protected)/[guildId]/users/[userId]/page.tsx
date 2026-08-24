@@ -75,6 +75,9 @@ export default function UserProfilePage() {
       case 'MUTE_TEXT': return t('actionMuteText');
       case 'MUTE_VOICE': return t('actionMuteVoice');
       case 'MUTE_BOTH': return t('actionMute');
+      case 'UNMUTE_TEXT': return t('actionUnmuteText');
+      case 'UNMUTE_VOICE': return t('actionUnmuteVoice');
+      case 'UNMUTE_BOTH': return t('actionUnmute');
       case 'MUTES': return t('actionMutes');
       default: return action;
     }
@@ -552,7 +555,8 @@ function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
   const t = useTranslations('Moderation');
   const rewardStatusLabel = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return t('active');
+      case 'ACTIVE':
+      case 'CLAIMED': return t('active');
       case 'REVOKED': return t('revoked');
       case 'EXPIRED': return t('expired');
       default: return status;
@@ -587,7 +591,9 @@ function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
               </div>
               <span
                 className={`text-[10px] ${
-                  claim.status === 'ACTIVE' ? 'text-green-300/70' : 'text-[var(--mod-text-dim)]'
+                  claim.status === 'ACTIVE' || claim.status === 'CLAIMED'
+                    ? 'text-green-300/70'
+                    : 'text-[var(--mod-text-dim)]'
                 }`}
               >
                 {rewardStatusLabel(claim.status)}

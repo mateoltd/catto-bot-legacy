@@ -143,6 +143,42 @@ describe('GET /api/auth/callback', () => {
     );
   });
 
+  it('falls back to Accept-Language when the Discord locale lookup stalls', async () => {
+    vi.useFakeTimers();
+    let requestSignal: AbortSignal | null = null;
+
+    try {
+      vi.mocked(fetch).mockImplementation((_input, init) => {
+        requestSignal = init?.signal ?? null;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        });
+      });
+      mockCookieStore.get.mockReturnValue(undefined);
+      const req = new NextRequest(
+        'http://localhost:3000/api/auth/callback?sessionId=abc',
+      );
+      req.headers.set('accept-language', 'es-MX, en;q=0.8');
+
+      const responsePromise = GET(req);
+      await vi.advanceTimersByTimeAsync(1_500);
+      await responsePromise;
+
+      expect(requestSignal).toHaveProperty('aborted', true);
+      expect(mockCookieStore.set).toHaveBeenCalledWith(
+        'CATTO_DASH_LOCALE',
+        'es-ES',
+        expect.objectContaining({ httpOnly: true, sameSite: 'lax', path: '/' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not overwrite an explicit dashboard locale', async () => {
     mockCookieStore.get.mockImplementation((name: string) =>
       name === 'CATTO_DASH_LOCALE' ? { value: 'es-ES' } : undefined,

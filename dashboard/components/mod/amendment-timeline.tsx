@@ -24,6 +24,7 @@ export function AmendmentTimeline({ amendments }: AmendmentTimelineProps) {
     switch (action) {
       case 'NOTE_ADDED': return t('amendmentNoteAdded');
       case 'DESCRIPTION_UPDATED': return t('amendmentDescriptionUpdated');
+      case 'TAGS_UPDATED': return t('amendmentTagsUpdated');
       case 'FLAGGED': return t('amendmentFlagged');
       case 'UNFLAGGED': return t('amendmentUnflagged');
       case 'STATUS_CHANGED': return t('amendmentStatusChanged');

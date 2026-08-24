@@ -25,6 +25,17 @@ const CHART_COLORS = [
   '#ec4899', '#f43f5e', '#f97316', '#eab308',
 ];
 
+function parseBucketDate(value: string | number) {
+  if (typeof value === 'string') {
+    const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (dateOnly) {
+      return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+    }
+  }
+
+  return new Date(value);
+}
+
 export default function AnalyticsPage() {
   const t = useTranslations('Moderation');
   const format = useFormatter();
@@ -142,7 +153,7 @@ export default function AnalyticsPage() {
                   <LineChart data={evidenceAnalytics.volumeOverTime}>
                     <XAxis
                       dataKey="date"
-                      tickFormatter={(date) => format.dateTime(new Date(date), { month: 'short', day: 'numeric' })}
+                      tickFormatter={(date) => format.dateTime(parseBucketDate(date), { month: 'short', day: 'numeric' })}
                       tick={{ fill: 'var(--mod-text-dim)', fontSize: 10 }}
                       axisLine={{ stroke: 'var(--mod-border)' }}
                     />
@@ -173,7 +184,7 @@ export default function AnalyticsPage() {
                   <LineChart data={caseAnalytics.volumeOverTime}>
                     <XAxis
                       dataKey="date"
-                      tickFormatter={(date) => format.dateTime(new Date(date), { month: 'short', day: 'numeric' })}
+                      tickFormatter={(date) => format.dateTime(parseBucketDate(date), { month: 'short', day: 'numeric' })}
                       tick={{ fill: 'var(--mod-text-dim)', fontSize: 10 }}
                       axisLine={{ stroke: 'var(--mod-border)' }}
                     />

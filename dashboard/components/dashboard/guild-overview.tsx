@@ -23,8 +23,11 @@ export function GuildOverview({ guildId }: { guildId: string }) {
     : 0;
   const trackedPercentageLabel =
     trackedPercentage > 0 && trackedPercentage < 1
-      ? '<1%'
-      : `${format.number(Math.round(trackedPercentage))}%`;
+      ? t('lessThanOnePercent')
+      : format.number(trackedPercentage / 100, {
+          style: 'percent',
+          maximumFractionDigits: 0,
+        });
   const formatNumber = (value: number | undefined) =>
     value === undefined ? '—' : format.number(value);
   const joinedAt = stats?.joinedAt ? new Date(stats.joinedAt) : null;

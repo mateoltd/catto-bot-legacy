@@ -61,13 +61,6 @@ function evidenceName(item: Evidence) {
   );
 }
 
-function formatBytes(bytes: number | null) {
-  if (!bytes) return null;
-  if (bytes < 1024 * 1024)
-    return `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
 /** Search results become case groups; a single case becomes a chronology. */
 export function EvidenceGallery({
   evidence,
@@ -97,6 +90,21 @@ export function EvidenceGallery({
       : (evidence[0]?.id ?? null);
   const activeItem =
     evidence.find((item) => item.id === resolvedActiveId) ?? evidence[0];
+  const activeFileSize = (() => {
+    const bytes = activeItem?.sizeBytes;
+    if (!bytes) return null;
+    if (bytes < 1024 * 1024) {
+      const fractionDigits = bytes < 10240 ? 1 : 0;
+      return `${format.number(bytes / 1024, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+      })} KB`;
+    }
+    return `${format.number(bytes / 1024 / 1024, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })} MB`;
+  })();
   const hasSelection = selectedIds.size > 0;
   const canCompare = selectedIds.size === 2;
   const caseCount = new Set(evidence.map((item) => item.caseNumber)).size;
@@ -348,10 +356,10 @@ export function EvidenceGallery({
                 label={t("submittedBy")}
                 value={activeItem.uploadedByTag}
               />
-              {formatBytes(activeItem.sizeBytes) && (
+              {activeFileSize && (
                 <DossierRow
                   label={t("fileSize")}
-                  value={formatBytes(activeItem.sizeBytes)!}
+                  value={activeFileSize}
                 />
               )}
               {activeItem.mimeType && (
@@ -814,12 +822,12 @@ function EvidenceFocusPreview({
             ))
           ) : (
             <p className="p-8 text-center text-sm text-[var(--mod-text-dim)]">
-              Snapshot preview unavailable.
+              {t("snapshotPreviewUnavailable")}
             </p>
           )}
           {messages.length > 3 && (
             <p className="border-t border-[var(--mod-border)] px-4 py-2 text-xs text-[var(--mod-text-dim)]">
-              +{messages.length - 3} more messages
+              {t("moreMessages", { count: messages.length - 3 })}
             </p>
           )}
         </div>
