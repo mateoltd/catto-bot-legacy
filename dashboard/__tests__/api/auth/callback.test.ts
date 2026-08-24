@@ -127,7 +127,7 @@ describe('GET /api/auth/callback', () => {
 
   it('seeds the dashboard locale from Discord on first authentication', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      Response.json({ user: { locale: 'fr-CA' } }),
+      Response.json({ user: { locale: 'es-419' } }),
     );
     mockCookieStore.get.mockReturnValue(undefined);
     const req = new NextRequest(
@@ -138,7 +138,7 @@ describe('GET /api/auth/callback', () => {
 
     expect(mockCookieStore.set).toHaveBeenCalledWith(
       'CATTO_DASH_LOCALE',
-      'fr-FR',
+      'es-ES',
       expect.objectContaining({ httpOnly: true, sameSite: 'lax', path: '/' }),
     );
   });

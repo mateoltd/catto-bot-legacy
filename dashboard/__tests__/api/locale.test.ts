@@ -22,14 +22,14 @@ describe('POST /api/locale', () => {
     const request = new NextRequest('https://dash.catto.one/api/locale', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: 'fr-FR' }),
+      body: JSON.stringify({ locale: 'es-ES' }),
     });
 
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ locale: 'fr-FR' });
-    expect(mockCookieStore.set).toHaveBeenCalledWith('CATTO_DASH_LOCALE', 'fr-FR', {
+    await expect(response.json()).resolves.toEqual({ locale: 'es-ES' });
+    expect(mockCookieStore.set).toHaveBeenCalledWith('CATTO_DASH_LOCALE', 'es-ES', {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
@@ -38,7 +38,7 @@ describe('POST /api/locale', () => {
     });
     expect(mockCookieStore.set).toHaveBeenCalledWith(
       'CATTO_DASH_LOCALE',
-      'fr-FR',
+      'es-ES',
       expect.not.objectContaining({ domain: expect.anything() }),
     );
   });

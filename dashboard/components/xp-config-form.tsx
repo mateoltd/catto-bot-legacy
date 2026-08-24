@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
+import { useTranslations } from 'next-intl';
 import type { XPConfig } from '@/lib/services/text-xp.service';
 import { textXPService } from '@/lib/services/text-xp.service';
 import { useGuildData } from '@/hooks/use-guild-data';
@@ -21,6 +22,7 @@ interface XPConfigFormProps {
 }
 
 export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormProps) {
+  const t = useTranslations('TextXp');
   const { mutate } = useSWRConfig();
   const [config, setConfig] = useState<XPConfig>(initialConfig);
   const [savedConfig, setSavedConfig] = useState<XPConfig>(initialConfig);
@@ -43,7 +45,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('unknownError'));
     } finally {
       setIsSaving(false);
     }
@@ -53,8 +55,8 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Text XP Configuration</h2>
-        <p className="text-muted-foreground mt-1">Configure how users earn XP from messages</p>
+        <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
+        <p className="text-muted-foreground mt-1">{t('description')}</p>
       </div>
 
       {/* Status Messages */}
@@ -74,7 +76,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
             />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-destructive">Error</h3>
+            <h3 className="text-sm font-medium text-destructive">{t('errorTitle')}</h3>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
           </div>
         </div>
@@ -91,8 +93,8 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-success">Success</h3>
-            <p className="text-sm text-success/80 mt-1">Configuration saved successfully!</p>
+            <h3 className="text-sm font-medium text-success">{t('successTitle')}</h3>
+            <p className="text-sm text-success/80 mt-1">{t('saved')}</p>
           </div>
         </div>
       )}
@@ -100,14 +102,14 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
       {/* General Settings */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
+          <CardTitle>{t('generalSettings')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Enabled Toggle */}
           <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
             <div>
-              <label className="text-sm font-medium text-foreground">Enable Text XP System</label>
-              <p className="text-sm text-muted-foreground">Allow users to gain XP from messages</p>
+              <label className="text-sm font-medium text-foreground">{t('enable')}</label>
+              <p className="text-sm text-muted-foreground">{t('enableDescription')}</p>
             </div>
             <Switch
               checked={config.enabled}
@@ -126,22 +128,22 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
       {/* Channel & Role Filters */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>Channel & Role Filters</CardTitle>
+          <CardTitle>{t('filters')}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoadingData ? (
             <div className="flex flex-col items-center justify-center py-8">
               <div className="neon-spinner mb-4" />
-              <p className="text-sm text-muted-foreground">Loading channels and roles...</p>
+              <p className="text-sm text-muted-foreground">{t('loadingChannelsRoles')}</p>
             </div>
           ) : (
             <div className="space-y-6">
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground">
-                  Channel Policy
+                  {t('channelPolicy')}
                 </label>
                 <p className="mb-2 text-xs text-muted-foreground">
-                  Set an explicit policy only where a channel should differ from the default.
+                  {t('channelPolicyDescription')}
                 </p>
                 <ChannelFilterList
                   items={channels.map((channel) => ({ value: channel.id, label: channel.name }))}
@@ -158,7 +160,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Ignored Roles
+                  {t('ignoredRoles')}
                 </label>
                 <MultiSelectList
                   items={roles.map((role) => ({
@@ -168,11 +170,11 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
                   }))}
                   value={config.ignoredRoles}
                   onValueChange={(ignoredRoles) => setConfig((prev) => ({ ...prev, ignoredRoles }))}
-                  emptyLabel="No roles available"
-                  searchPlaceholder="Filter roles…"
+                  emptyLabel={t('noRoles')}
+                  searchPlaceholder={t('filterRoles')}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Users with these roles do not earn XP
+                  {t('ignoredRolesDescription')}
                 </p>
               </div>
             </div>
@@ -183,13 +185,13 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
       {/* Level-Up Announcements */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>Level-Up Announcements</CardTitle>
+          <CardTitle>{t('announcements')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
             <div>
-              <label className="text-sm font-medium text-foreground">Announce Level-Ups</label>
-              <p className="text-sm text-muted-foreground">Send a message when users level up</p>
+              <label className="text-sm font-medium text-foreground">{t('announce')}</label>
+              <p className="text-sm text-muted-foreground">{t('announceDescription')}</p>
             </div>
             <Switch
               checked={config.announceLevelUp}
@@ -203,7 +205,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
             <div className="space-y-4 pt-2">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Announcement Channel ID (Optional)
+                  {t('announcementChannel')}
                 </label>
                 <Input
                   type="text"
@@ -214,13 +216,13 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
                       announceChannelId: e.target.value || null,
                     }))
                   }
-                  placeholder="Leave empty to announce in message channel"
+                  placeholder={t('announcementChannelPlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Message Template
+                  {t('messageTemplate')}
                 </label>
                 <Input
                   type="text"
@@ -231,14 +233,16 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
                   maxLength={2000}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Variables: {'{user}'}, {'{level}'}, {'{xpGain}'}, {'{totalXp}'}
+                  {t('templateVariables', {
+                    variables: '{user}, {level}, {xpGain}, {totalXp}',
+                  })}
                 </p>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
                 <div>
-                  <label className="text-sm font-medium text-foreground">Use Embed</label>
-                  <p className="text-sm text-muted-foreground">Show level-up in a fancy embed</p>
+                  <label className="text-sm font-medium text-foreground">{t('useEmbed')}</label>
+                  <p className="text-sm text-muted-foreground">{t('useEmbedDescription')}</p>
                 </div>
                 <Switch
                   checked={config.embedEnabled}
@@ -251,7 +255,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
               {config.embedEnabled && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Embed Color
+                    {t('embedColor')}
                   </label>
                   <ColorField
                     value={`#${config.embedColor.toString(16).padStart(6, '0')}`}

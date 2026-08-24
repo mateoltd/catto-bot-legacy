@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ['en-US', 'es-ES', 'fr-FR'] as const;
+export const SUPPORTED_LOCALES = ['en-US', 'es-ES'] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 export type DashboardMessages = typeof import('@/messages/en-US.json');
@@ -10,7 +10,6 @@ export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const localeByLanguage: Record<string, AppLocale> = {
   en: 'en-US',
   es: 'es-ES',
-  fr: 'fr-FR',
 };
 
 export function isAppLocale(value: unknown): value is AppLocale {
@@ -58,4 +57,3 @@ export function matchAcceptLanguage(value: string | null | undefined): AppLocale
 
   return null;
 }
-

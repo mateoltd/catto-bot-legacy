@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { useTranslations } from 'next-intl';
 import { BrandMark } from '@/components/dashboard/brand-mark';
+import { LocaleSwitcher } from '@/components/dashboard/locale-switcher';
 import { cn } from '@/lib/utils';
 
 interface DashboardTopbarProps {
@@ -45,7 +46,10 @@ export function DashboardTopbar({
             </>
           )}
         </div>
-        {trailing}
+        <div className="flex shrink-0 items-center gap-2">
+          <LocaleSwitcher />
+          {trailing}
+        </div>
       </div>
     </header>
   );

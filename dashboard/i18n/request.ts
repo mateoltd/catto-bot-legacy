@@ -15,7 +15,6 @@ const messageLoaders: Record<
 > = {
   'en-US': () => import('@/messages/en-US.json'),
   'es-ES': () => import('@/messages/es-ES.json'),
-  'fr-FR': () => import('@/messages/fr-FR.json'),
 };
 
 export default getRequestConfig(async () => {

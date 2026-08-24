@@ -1,5 +1,6 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocaleSwitcher } from '@/components/dashboard/locale-switcher';
@@ -23,22 +24,22 @@ describe('LocaleSwitcher', () => {
   });
 
   it('persists the selected locale and refreshes the current route', async () => {
+    const user = userEvent.setup();
     render(
       <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
         <LocaleSwitcher />
       </NextIntlClientProvider>,
     );
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Change dashboard language' }), {
-      target: { value: 'fr-FR' },
-    });
+    await user.click(screen.getByRole('combobox', { name: 'Change dashboard language' }));
+    await user.click(screen.getByRole('option', { name: 'Español' }));
 
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce());
     expect(fetch).toHaveBeenCalledWith('/api/locale', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: 'fr-FR' }),
+      body: JSON.stringify({ locale: 'es-ES' }),
     });
   });
 });

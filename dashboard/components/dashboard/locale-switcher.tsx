@@ -5,18 +5,27 @@ import { useRouter } from 'next/navigation';
 import { IconLanguage } from '@tabler/icons-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { isAppLocale, SUPPORTED_LOCALES } from '@/i18n/config';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function LocaleSwitcher() {
   const locale = useLocale();
   const t = useTranslations('Locale');
   const router = useRouter();
   const selectId = useId();
+  const [selectedLocale, setSelectedLocale] = useState(locale);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateLocale = async (value: string) => {
     if (!isAppLocale(value) || value === locale) return;
 
+    setSelectedLocale(value);
     setIsUpdating(true);
     setError(null);
     try {
@@ -29,6 +38,7 @@ export function LocaleSwitcher() {
       if (!response.ok) throw new Error('Locale update failed');
       router.refresh();
     } catch {
+      setSelectedLocale(locale);
       setError(t('updateFailed'));
     } finally {
       setIsUpdating(false);
@@ -36,30 +46,37 @@ export function LocaleSwitcher() {
   };
 
   return (
-    <div className="border-b border-border px-3 py-2">
-      <label
-        htmlFor={selectId}
-        className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground"
-      >
-        <IconLanguage size={15} aria-hidden="true" />
+    <div className="relative">
+      <label htmlFor={selectId} className="sr-only">
         {t('label')}
       </label>
-      <select
-        id={selectId}
-        value={locale}
+      <Select
+        value={selectedLocale}
         disabled={isUpdating}
-        onChange={(event) => void updateLocale(event.target.value)}
-        aria-label={t('change')}
-        className="h-9 w-full border border-border bg-background px-2 text-xs text-foreground disabled:opacity-60"
+        onValueChange={(value) => void updateLocale(value)}
       >
-        {SUPPORTED_LOCALES.map((supportedLocale) => (
-          <option key={supportedLocale} value={supportedLocale}>
-            {t(supportedLocale)}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          id={selectId}
+          aria-label={t('change')}
+          size="sm"
+          className="w-10 px-2 text-xs sm:w-36"
+        >
+          <IconLanguage size={15} aria-hidden="true" />
+          <SelectValue className="hidden sm:flex" />
+        </SelectTrigger>
+        <SelectContent align="end" position="popper">
+          {SUPPORTED_LOCALES.map((supportedLocale) => (
+            <SelectItem key={supportedLocale} value={supportedLocale}>
+              {t(supportedLocale)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {error && (
-        <p className="mt-1.5 text-xs text-red-400" role="alert">
+        <p
+          className="absolute right-0 top-full z-50 mt-1 w-64 border border-destructive/40 bg-popover p-2 text-xs text-red-400 shadow-xl"
+          role="alert"
+        >
           {error}
         </p>
       )}

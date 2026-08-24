@@ -1,6 +1,7 @@
 'use client';
 
 import XPConfigForm from '@/components/xp-config-form';
+import { useTranslations } from 'next-intl';
 import { useTextXPConfig } from '@/hooks/use-text-xp-config';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -9,6 +10,7 @@ interface TextXPConfigPageProps {
 }
 
 export default function TextXPConfigPage({ guildId }: TextXPConfigPageProps) {
+  const t = useTranslations('TextXp');
   const { config, loading, error } = useTextXPConfig(guildId);
 
   if (loading) {
@@ -16,7 +18,7 @@ export default function TextXPConfigPage({ guildId }: TextXPConfigPageProps) {
       <Card variant="glass" className="p-8">
         <CardContent className="flex flex-col items-center justify-center py-8">
           <div className="neon-spinner mb-4" />
-          <p className="text-muted-foreground">Loading configuration...</p>
+          <p className="text-muted-foreground">{t('loading')}</p>
         </CardContent>
       </Card>
     );
@@ -42,10 +44,10 @@ export default function TextXPConfigPage({ guildId }: TextXPConfigPageProps) {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">
-            Failed to Load Configuration
+            {t('loadFailed')}
           </h2>
           <p className="text-muted-foreground text-center">
-            {error || 'Unable to fetch the XP configuration. Please try again later.'}
+            {error || t('loadFailedDescription')}
           </p>
         </CardContent>
       </Card>

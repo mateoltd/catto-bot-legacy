@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   RewardBuilder,
   type RewardFormState,
 } from '@/components/rewards/reward-builder';
+import messages from '@/messages/en-US.json';
 
 const initialReward: RewardFormState = {
   level: 1,
@@ -27,14 +29,16 @@ afterEach(cleanup);
 function Example({ onSubmit = vi.fn() }: { onSubmit?: () => void }) {
   const [value, setValue] = useState(initialReward);
   return (
-    <RewardBuilder
-      value={value}
-      onChange={setValue}
-      onSubmit={onSubmit}
-      onCancel={vi.fn()}
-      roles={[{ id: 'veteran', name: 'Veteran', color: 0xffaa00, position: 1 }]}
-      textChannels={[{ id: 'lounge', name: 'lounge', type: 'text' }]}
-    />
+    <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+      <RewardBuilder
+        value={value}
+        onChange={setValue}
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        roles={[{ id: 'veteran', name: 'Veteran', color: 0xffaa00, position: 1 }]}
+        textChannels={[{ id: 'lounge', name: 'lounge', type: 'text' }]}
+      />
+    </NextIntlClientProvider>
   );
 }
 

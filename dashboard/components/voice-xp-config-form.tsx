@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
+import { useTranslations } from 'next-intl';
 import { useGuildData } from '@/hooks/use-guild-data';
 import type { VoiceXPConfig } from '@/lib/services/voice-xp.service';
 import { voiceXPService } from '@/lib/services/voice-xp.service';
@@ -22,6 +23,7 @@ interface VoiceXPConfigFormProps {
 }
 
 export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPConfigFormProps) {
+  const t = useTranslations('VoiceXp');
   const { mutate } = useSWRConfig();
   const [config, setConfig] = useState<VoiceXPConfig>(initialConfig);
   const [savedConfig, setSavedConfig] = useState<VoiceXPConfig>(initialConfig);
@@ -45,7 +47,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('unknownError'));
     } finally {
       setIsSaving(false);
     }
@@ -55,9 +57,9 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Voice XP Configuration</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
         <p className="text-muted-foreground mt-1">
-          Configure how users earn XP from voice channels
+          {t('description')}
         </p>
       </div>
 
@@ -78,7 +80,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
             />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-destructive">Error</h3>
+            <h3 className="text-sm font-medium text-destructive">{t('errorTitle')}</h3>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
           </div>
         </div>
@@ -95,8 +97,8 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-success">Success</h3>
-            <p className="text-sm text-success/80 mt-1">Configuration saved successfully!</p>
+            <h3 className="text-sm font-medium text-success">{t('successTitle')}</h3>
+            <p className="text-sm text-success/80 mt-1">{t('saved')}</p>
           </div>
         </div>
       )}
@@ -104,14 +106,14 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
       {/* General Settings */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
+          <CardTitle>{t('generalSettings')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
             <div>
-              <label className="text-sm font-medium text-foreground">Enable Voice XP System</label>
+              <label className="text-sm font-medium text-foreground">{t('enable')}</label>
               <p className="text-sm text-muted-foreground">
-                Allow users to gain XP from voice channels
+                {t('enableDescription')}
               </p>
             </div>
             <Switch
@@ -131,17 +133,17 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
       {/* User State Filters */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>User State Filters</CardTitle>
+          <CardTitle>{t('userStateFilters')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground mb-4">
-            Configure which user states should earn XP
+            {t('userStateDescription')}
           </p>
 
           <div className="flex items-center justify-between p-3 bg-muted/20 border border-border/30">
             <div>
-              <label className="text-sm font-medium text-foreground">Award XP While Muted</label>
-              <p className="text-xs text-muted-foreground">Allow XP gain when user is muted</p>
+              <label className="text-sm font-medium text-foreground">{t('awardMuted')}</label>
+              <p className="text-xs text-muted-foreground">{t('awardMutedDescription')}</p>
             </div>
             <Switch
               checked={config.awardMuted}
@@ -151,8 +153,8 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
 
           <div className="flex items-center justify-between p-3 bg-muted/20 border border-border/30">
             <div>
-              <label className="text-sm font-medium text-foreground">Award XP While Deafened</label>
-              <p className="text-xs text-muted-foreground">Allow XP gain when user is deafened</p>
+              <label className="text-sm font-medium text-foreground">{t('awardDeafened')}</label>
+              <p className="text-xs text-muted-foreground">{t('awardDeafenedDescription')}</p>
             </div>
             <Switch
               checked={config.awardDeafened}
@@ -165,9 +167,9 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
           <div className="flex items-center justify-between p-3 bg-muted/20 border border-border/30">
             <div>
               <label className="text-sm font-medium text-foreground">
-                Award XP While Streaming
+                {t('awardStreaming')}
               </label>
-              <p className="text-xs text-muted-foreground">Give XP when user is screen sharing</p>
+              <p className="text-xs text-muted-foreground">{t('awardStreamingDescription')}</p>
             </div>
             <Switch
               checked={config.awardStreaming}
@@ -179,8 +181,8 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
 
           <div className="flex items-center justify-between p-3 bg-muted/20 border border-border/30">
             <div>
-              <label className="text-sm font-medium text-foreground">Award XP With Video On</label>
-              <p className="text-xs text-muted-foreground">Give XP when user has video enabled</p>
+              <label className="text-sm font-medium text-foreground">{t('awardVideo')}</label>
+              <p className="text-xs text-muted-foreground">{t('awardVideoDescription')}</p>
             </div>
             <Switch
               checked={config.awardVideo}
@@ -190,8 +192,8 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
 
           <div className="flex items-center justify-between p-3 bg-muted/20 border border-border/30">
             <div>
-              <label className="text-sm font-medium text-foreground">Ignore AFK Channel</label>
-              <p className="text-xs text-muted-foreground">Do not award XP in the AFK channel</p>
+              <label className="text-sm font-medium text-foreground">{t('ignoreAfk')}</label>
+              <p className="text-xs text-muted-foreground">{t('ignoreAfkDescription')}</p>
             </div>
             <Switch
               checked={config.ignoreAfkChannel}
@@ -205,10 +207,10 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-medium text-foreground">
-                  Anti-Farm Dampening (Optional)
+                  {t('antiFarm')}
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  Reduce XP in likely farming contexts without hard-blocking gains
+                  {t('antiFarmDescription')}
                 </p>
               </div>
               <Switch
@@ -223,7 +225,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Dampening Multiplier
+                    {t('dampeningMultiplier')}
                   </label>
                   <Input
                     type="number"
@@ -247,7 +249,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Minimum Non-Bot Participants
+                    {t('minimumParticipants')}
                   </label>
                   <Input
                     type="number"
@@ -279,15 +281,15 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
       {!isLoadingData && voiceChannels.length > 0 && (
         <Card variant="glass">
           <CardHeader>
-            <CardTitle>Channel Filters</CardTitle>
+            <CardTitle>{t('channelFilters')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
-                Channel Policy
+                {t('channelPolicy')}
               </label>
               <p className="mb-2 text-xs text-muted-foreground">
-                Set an explicit policy only where a channel should differ from the default.
+                {t('channelPolicyDescription')}
               </p>
               <ChannelFilterList
                 items={voiceChannels.map((channel) => ({ value: channel.id, label: channel.name }))}
@@ -299,7 +301,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
                 onIgnoredChange={(ignoredChannels) =>
                   setConfig((prev) => ({ ...prev, ignoredChannels }))
                 }
-                searchPlaceholder="Filter voice channels…"
+                searchPlaceholder={t('filterVoiceChannels')}
               />
             </div>
           </CardContent>
@@ -310,12 +312,12 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
       {!isLoadingData && roles.length > 0 && (
         <Card variant="glass">
           <CardHeader>
-            <CardTitle>Role Filters</CardTitle>
+            <CardTitle>{t('roleFilters')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <label className="block text-sm font-medium text-foreground mb-2">Ignored Roles</label>
+            <label className="block text-sm font-medium text-foreground mb-2">{t('ignoredRoles')}</label>
             <p className="text-xs text-muted-foreground mb-2">
-              Users with these roles do not gain XP
+              {t('ignoredRolesDescription')}
             </p>
             <MultiSelectList
               items={roles.map((role) => ({
@@ -326,7 +328,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
               }))}
               value={config.ignoredRoles}
               onValueChange={(ignoredRoles) => setConfig((prev) => ({ ...prev, ignoredRoles }))}
-              searchPlaceholder="Filter roles…"
+              searchPlaceholder={t('filterRoles')}
             />
           </CardContent>
         </Card>
@@ -335,13 +337,13 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
       {/* Level-Up Announcements */}
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>Level-Up Announcements</CardTitle>
+          <CardTitle>{t('announcements')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
             <div>
-              <label className="text-sm font-medium text-foreground">Announce Level-Ups</label>
-              <p className="text-sm text-muted-foreground">Send a message when users level up</p>
+              <label className="text-sm font-medium text-foreground">{t('announce')}</label>
+              <p className="text-sm text-muted-foreground">{t('announceDescription')}</p>
             </div>
             <Switch
               checked={config.announceLevelUp}
@@ -357,7 +359,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
               {!isLoadingData && textChannels.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Announcement Channel (Optional)
+                    {t('announcementChannel')}
                   </label>
                   <Select
                     value={config.announceChannelId || '_none'}
@@ -372,7 +374,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">No announcement channel</SelectItem>
+                      <SelectItem value="_none">{t('noAnnouncementChannel')}</SelectItem>
                       {textChannels.map((channel) => (
                         <SelectItem key={channel.id} value={channel.id}>
                           # {channel.name}
@@ -381,7 +383,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1.5">
-                    Set a channel to enable voice level-up announcements
+                    {t('announcementChannelDescription')}
                   </p>
                 </div>
               )}
@@ -389,7 +391,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
               {/* Message Template */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Message Template
+                  {t('messageTemplate')}
                 </label>
                 <textarea
                   value={config.messageTemplate}
@@ -398,18 +400,20 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
                   }
                   className="w-full resize-none border border-border bg-input px-4 py-3 text-foreground placeholder:text-muted-foreground outline-none"
                   rows={3}
-                  placeholder="GG {user}, you just advanced to level {level}!"
+                  placeholder={t('messageTemplatePlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Available variables: {'{user}'}, {'{level}'}, {'{xp}'}, {'{nextLevelXp}'}
+                  {t('templateVariables', {
+                    variables: '{user}, {level}, {xp}, {nextLevelXp}',
+                  })}
                 </p>
               </div>
 
               {/* Embed Settings */}
               <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
                 <div>
-                  <label className="text-sm font-medium text-foreground">Use Embed</label>
-                  <p className="text-sm text-muted-foreground">Send as an embedded message</p>
+                  <label className="text-sm font-medium text-foreground">{t('useEmbed')}</label>
+                  <p className="text-sm text-muted-foreground">{t('useEmbedDescription')}</p>
                 </div>
                 <Switch
                   checked={config.embedEnabled}
@@ -422,7 +426,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
               {config.embedEnabled && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Embed Color
+                    {t('embedColor')}
                   </label>
                   <ColorField
                     value={`#${config.embedColor.toString(16).padStart(6, '0')}`}

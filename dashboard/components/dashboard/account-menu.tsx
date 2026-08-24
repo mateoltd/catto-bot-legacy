@@ -9,7 +9,6 @@ import {
   IconChevronDown,
   IconLogout,
 } from '@tabler/icons-react';
-import { LocaleSwitcher } from '@/components/dashboard/locale-switcher';
 
 export interface AccountIdentity {
   id: string;
@@ -114,7 +113,6 @@ export function AccountMenu({
             <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
             <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">{user.id}</p>
           </div>
-          <LocaleSwitcher />
           <div className="p-1">
             {allowAccountSwitch && (
               <button
