@@ -1,62 +1,38 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { loggingService, type LogConfig } from '@/lib/services/logging.service';
 
 export function useLoggingConfig(guildId: string) {
-  const [config, setConfig] = useState<LogConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const mountedRef = useRef(true);
-
-  const fetchConfig = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await loggingService.getConfig(guildId);
-      if (mountedRef.current) {
-        setConfig(data);
-      }
-    } catch (err) {
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch logging config');
-      }
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [guildId]);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    fetchConfig();
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [fetchConfig]);
+  const { data: config, error, isLoading, mutate } = useSWR<LogConfig>(
+    ['logging-config', guildId],
+    () => loggingService.getConfig(guildId),
+    { revalidateOnFocus: false },
+  );
 
   const updateConfig = async (updates: { enabled?: boolean; ignoredChannels?: string[] }) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await loggingService.updateConfig(guildId, updates);
-      // Update local state
-      setConfig((prev) =>
-        prev
+      await mutate(
+        (current) =>
+          current
           ? {
-              ...prev,
+              ...current,
               enabled: result.enabled,
               ignoredChannels: result.ignoredChannels,
             }
-          : null
+          : current,
+        { revalidate: false },
       );
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update logging config';
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -66,20 +42,22 @@ export function useLoggingConfig(guildId: string) {
   const setIgnoredChannels = async (channelIds: string[]) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await loggingService.setIgnoredChannels(guildId, channelIds);
-      setConfig((prev) =>
-        prev
+      await mutate(
+        (current) =>
+          current
           ? {
-              ...prev,
+              ...current,
               ignoredChannels: result.ignoredChannels,
             }
-          : null
+          : current,
+        { revalidate: false },
       );
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update ignored channels';
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -89,20 +67,22 @@ export function useLoggingConfig(guildId: string) {
   const addIgnoredChannel = async (channelId: string) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await loggingService.addIgnoredChannel(guildId, channelId);
-      setConfig((prev) =>
-        prev
+      await mutate(
+        (current) =>
+          current
           ? {
-              ...prev,
+              ...current,
               ignoredChannels: result.ignoredChannels,
             }
-          : null
+          : current,
+        { revalidate: false },
       );
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add ignored channel';
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -112,20 +92,22 @@ export function useLoggingConfig(guildId: string) {
   const removeIgnoredChannel = async (channelId: string) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await loggingService.removeIgnoredChannel(guildId, channelId);
-      setConfig((prev) =>
-        prev
+      await mutate(
+        (current) =>
+          current
           ? {
-              ...prev,
+              ...current,
               ignoredChannels: result.ignoredChannels,
             }
-          : null
+          : current,
+        { revalidate: false },
       );
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to remove ignored channel';
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -133,15 +115,17 @@ export function useLoggingConfig(guildId: string) {
   };
 
   return {
-    config,
-    loading,
+    config: config ?? null,
+    loading: isLoading,
     saving,
-    error,
+    error:
+      mutationError ??
+      (error instanceof Error ? error.message : error ? 'Failed to fetch logging config' : null),
     updateConfig,
     setIgnoredChannels,
     addIgnoredChannel,
     removeIgnoredChannel,
-    refetch: fetchConfig,
-    setConfig,
+    refetch: () => mutate(),
+    setConfig: (value: LogConfig) => mutate(value, { revalidate: false }),
   };
 }

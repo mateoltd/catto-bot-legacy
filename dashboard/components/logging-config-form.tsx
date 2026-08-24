@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { useLoggingConfig } from '@/hooks/use-logging-config';
 import { useGuildData } from '@/hooks/use-guild-data';
-import { loggingService, type LogType, type LogTypeInfo } from '@/lib/services/logging.service';
+import { loggingService, type LogType } from '@/lib/services/logging.service';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { MultiSelectList } from '@/components/ui/multi-select-list';
+import { UnsavedChangesBar } from '@/components/ui/unsaved-changes-bar';
 
 interface LoggingConfigFormProps {
   guildId: string;
@@ -46,17 +48,22 @@ const LOG_TYPE_ICONS: Record<string, string> = {
 };
 
 export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
-  const router = useRouter();
   const { config, loading, saving, error, updateConfig, setIgnoredChannels, refetch, setConfig } =
     useLoggingConfig(guildId);
   const { channels, loading: loadingChannels } = useGuildData(guildId);
-  const [localIgnoredChannels, setLocalIgnoredChannels] = useState<string[]>([]);
+  const [ignoredChannelsDraft, setLocalIgnoredChannels] = useState<string[] | null>(null);
   const [success, setSuccess] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
 
-  // Log types from API
-  const [logTypes, setLogTypes] = useState<LogTypeInfo[]>([]);
-  const [logTypesLoading, setLogTypesLoading] = useState(true);
+  const {
+    data: logTypesData,
+    isLoading: logTypesLoading,
+    mutate: mutateLogTypes,
+  } = useSWR(
+    ['logging-types', guildId],
+    () => loggingService.getTypes(guildId),
+    { revalidateOnFocus: false },
+  );
+  const logTypes = logTypesData?.types ?? [];
 
   // Setup wizard state
   const [selectedLogTypes, setSelectedLogTypes] = useState<LogType[]>([
@@ -74,40 +81,11 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Fetch log types from API
-  const fetchLogTypes = useCallback(async () => {
-    try {
-      setLogTypesLoading(true);
-      const data = await loggingService.getTypes(guildId);
-      setLogTypes(data.types);
-    } catch (err) {
-      console.error('Failed to fetch log types:', err);
-    } finally {
-      setLogTypesLoading(false);
-    }
-  }, [guildId]);
-
-  useEffect(() => {
-    fetchLogTypes();
-  }, [fetchLogTypes]);
-
-  // Sync local state with fetched config
-  useEffect(() => {
-    if (config) {
-      setLocalIgnoredChannels(config.ignoredChannels || []);
-    }
-  }, [config]);
-
-  // Track changes
-  useEffect(() => {
-    if (config) {
-      const configIgnored = config.ignoredChannels || [];
-      const ignoredChanged =
-        JSON.stringify([...localIgnoredChannels].sort()) !==
-        JSON.stringify([...configIgnored].sort());
-      setHasChanges(ignoredChanged);
-    }
-  }, [localIgnoredChannels, config]);
+  const localIgnoredChannels = ignoredChannelsDraft ?? config?.ignoredChannels ?? [];
+  const hasChanges = config
+    ? JSON.stringify([...localIgnoredChannels].sort()) !==
+      JSON.stringify([...(config.ignoredChannels || [])].sort())
+    : false;
 
   const handleToggleEnabled = async (enabled: boolean) => {
     const result = await updateConfig({ enabled });
@@ -121,18 +99,9 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
   const handleSaveIgnoredChannels = async () => {
     const result = await setIgnoredChannels(localIgnoredChannels);
     if (result.success) {
+      setLocalIgnoredChannels(null);
       setSuccess(true);
-      setHasChanges(false);
       setTimeout(() => setSuccess(false), 3000);
-      router.refresh();
-    }
-  };
-
-  const handleToggleIgnoredChannel = (channelId: string, checked: boolean) => {
-    if (checked) {
-      setLocalIgnoredChannels((prev) => [...prev, channelId]);
-    } else {
-      setLocalIgnoredChannels((prev) => prev.filter((id) => id !== channelId));
     }
   };
 
@@ -141,9 +110,15 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
     try {
       const result = await loggingService.toggleLogType(guildId, logType, enabled);
       if (result.success) {
-        // Update local logTypes state directly
-        setLogTypes((prev) =>
-          prev.map((t) => (t.key === logType ? { ...t, enabled: result.enabled } : t))
+        await mutateLogTypes(
+          (current) =>
+            current && {
+              ...current,
+              types: current.types.map((type) =>
+                type.key === logType ? { ...type, enabled: result.enabled } : type,
+              ),
+            },
+          { revalidate: false },
         );
         // Also update config if needed
         if (config) {
@@ -177,8 +152,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       refetch();
-      fetchLogTypes();
-      router.refresh();
+      mutateLogTypes();
     } catch (err) {
       console.error('Failed to delete logging:', err);
     } finally {
@@ -223,19 +197,12 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
         });
         setSuccess(true);
         refetch();
-        fetchLogTypes();
-        router.refresh();
+        mutateLogTypes();
       } catch (err) {
         setSetupError(err instanceof Error ? err.message : 'Failed to setup logging');
       } finally {
         setIsSettingUp(false);
       }
-    };
-
-    const toggleLogType = (key: LogType) => {
-      setSelectedLogTypes((prev) =>
-        prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-      );
     };
 
     const selectAllCore = () => {
@@ -257,7 +224,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
         </div>
 
         {setupError && (
-          <div className="glass border-destructive/50 rounded-lg p-4 flex items-start gap-3">
+          <div className="glass border-destructive/50 p-4 flex items-start gap-3">
             <svg
               className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
               fill="none"
@@ -324,99 +291,27 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
             {/* Core Log Types */}
             <div>
               <h4 className="text-sm font-medium text-foreground mb-3">Core Logs</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {logTypes
-                  .filter((t) => t.category === 'core')
-                  .map((logType) => (
-                    <label
-                      key={logType.key}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        selectedLogTypes.includes(logType.key as LogType)
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border/50 bg-muted/30 hover:bg-muted/50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedLogTypes.includes(logType.key as LogType)}
-                        onChange={() => toggleLogType(logType.key as LogType)}
-                        className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary focus:ring-offset-0 focus:ring-2"
-                      />
-                      <div
-                        className={`p-2 rounded-lg ${selectedLogTypes.includes(logType.key as LogType) ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'}`}
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d={LOG_TYPE_ICONS[logType.key] || ''}
-                          />
-                        </svg>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{logType.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {logType.description}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-              </div>
+              <MultiSelectList
+                items={logTypes
+                  .filter((type) => type.category === 'core')
+                  .map((type) => ({ value: type.key, label: type.name, description: type.description }))}
+                value={selectedLogTypes}
+                onValueChange={(value) => setSelectedLogTypes(value as LogType[])}
+                searchPlaceholder="Filter core logs…"
+              />
             </div>
 
             {/* Advanced Log Types */}
             <div>
               <h4 className="text-sm font-medium text-foreground mb-3">Advanced Logs</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {logTypes
-                  .filter((t) => t.category === 'advanced')
-                  .map((logType) => (
-                    <label
-                      key={logType.key}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        selectedLogTypes.includes(logType.key as LogType)
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border/50 bg-muted/30 hover:bg-muted/50'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedLogTypes.includes(logType.key as LogType)}
-                        onChange={() => toggleLogType(logType.key as LogType)}
-                        className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary focus:ring-offset-0 focus:ring-2"
-                      />
-                      <div
-                        className={`p-2 rounded-lg ${selectedLogTypes.includes(logType.key as LogType) ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'}`}
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d={LOG_TYPE_ICONS[logType.key] || ''}
-                          />
-                        </svg>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground">{logType.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {logType.description}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-              </div>
+              <MultiSelectList
+                items={logTypes
+                  .filter((type) => type.category === 'advanced')
+                  .map((type) => ({ value: type.key, label: type.name, description: type.description }))}
+                value={selectedLogTypes}
+                onValueChange={(value) => setSelectedLogTypes(value as LogType[])}
+                searchPlaceholder="Filter advanced logs…"
+              />
             </div>
 
             {/* Setup Button */}
@@ -470,30 +365,18 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div>
         <div>
           <h2 className="text-2xl font-bold text-foreground">Event Logging</h2>
           <p className="text-muted-foreground mt-1">
             Track and log server events to dedicated channels
           </p>
         </div>
-        {hasChanges && (
-          <Button variant="neon" onClick={handleSaveIgnoredChannels} disabled={saving}>
-            {saving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                Saving...
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
-        )}
       </div>
 
       {/* Status Messages */}
       {error && (
-        <div className="glass border-destructive/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-destructive/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
             fill="none"
@@ -515,7 +398,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
       )}
 
       {success && (
-        <div className="glass border-success/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-success/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-success flex-shrink-0 mt-0.5"
             fill="none"
@@ -538,7 +421,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Enabled Toggle */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+          <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
             <div>
               <label className="text-sm font-medium text-foreground">Enable Logging System</label>
               <p className="text-sm text-muted-foreground">Master toggle for all logging events</p>
@@ -559,30 +442,19 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
           <CardDescription>Events from these channels will not be logged</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border border-border/50 rounded-lg bg-muted/20 p-3 max-h-64 overflow-y-auto space-y-1">
-            {loadingChannels ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : channels.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2 px-2">No channels available</p>
-            ) : (
-              channels.map((channel) => (
-                <label
-                  key={channel.id}
-                  className="flex items-center gap-3 px-3 py-2 hover:bg-muted/30 rounded-lg cursor-pointer transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={localIgnoredChannels.includes(channel.id)}
-                    onChange={(e) => handleToggleIgnoredChannel(channel.id, e.target.checked)}
-                    className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary focus:ring-offset-0 focus:ring-2"
-                  />
-                  <span className="text-sm text-muted-foreground"># {channel.name}</span>
-                </label>
-              ))
-            )}
-          </div>
+          {loadingChannels ? (
+            <div className="flex items-center justify-center border border-border py-8">
+              <div className="neon-spinner" />
+            </div>
+          ) : (
+            <MultiSelectList
+              items={channels.map((channel) => ({ value: channel.id, label: channel.name, prefix: '#' }))}
+              value={localIgnoredChannels}
+              onValueChange={setLocalIgnoredChannels}
+              emptyLabel="No channels available"
+              searchPlaceholder="Filter channels…"
+            />
+          )}
           <p className="text-xs text-muted-foreground mt-2">
             {localIgnoredChannels.length === 0
               ? 'No channels are being ignored'
@@ -605,19 +477,19 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="divide-y divide-border border border-border bg-input">
               {logTypes.map((logType) => {
                 const isEnabled = logType.enabled;
                 const isToggling = togglingLogTypes.has(logType.key as LogType);
                 return (
                   <div
                     key={logType.key}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                      isEnabled ? 'border-primary/50 bg-primary/5' : 'border-border/50 bg-muted/30'
+                    className={`flex items-center gap-3 border-l-2 p-3 transition-colors ${
+                      isEnabled ? 'border-l-foreground bg-accent' : 'border-l-transparent'
                     }`}
                   >
                     <div
-                      className={`p-2 rounded-lg ${isEnabled ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground'}`}
+                      className={isEnabled ? 'text-foreground' : 'text-muted-foreground'}
                     >
                       <svg
                         className="w-4 h-4"
@@ -666,6 +538,12 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
         </CardContent>
       </Card>
 
+      <UnsavedChangesBar
+        visible={hasChanges}
+        saving={saving}
+        onSave={handleSaveIgnoredChannels}
+      />
+
       {/* Danger Zone - Delete Logging */}
       <Card variant="glass" className="border-destructive/30">
         <CardHeader>
@@ -673,7 +551,7 @@ export default function LoggingConfigForm({ guildId }: LoggingConfigFormProps) {
           <CardDescription>Irreversible actions for the logging system</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+          <div className="flex items-center justify-between p-4 bg-destructive/5 border border-destructive/20">
             <div>
               <p className="text-sm font-medium text-foreground">Delete Logging System</p>
               <p className="text-sm text-muted-foreground">
