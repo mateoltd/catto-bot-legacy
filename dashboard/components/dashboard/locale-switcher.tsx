@@ -59,10 +59,12 @@ export function LocaleSwitcher() {
           id={selectId}
           aria-label={t('change')}
           size="sm"
-          className="w-9 px-1.5 text-xs data-[size=sm]:h-[42px] sm:w-36 sm:px-2"
+          className="w-9 justify-center p-0 text-xs data-[size=sm]:h-9 sm:w-36 sm:justify-between sm:px-2 [&_.lucide-chevron-down]:hidden sm:[&_.lucide-chevron-down]:block"
         >
           <IconLanguage size={15} aria-hidden="true" />
-          <SelectValue className="hidden sm:flex" />
+          <span className="hidden sm:contents">
+            <SelectValue />
+          </span>
         </SelectTrigger>
         <SelectContent align="end" position="popper">
           {SUPPORTED_LOCALES.map((supportedLocale) => (

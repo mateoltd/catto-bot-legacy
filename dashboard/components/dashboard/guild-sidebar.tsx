@@ -20,9 +20,16 @@ interface GuildSidebarProps {
   access: GuildNavigationAccess;
   account: React.ReactNode;
   onNavigate?: () => void;
+  showAccessBadges?: boolean;
 }
 
-export function GuildSidebar({ guild, access, account, onNavigate }: GuildSidebarProps) {
+export function GuildSidebar({
+  guild,
+  access,
+  account,
+  onNavigate,
+  showAccessBadges = true,
+}: GuildSidebarProps) {
   const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations('Navigation');
@@ -32,7 +39,7 @@ export function GuildSidebar({ guild, access, account, onNavigate }: GuildSideba
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-card">
-      <div className="border-b border-border p-4">
+      <div className="border-b border-border p-4 pr-12 md:pr-4">
         <div className="flex min-w-0 items-center gap-3">
           {iconUrl ? (
             <Image src={iconUrl} alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
@@ -43,11 +50,13 @@ export function GuildSidebar({ guild, access, account, onNavigate }: GuildSideba
           )}
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">{guild.name}</p>
-            <ServerAccessBadges
-              canConfigure={access.canConfigure}
-              canModerate={access.canModerate}
-              className="mt-1"
-            />
+            {showAccessBadges && (
+              <ServerAccessBadges
+                canConfigure={access.canConfigure}
+                canModerate={access.canModerate}
+                className="mt-1"
+              />
+            )}
           </div>
         </div>
       </div>

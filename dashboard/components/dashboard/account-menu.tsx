@@ -40,6 +40,7 @@ export function AccountMenu({
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=96`
     : null;
   const isSidebar = variant === 'sidebar';
+  const isHeader = variant === 'header';
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -73,17 +74,31 @@ export function AccountMenu({
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className={`flex w-full items-center gap-2 border-border bg-card text-left hover:bg-accent ${
-          isSidebar ? 'border-t px-3 py-3' : 'border px-2 py-1.5'
+        className={`flex items-center gap-2 border-border bg-card text-left hover:bg-accent ${
+          isSidebar
+            ? 'w-full border-t px-3 py-3'
+            : isHeader
+              ? 'h-9 w-9 justify-center border p-0 sm:h-auto sm:w-auto sm:justify-start sm:px-2 sm:py-1.5'
+              : 'w-full border px-2 py-1.5'
         }`}
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label={t('menuLabel', { name: displayName })}
       >
         {avatarUrl ? (
-          <Image src={avatarUrl} alt="" width={28} height={28} className="h-7 w-7 shrink-0" />
+          <Image
+            src={avatarUrl}
+            alt=""
+            width={28}
+            height={28}
+            className={`shrink-0 ${isHeader ? 'h-6 w-6 sm:h-7 sm:w-7' : 'h-7 w-7'}`}
+          />
         ) : (
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center bg-muted font-mono text-xs text-foreground">
+          <span
+            className={`flex shrink-0 items-center justify-center bg-muted font-mono text-xs text-foreground ${
+              isHeader ? 'h-6 w-6 sm:h-7 sm:w-7' : 'h-7 w-7'
+            }`}
+          >
             {displayName.charAt(0).toLocaleUpperCase(locale)}
           </span>
         )}
@@ -98,7 +113,7 @@ export function AccountMenu({
           size={14}
           className={`shrink-0 text-muted-foreground transition-transform ${
             isOpen ? 'rotate-180' : ''
-          }`}
+          } ${isHeader ? 'hidden sm:block' : ''}`}
         />
       </button>
 

@@ -1,13 +1,20 @@
 'use client';
 
 import Image from 'next/image';
-import { createContext, useContext, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
+import { IconMenu2 } from '@tabler/icons-react';
 import { AccountMenu } from '@/components/dashboard/account-menu';
 import { DashboardTopbar } from '@/components/dashboard/dashboard-topbar';
-import { GuildNavigationLink } from '@/components/dashboard/guild-navigation-link';
 import { GuildSidebar } from '@/components/dashboard/guild-sidebar';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   getGuildNavigation,
   isGuildNavigationItemActive,
@@ -47,6 +54,7 @@ export default function GuildPageLayout({
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations('Navigation');
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const guildIconUrl = guild.icon
     ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=96`
     : null;
@@ -87,25 +95,44 @@ export default function GuildPageLayout({
           />
         </div>
 
-        <div className="shrink-0 border-b border-border bg-card px-4 py-4 sm:hidden">
-          <ServerIdentity
-            guild={guild}
-            iconUrl={guildIconUrl}
-            pageTitle={activeItem?.label ?? t('overview')}
-            locale={locale}
-          />
-        </div>
-
-        <nav className="scrollbar-none flex shrink-0 overflow-x-auto border-b border-border bg-card px-2 sm:hidden">
-          {navigation.map((item) => (
-            <GuildNavigationLink
-              key={item.id}
-              item={item}
-              isActive={item.id === activeItem?.id}
-              compact
+        <div className="shrink-0 border-b border-border bg-card px-4 py-3 md:hidden">
+          <div className="flex min-w-0 items-center justify-between gap-4">
+            <ServerIdentity
+              guild={guild}
+              iconUrl={guildIconUrl}
+              pageTitle={activeItem?.label ?? t('overview')}
+              locale={locale}
             />
-          ))}
-        </nav>
+
+            <Sheet open={mobileNavigationOpen} onOpenChange={setMobileNavigationOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('openServerNavigation')}
+                  className="flex h-10 shrink-0 items-center gap-2 border border-border bg-background px-3 font-mono text-[10px] uppercase tracking-wider text-foreground transition-colors hover:bg-accent"
+                >
+                  <IconMenu2 size={17} aria-hidden="true" />
+                  <span>{t('menu')}</span>
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                closeLabel={t('closeServerNavigation')}
+                className="flex w-[min(88vw,20rem)] max-w-none flex-col gap-0 overflow-hidden border-r border-border bg-card p-0 sm:max-w-none md:hidden [&>button]:right-3 [&>button]:top-3"
+              >
+                <SheetTitle className="sr-only">{guild.name}</SheetTitle>
+                <SheetDescription className="sr-only">{t('openServerNavigation')}</SheetDescription>
+                <GuildSidebar
+                  guild={guild}
+                  access={access}
+                  account={null}
+                  showAccessBadges={false}
+                  onNavigate={() => setMobileNavigationOpen(false)}
+                />
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
 
         <div className="grid min-h-0 w-full flex-1 md:grid-cols-[208px_minmax(0,1fr)]">
           <aside className="hidden min-h-0 border-r border-border bg-card md:flex md:flex-col">

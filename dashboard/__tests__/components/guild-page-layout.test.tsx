@@ -1,5 +1,6 @@
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextIntlClientProvider } from 'next-intl';
 import GuildPageLayout from '@/components/guild-page-layout';
@@ -27,7 +28,16 @@ vi.mock('@/components/dashboard/guild-navigation-link', () => ({
 }));
 
 vi.mock('@/components/dashboard/guild-sidebar', () => ({
-  GuildSidebar: () => <div>Guild sidebar</div>,
+  GuildSidebar: ({ onNavigate }: { onNavigate?: () => void }) => (
+    <div>
+      Guild sidebar
+      {onNavigate && (
+        <button type="button" onClick={onNavigate}>
+          Navigate
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('@/components/user-dropdown', () => ({
@@ -73,5 +83,43 @@ describe('GuildPageLayout', () => {
 
     expect(document.documentElement.style.overflow).toBe(htmlOverflow);
     expect(document.body.style.overflow).toBe(bodyOverflow);
+  });
+
+  it('opens grouped navigation in a mobile drawer instead of rendering a horizontal nav', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NextIntlClientProvider locale="en-US" messages={messages}>
+        <GuildPageLayout
+          guild={{
+            id: 'guild-1',
+            name: 'Test server',
+            icon: null,
+            owner: true,
+            permissions: '0',
+          }}
+          user={{
+            id: 'user-1',
+            username: 'tester',
+            discriminator: '0',
+            avatar: null,
+          }}
+          access={{ canConfigure: true, canModerate: true }}
+        >
+          <div>Configuration content</div>
+        </GuildPageLayout>
+      </NextIntlClientProvider>,
+    );
+
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open server navigation' }));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getAllByText('Guild sidebar')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Navigate' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
