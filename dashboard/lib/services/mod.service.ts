@@ -1,4 +1,3 @@
-import axios from 'axios';
 import type {
   Evidence,
   EvidenceSummary,
@@ -12,27 +11,10 @@ import type {
   EvidenceAnalytics,
   CaseAnalytics,
 } from '@/lib/mod-types';
-import { emitSessionExpired } from '@/lib/auth-events';
-
-// Shared axios instance with session expiration handling
-const apiInstance = axios.create({
-  baseURL: '/api',
-  withCredentials: true,
-});
-
-// Intercept 401 responses to emit session expired event
-apiInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      emitSessionExpired();
-    }
-    return Promise.reject(error);
-  }
-);
+import { dashboardApi } from '@/lib/api';
 
 function api() {
-  return apiInstance;
+  return dashboardApi;
 }
 
 // ─── Dashboard Access ───

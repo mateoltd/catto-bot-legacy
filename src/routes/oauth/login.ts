@@ -14,7 +14,7 @@ export class OAuthLoginRoute extends Route {
     });
   }
 
-  public async run(_request: ApiRequest, response: ApiResponse) {
+  public async run(request: ApiRequest, response: ApiResponse) {
     const { server } = this.container;
 
     if (!server.auth) {
@@ -39,6 +39,9 @@ export class OAuthLoginRoute extends Route {
     discordAuthUrl.searchParams.set('response_type', 'code');
     discordAuthUrl.searchParams.set('scope', server.auth.scopes.join(' '));
     discordAuthUrl.searchParams.set('state', state);
+    if (request.query?.prompt === 'consent') {
+      discordAuthUrl.searchParams.set('prompt', 'consent');
+    }
 
     // Redirect to Discord using proper Sapphire method
     return response.status(302).setHeader('Location', discordAuthUrl.toString()).text('');

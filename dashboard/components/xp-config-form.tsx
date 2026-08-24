@@ -362,7 +362,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Users won't earn XP in these channels
+                  Users do not earn XP in these channels
                 </p>
               </div>
 
@@ -413,7 +413,7 @@ export default function XPConfigForm({ guildId, initialConfig }: XPConfigFormPro
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Users with these roles won't earn XP
+                  Users with these roles do not earn XP
                 </p>
               </div>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
@@ -158,7 +159,10 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const sidebarOpenRef = useRef(false);
-  sidebarOpenRef.current = sidebarOpen;
+
+  useEffect(() => {
+    sidebarOpenRef.current = sidebarOpen;
+  }, [sidebarOpen]);
 
   // Real-time event handling via SSE
   const { mutate: globalMutate } = useSWRConfig();
@@ -189,6 +193,8 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
 
   // Close sidebar on route change (covers browser back/forward + keyboard nav)
   useEffect(() => {
+    // The route is external state; navigation always dismisses the mobile drawer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     closeSidebar();
   }, [pathname, closeSidebar]);
 
@@ -305,7 +311,7 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
             Access Denied
           </h1>
           <p className="max-w-xs text-sm text-[var(--mod-text-muted)]">
-            You don't have permission to view this server's moderation dashboard.
+            You don&apos;t have permission to view this server&apos;s moderation dashboard.
           </p>
           <Link
             href="/mod"
@@ -336,7 +342,13 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
         </Link>
         <div className="flex items-center gap-2">
           {guildIconUrl ? (
-            <img src={guildIconUrl} alt="" className="h-8 w-8 shrink-0" />
+            <Image
+              src={guildIconUrl}
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 shrink-0"
+            />
           ) : (
             <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--mono-700)] text-xs font-medium text-[var(--mono-white)]">
               {guildInfo?.name?.charAt(0) ?? '?'}

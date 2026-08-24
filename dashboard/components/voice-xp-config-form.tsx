@@ -258,7 +258,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30">
             <div>
               <label className="text-sm font-medium text-foreground">Ignore AFK Channel</label>
-              <p className="text-xs text-muted-foreground">Don't award XP in the AFK channel</p>
+              <p className="text-xs text-muted-foreground">Do not award XP in the AFK channel</p>
             </div>
             <Switch
               checked={config.ignoreAfkChannel}
@@ -417,7 +417,7 @@ export default function VoiceXPConfigForm({ guildId, initialConfig }: VoiceXPCon
           <CardContent>
             <label className="block text-sm font-medium text-foreground mb-2">Ignored Roles</label>
             <p className="text-xs text-muted-foreground mb-2">
-              Users with these roles won't gain XP
+              Users with these roles do not gain XP
             </p>
             <select
               multiple

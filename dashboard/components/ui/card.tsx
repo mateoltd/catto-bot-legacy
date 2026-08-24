@@ -9,12 +9,11 @@ const Card = React.forwardRef<
   }
 >(({ className, variant = 'default', ...props }, ref) => {
   const variants = {
-    default: 'rounded-xl border border-border/50 bg-card text-card-foreground shadow-glass',
-    glass:
-      'rounded-xl border border-border/30 bg-card/50 backdrop-blur-xl text-card-foreground shadow-glass',
-    'glass-strong':
-      'rounded-xl border border-border/40 bg-card/70 backdrop-blur-2xl text-card-foreground shadow-glass-lg',
-    neon: 'rounded-xl border border-primary/30 bg-card/50 backdrop-blur-xl text-card-foreground shadow-glass hover:border-primary/50 hover:shadow-neon-blue-sm transition-all duration-200',
+    default: 'border border-border bg-card text-card-foreground',
+    glass: 'border border-border bg-card text-card-foreground',
+    'glass-strong': 'border border-border bg-card text-card-foreground',
+    neon:
+      'border border-border bg-card text-card-foreground transition-colors duration-100 hover:border-muted-foreground/50',
   };
 
   return <div ref={ref} className={cn(variants[variant], className)} {...props} />;

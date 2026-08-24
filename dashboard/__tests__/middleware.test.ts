@@ -7,7 +7,7 @@ vi.stubGlobal('fetch', mockFetch);
 
 // We need to import the middleware function - since it uses env vars directly,
 // we test the exported middleware function
-import { middleware } from '@/middleware';
+import { proxy } from '@/proxy';
 
 function createRequest(pathname: string, cookies: Record<string, string> = {}) {
   const url = `http://localhost:3000${pathname}`;
@@ -29,7 +29,7 @@ describe('Dashboard Middleware', () => {
 
   it('redirects to /mod/login when no session cookie on /mod route', async () => {
     const req = createRequest('/mod/cases');
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toContain('/mod/login');
@@ -37,7 +37,7 @@ describe('Dashboard Middleware', () => {
 
   it('allows /mod/login without session cookie', async () => {
     const req = createRequest('/mod/login');
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     // Should pass through (NextResponse.next())
     expect(res.status).toBe(200);
@@ -46,7 +46,7 @@ describe('Dashboard Middleware', () => {
 
   it('preserves intended destination in mod_auth_redirect cookie on redirect', async () => {
     const req = createRequest('/mod/guild-123/evidence');
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     expect(res.status).toBe(307);
     // Check that mod_auth_redirect cookie is set
@@ -62,7 +62,7 @@ describe('Dashboard Middleware', () => {
     mockFetch.mockResolvedValue({ status: 200 });
 
     const req = createRequest('/mod/cases', { DASHBOARD_AUTH: 'valid-session-id' });
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     expect(mockFetch).toHaveBeenCalledWith(
       'http://localhost:4000/api/users/@me',
@@ -82,7 +82,7 @@ describe('Dashboard Middleware', () => {
     mockFetch.mockResolvedValue({ status: 401 });
 
     const req = createRequest('/mod/cases', { DASHBOARD_AUTH: 'expired-session' });
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toContain('/mod/login');
@@ -98,7 +98,7 @@ describe('Dashboard Middleware', () => {
     mockFetch.mockRejectedValue(new Error('Network error'));
 
     const req = createRequest('/mod/cases', { DASHBOARD_AUTH: 'valid-session' });
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     // Should pass through, not redirect
     expect(res.status).toBe(200);
@@ -108,7 +108,7 @@ describe('Dashboard Middleware', () => {
     mockFetch.mockResolvedValue({ status: 500 });
 
     const req = createRequest('/mod/cases', { DASHBOARD_AUTH: 'valid-session' });
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     // Should pass through (next()), not redirect — same as network error
     expect(res.status).toBe(200);
@@ -117,7 +117,7 @@ describe('Dashboard Middleware', () => {
 
   it('does not protect non-mod routes', async () => {
     const req = createRequest('/about');
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     expect(res.status).toBe(200);
     expect(mockFetch).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ describe('Dashboard Middleware', () => {
     mockFetch.mockResolvedValue({ status: 401 });
 
     const req = createRequest('/mod/guild-1/analytics', { DASHBOARD_AUTH: 'expired' });
-    const res = await middleware(req);
+    const res = await proxy(req);
 
     const setCookie = res.headers.getSetCookie();
     const redirectCookie = setCookie.find((c: string) => c.includes('mod_auth_redirect'));

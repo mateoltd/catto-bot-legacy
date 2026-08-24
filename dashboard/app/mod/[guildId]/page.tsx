@@ -1,11 +1,10 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import useSWR from 'swr';
 import { getCases } from '@/lib/services/mod.service';
 import { useGuildInfo } from '@/hooks/use-guild-info';
-import type { ModCase } from '@/lib/mod-types';
 import Link from 'next/link';
 import {
   BarChart,
@@ -31,6 +30,11 @@ const ACTION_COLORS: Record<string, string> = {
 
 const MONO_FILLS = ['#aaaaaa', '#888888', '#666666', '#444444', '#333333'];
 
+interface TooltipEntry {
+  dataKey?: string | number;
+  value?: string | number;
+}
+
 export default function GuildModOverview() {
   const params = useParams();
   const guildId = params.guildId as string;
@@ -41,7 +45,7 @@ export default function GuildModOverview() {
     () => getCases(guildId, { limit: 200 }),
   );
 
-  const cases = casesData?.cases ?? [];
+  const cases = useMemo(() => casesData?.cases ?? [], [casesData?.cases]);
 
   // Aggregated stats
   const stats = useMemo(() => {
@@ -87,7 +91,7 @@ export default function GuildModOverview() {
 
     return days.map((d) => ({
       ...d,
-      label: d.date.slice(5), // MM-DD
+      label: d.date.slice(5),
     }));
   }, [cases]);
 
@@ -96,7 +100,7 @@ export default function GuildModOverview() {
     const counts: Record<string, number> = {};
     for (const c of cases) {
       if (c.action.startsWith('UNMUTE_')) continue;
-      if (c.action === 'MUTE' || c.action.startsWith('MUTE_')) {
+      if (c.action.startsWith('MUTE_')) {
         counts['Mutes'] = (counts['Mutes'] || 0) + 1;
       } else {
         const label = ACTION_LABELS[c.action] || c.action;
@@ -286,7 +290,15 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function ModChartTooltip({ active, payload, label }: any) {
+function ModChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: ReactNode;
+}) {
   if (!active || !payload?.length) return null;
 
   return (
@@ -295,8 +307,8 @@ function ModChartTooltip({ active, payload, label }: any) {
       style={{ fontFamily: 'var(--font-mono)' }}
     >
       <p className="text-xs text-[var(--mono-white)]">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-xs text-[var(--mono-300)]">
+      {payload.map((entry, index) => (
+        <p key={`${entry.dataKey}-${index}`} className="text-xs text-[var(--mono-300)]">
           {entry.dataKey}: {entry.value}
         </p>
       ))}

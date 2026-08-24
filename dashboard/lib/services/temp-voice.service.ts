@@ -51,7 +51,7 @@ export interface TempVoiceConfigCreate {
   logChannelId?: string | null;
 }
 
-export interface TempVoiceConfigUpdate extends Partial<TempVoiceConfigCreate> {}
+export type TempVoiceConfigUpdate = Partial<TempVoiceConfigCreate>;
 
 export interface TempVoiceChannelMember {
   id: string;

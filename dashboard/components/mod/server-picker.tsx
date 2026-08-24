@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import useSWR from 'swr';
-import Link from 'next/link';
-import { IconSearch } from '@/lib/mod-icons';
-import { IconLayoutGrid, IconLayoutList } from '@tabler/icons-react';
+import { ServerCard } from '@/components/dashboard/server-card';
+import {
+  ServerToolbar,
+  type ServerViewMode,
+} from '@/components/dashboard/server-toolbar';
 import { AccountSwitcher } from './account-switcher';
 import { cacheGuildInfo } from '@/hooks/use-guild-info';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -30,8 +32,6 @@ interface ServerPickerProps {
   session: UserSession;
 }
 
-type ViewMode = 'grid' | 'list';
-
 const STORAGE_KEY_VIEW = 'mod:view-mode';
 const STORAGE_KEY_RECENT = 'mod:recent-guilds';
 interface UserModStats {
@@ -43,9 +43,25 @@ interface UserModStats {
   topGuilds: { guildId: string; guildName: string; count: number }[];
 }
 
-function getStoredViewMode(): ViewMode {
+interface ActivityCase {
+  action: string;
+  createdAt: string;
+  guildId: string;
+  moderatorId: string;
+}
+
+interface CasesResponse {
+  cases?: Omit<ActivityCase, 'guildId'>[];
+}
+
+interface TooltipEntry {
+  dataKey?: string | number;
+  value?: string | number;
+}
+
+function getStoredViewMode(): ServerViewMode {
   if (typeof window === 'undefined') return 'grid';
-  return (localStorage.getItem(STORAGE_KEY_VIEW) as ViewMode) || 'grid';
+  return (localStorage.getItem(STORAGE_KEY_VIEW) as ServerViewMode) || 'grid';
 }
 
 function getRecentGuilds(): string[] {
@@ -76,39 +92,38 @@ const ACTION_LABELS: Record<string, string> = {
 export function ServerPicker({ session }: ServerPickerProps) {
   const { guilds, user } = session;
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [preferences, setPreferences] = useState<{
+    viewMode: ServerViewMode;
+    recentIds: string[];
+  }>({ viewMode: 'grid', recentIds: [] });
+  const { viewMode, recentIds } = preferences;
 
-  // Hydrate localStorage values after mount to avoid SSR mismatch
   useEffect(() => {
-    setViewMode(getStoredViewMode());
-    setRecentIds(getRecentGuilds());
+    // localStorage is unavailable to the server render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPreferences({ viewMode: getStoredViewMode(), recentIds: getRecentGuilds() });
   }, []);
 
-  // Stabilize guilds reference to avoid refetching on parent re-renders
-  const guildsRef = useRef(guilds);
-  guildsRef.current = guilds;
-
-  // Fetch user stats across all mod guilds
   const { data: userStats, isLoading: statsLoading } = useSWR(
-    guilds.length > 0 ? ['user-mod-stats', user.id] : null,
+    guilds.length > 0 ? ['user-mod-stats', user.id, guilds.map((guild) => guild.id).join(',')] : null,
     async () => {
-      const currentModGuilds = guildsRef.current;
+      const currentModGuilds = guilds;
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      let allCases: { action: string; createdAt: string; guildId: string; moderatorId: string }[] =
-        [];
+      const allCases: ActivityCase[] = [];
 
-      const guildSlice = currentModGuilds.slice(0, 5);
       const results = await Promise.allSettled(
-        guildSlice.map((g) =>
+        currentModGuilds.map((g) =>
           fetch(`/api/guilds/${g.id}/moderation/cases?limit=200`, {
             credentials: 'include',
           })
-            .then((r) => r.json())
-            .then((data) => (data.cases || []).map((c: any) => ({ ...c, guildId: g.id })))
+            .then(async (response) => {
+              if (!response.ok) return [];
+              const data = (await response.json()) as CasesResponse;
+              return (data.cases ?? []).map((modCase) => ({ ...modCase, guildId: g.id }));
+            })
         )
       );
 
@@ -127,7 +142,7 @@ export function ServerPicker({ session }: ServerPickerProps) {
       const muteBreakdown: Record<string, number> = {};
       for (const c of myCases) {
         if (c.action.startsWith('UNMUTE_')) continue;
-        if (c.action.startsWith('MUTE_') || c.action === 'MUTE') {
+        if (c.action.startsWith('MUTE_')) {
           const label = ACTION_LABELS[c.action] || c.action;
           muteBreakdown[label] = (muteBreakdown[label] || 0) + 1;
         } else {
@@ -135,7 +150,6 @@ export function ServerPicker({ session }: ServerPickerProps) {
           actionCounts[label] = (actionCounts[label] || 0) + 1;
         }
       }
-      // Merge mute variants into a single aggregate "Mutes" count
       const muteTotal = Object.values(muteBreakdown).reduce((a, b) => a + b, 0);
       if (muteTotal > 0) {
         actionCounts['Mutes'] = muteTotal;
@@ -182,9 +196,8 @@ export function ServerPicker({ session }: ServerPickerProps) {
     { revalidateOnFocus: false }
   );
 
-  const toggleView = () => {
-    const next = viewMode === 'grid' ? 'list' : 'grid';
-    setViewMode(next);
+  const updateViewMode = (next: ServerViewMode) => {
+    setPreferences((current) => ({ ...current, viewMode: next }));
     localStorage.setItem(STORAGE_KEY_VIEW, next);
   };
 
@@ -352,28 +365,13 @@ export function ServerPicker({ session }: ServerPickerProps) {
           )}
         </div>
 
-        {/* Search + View toggle */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="relative flex-1">
-            <IconSearch
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mod-text-dim)]"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search servers..."
-              className="font-mono w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2.5 pl-10 pr-3 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
-            />
-          </div>
-          <button
-            onClick={toggleView}
-            className="border border-[var(--mod-border)] p-2.5 text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)]"
-            title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-          >
-            {viewMode === 'grid' ? <IconLayoutList size={18} /> : <IconLayoutGrid size={18} />}
-          </button>
+        <div className="mb-6">
+          <ServerToolbar
+            query={search}
+            onQueryChange={setSearch}
+            viewMode={viewMode}
+            onViewModeChange={updateViewMode}
+          />
         </div>
 
         {/* Recently visited */}
@@ -384,10 +382,11 @@ export function ServerPicker({ session }: ServerPickerProps) {
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {recentGuilds.map((guild) => (
-                <GuildCard
+                <ServerCard
                   key={`recent-${guild.id}`}
-                  guild={guild}
-                  layout="grid"
+                  server={guild}
+                  href={`/mod/${guild.id}`}
+                  status="Moderation access"
                   onClick={() => handleGuildClick(guild)}
                 />
               ))}
@@ -403,10 +402,11 @@ export function ServerPicker({ session }: ServerPickerProps) {
         {viewMode === 'grid' ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((guild) => (
-              <GuildCard
+              <ServerCard
                 key={guild.id}
-                guild={guild}
-                layout="grid"
+                server={guild}
+                href={`/mod/${guild.id}`}
+                status="Moderation access"
                 onClick={() => handleGuildClick(guild)}
               />
             ))}
@@ -414,10 +414,12 @@ export function ServerPicker({ session }: ServerPickerProps) {
         ) : (
           <div className="space-y-1">
             {filtered.map((guild) => (
-              <GuildCard
+              <ServerCard
                 key={guild.id}
-                guild={guild}
-                layout="list"
+                server={guild}
+                href={`/mod/${guild.id}`}
+                status="Moderation access"
+                compact
                 onClick={() => handleGuildClick(guild)}
               />
             ))}
@@ -438,53 +440,6 @@ export function ServerPicker({ session }: ServerPickerProps) {
   );
 }
 
-function GuildCard({
-  guild,
-  layout,
-  onClick,
-}: {
-  guild: Guild;
-  layout: 'grid' | 'list';
-  onClick: () => void;
-}) {
-  const iconUrl = guild.icon
-    ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64`
-    : null;
-
-  const baseClass =
-    layout === 'grid'
-      ? 'flex items-center gap-3 border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4'
-      : 'flex items-center gap-3 border border-[var(--mod-border)] bg-[var(--mod-surface)] px-4 py-3';
-
-  return (
-    <Link
-      href={`/mod/${guild.id}`}
-      onClick={onClick}
-      className={`${baseClass} transition-[background-color,border-color] duration-75 hover:border-[var(--mod-border-hover)] hover:bg-[var(--mod-surface-hover)]`}
-    >
-      {iconUrl ? (
-        <img
-          src={iconUrl}
-          alt=""
-          className={layout === 'grid' ? 'h-10 w-10 shrink-0' : 'h-8 w-8 shrink-0'}
-        />
-      ) : (
-        <div
-          className={`flex shrink-0 items-center justify-center bg-[var(--mono-700)] text-sm font-medium text-[var(--mono-white)] ${
-            layout === 'grid' ? 'h-10 w-10' : 'h-8 w-8'
-          }`}
-        >
-          {guild.name.charAt(0)}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-[var(--mono-white)]">{guild.name}</p>
-        <p className="text-xs text-[var(--mod-text-dim)]">{guild.id}</p>
-      </div>
-    </Link>
-  );
-}
-
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] px-4 py-3">
@@ -498,13 +453,21 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: ReactNode;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div className="font-mono border border-[var(--mono-700)] bg-[var(--mono-900)] px-3 py-2">
       <p className="text-xs text-[var(--mono-white)]">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <p key={i} className="text-xs text-[var(--mono-300)]">
+      {payload.map((entry, index) => (
+        <p key={`${entry.dataKey}-${index}`} className="text-xs text-[var(--mono-300)]">
           {entry.dataKey}: {entry.value}
         </p>
       ))}
