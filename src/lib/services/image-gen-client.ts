@@ -5,6 +5,7 @@
 
 import { Buffer } from 'node:buffer';
 import type { BonkImageData, RankCardData, LeaderboardCardData } from './image-gen-types.js';
+import { checkRustServiceHealth, type RustServiceHealth } from './rust-service-health.js';
 
 /* global AbortController, fetch */
 
@@ -12,6 +13,13 @@ const IMAGE_GEN_SERVICE_URL = process.env.IMAGE_GEN_SERVICE_URL || 'http://local
 const SERVICE_TIMEOUT = 15_000; // 15 seconds
 
 class ImageGenClient {
+  /**
+   * Check if the Rust image generation service is available.
+   */
+  async checkHealth(): Promise<RustServiceHealth> {
+    return checkRustServiceHealth(IMAGE_GEN_SERVICE_URL);
+  }
+
   /**
    * Generate a bonk image using the Rust microservice.
    */

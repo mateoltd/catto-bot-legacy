@@ -4,6 +4,7 @@
  */
 
 import { Buffer } from 'node:buffer';
+import { checkRustServiceHealth, type RustServiceHealth } from './rust-service-health.js';
 
 // Node.js >= 18 globals used: fetch, AbortController, FormData, Blob
 /* global AbortController, fetch, FormData, Blob */
@@ -24,6 +25,16 @@ class WatermarkClient {
   private readonly healthCheckInterval = 60_000; // 1 minute
 
   /**
+   * Check the Rust watermark service and update the availability cache.
+   */
+  async checkHealth(): Promise<RustServiceHealth> {
+    const health = await checkRustServiceHealth(WATERMARK_SERVICE_URL);
+    this.serviceAvailable = health.ok;
+    this.lastHealthCheck = Date.now();
+    return health;
+  }
+
+  /**
    * Check if the Rust watermark service is available.
    */
   async isServiceAvailable(): Promise<boolean> {
@@ -34,25 +45,7 @@ class WatermarkClient {
       return this.serviceAvailable;
     }
 
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000);
-
-      const response = await fetch(`${WATERMARK_SERVICE_URL}/health`, {
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      this.serviceAvailable = response.ok;
-      this.lastHealthCheck = now;
-
-      return this.serviceAvailable;
-    } catch {
-      this.serviceAvailable = false;
-      this.lastHealthCheck = now;
-      return false;
-    }
+    return (await this.checkHealth()).ok;
   }
 
   /**

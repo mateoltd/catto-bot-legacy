@@ -6,6 +6,8 @@ import { CONFIG } from '#config.js';
 import { Prisma } from '@prisma/client';
 import { loggingService } from '../lib/services/logging.js';
 import { logRoutes } from '../lib/route-logger.js';
+import { imageGenClient } from '../lib/services/image-gen-client.js';
+import { watermarkClient } from '../lib/services/watermark-client.js';
 
 export class ReadyListener extends Listener {
   public constructor(context: Listener.LoaderContext, options: Listener.Options) {
@@ -21,6 +23,8 @@ export class ReadyListener extends Listener {
     this.container.logger.info(`Successfully logged in as ${username} (${id})`);
     this.container.logger.info(`Environment: ${CONFIG.NODE_ENV}`);
     this.container.logger.info(`Serving ${client.guilds.cache.size} guilds`);
+
+    await this.checkRustServices();
 
     // Initialize moderation scheduler
     this.container.logger.info('Initializing moderation scheduler...');
@@ -235,5 +239,35 @@ export class ReadyListener extends Listener {
         this.container.logger.error('[API] Error logging server info:', error);
       }
     }, 500);
+  }
+
+  private async checkRustServices(): Promise<void> {
+    this.container.logger.info('[Rust services] Checking connectivity...');
+
+    const services = await Promise.all([
+      imageGenClient.checkHealth().then((health) => ({
+        name: 'image-gen',
+        fallback: 'image commands will use text fallbacks',
+        health,
+      })),
+      watermarkClient.checkHealth().then((health) => ({
+        name: 'watermark',
+        fallback: 'watermarks will use the local Sharp fallback',
+        health,
+      })),
+    ]);
+
+    for (const service of services) {
+      if (service.health.ok) {
+        const version = service.health.version ? ` v${service.health.version}` : '';
+        this.container.logger.info(
+          `[Rust services] ${service.name}${version} connected at ${service.health.url} (${service.health.latencyMs}ms)`
+        );
+      } else {
+        this.container.logger.warn(
+          `[Rust services] ${service.name} unavailable at ${service.health.url}: ${service.health.error}; ${service.fallback}`
+        );
+      }
+    }
   }
 }
