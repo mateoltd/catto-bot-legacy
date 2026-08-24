@@ -35,7 +35,7 @@ export default function ModerationSection({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+        <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
           <div>
             <label className="text-sm font-medium text-foreground">
               Enable Name Moderation

@@ -5,6 +5,7 @@ import { useTempVoiceConfig } from '@/hooks/use-temp-voice-config';
 import { useGuildData } from '@/hooks/use-guild-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { UnsavedChangesBar } from '@/components/ui/unsaved-changes-bar';
 
 import SetupWizard from '@/components/temp-voice/setup-wizard';
 import GeneralSettings from '@/components/temp-voice/general-settings';
@@ -142,21 +143,18 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div>
         <div>
           <h2 className="text-2xl font-bold text-foreground">Temporary Voice Channels</h2>
           <p className="text-muted-foreground mt-1">
             Let users create their own temporary voice channels
           </p>
         </div>
-        <Button variant="neon" onClick={handleSaveConfig} disabled={saving || !isDirty}>
-          {saving ? 'Saving...' : isDirty ? 'Save Changes' : 'Saved'}
-        </Button>
       </div>
 
       {/* Status Messages */}
       {error && (
-        <div className="glass border-destructive/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-destructive/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
             fill="none"
@@ -178,7 +176,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       )}
 
       {success && (
-        <div className="glass border-success/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-success/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-success flex-shrink-0 mt-0.5"
             fill="none"
@@ -279,6 +277,12 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
 
       <ActiveChannels channels={channels} />
 
+      <UnsavedChangesBar
+        visible={isDirty}
+        saving={saving}
+        onSave={handleSaveConfig}
+      />
+
       {/* Danger Zone */}
       <Card variant="glass" className="border-destructive/30">
         <CardHeader>
@@ -286,7 +290,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
           <CardDescription>Irreversible actions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+          <div className="flex items-center justify-between p-4 bg-destructive/5 border border-destructive/20">
             <div>
               <p className="text-sm font-medium text-foreground">Delete Temp Voice Configuration</p>
               <p className="text-sm text-muted-foreground">

@@ -23,7 +23,7 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
           {channels.map((channel) => (
             <div
               key={channel.channelId}
-              className="p-4 rounded-lg bg-muted/20 border border-border/30"
+              className="p-4 bg-muted/20 border border-border/30"
             >
               {/* Channel Header */}
               <div className="flex items-center justify-between mb-2">

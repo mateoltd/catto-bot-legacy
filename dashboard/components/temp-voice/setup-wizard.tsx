@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { OptionSelector } from '@/components/ui/option-selector';
 import type { TempVoiceSetupRequest } from '@/lib/services/temp-voice.service';
 import type { Channel } from '@/lib/types';
 
@@ -62,7 +63,7 @@ export default function SetupWizard({
       </div>
 
       {displayedError && (
-        <div className="glass border-destructive/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-destructive/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
             fill="none"
@@ -110,32 +111,15 @@ export default function SetupWizard({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Mode selector */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setMode('create')}
-              className={`px-4 py-3 rounded-lg border-2 transition-all text-left ${
-                mode === 'create'
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/30'
-              }`}
-            >
-              <div className="font-medium">Create New</div>
-              <div className="text-xs opacity-75">Create a new category and join channel</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('existing')}
-              className={`px-4 py-3 rounded-lg border-2 transition-all text-left ${
-                mode === 'existing'
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/30'
-              }`}
-            >
-              <div className="font-medium">Use Existing Channel</div>
-              <div className="text-xs opacity-75">Pick a voice channel as the join trigger</div>
-            </button>
-          </div>
+          <OptionSelector
+            value={mode}
+            onValueChange={setMode}
+            ariaLabel="Setup method"
+            options={[
+              { value: 'create', label: 'Create New', description: 'Create a category and join channel' },
+              { value: 'existing', label: 'Use Existing', description: 'Pick a voice channel as the join trigger' },
+            ]}
+          />
 
           {mode === 'create' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -180,7 +164,7 @@ export default function SetupWizard({
                 <select
                   value={selectedChannelId}
                   onChange={(e) => setSelectedChannelId(e.target.value)}
-                  className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full border border-border bg-input px-4 py-3 text-foreground outline-none"
                 >
                   <option value="">Select a voice channel...</option>
                   {voiceChannels.map((channel) => (

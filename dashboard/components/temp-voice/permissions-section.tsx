@@ -23,7 +23,7 @@ export default function PermissionsSection({
         <CardTitle>Owner Permissions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+        <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
           <div>
             <label className="text-sm font-medium text-foreground">Allow Owner Transfer</label>
             <p className="text-sm text-muted-foreground">
@@ -36,7 +36,7 @@ export default function PermissionsSection({
           />
         </div>
 
-        <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
+        <div className="flex items-center justify-between p-4 bg-muted/30 border border-border/50">
           <div>
             <label className="text-sm font-medium text-foreground">Allow Owner Management</label>
             <p className="text-sm text-muted-foreground">Let owners rename, limit users, etc.</p>

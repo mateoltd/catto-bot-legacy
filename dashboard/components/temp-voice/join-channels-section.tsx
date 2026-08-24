@@ -38,7 +38,7 @@ export default function JoinChannelsSection({
               return (
                 <div
                   key={channelId}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30"
+                  className="flex items-center justify-between p-3 bg-muted/20 border border-border/30"
                 >
                   <span className="text-sm text-foreground">{channel?.name || channelId}</span>
                   <Button
@@ -70,7 +70,7 @@ export default function JoinChannelsSection({
                   e.target.value = '';
                 }
               }}
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full border border-border bg-input px-4 py-3 text-foreground outline-none"
               disabled={saving}
             >
               <option value="">Select a voice channel...</option>

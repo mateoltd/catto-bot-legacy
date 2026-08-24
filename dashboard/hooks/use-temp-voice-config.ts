@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useMemo, type Dispatch, type SetStateAction } from 'react';
+import useSWR from 'swr';
 import {
   tempVoiceService,
   type TempVoiceConfig,
@@ -52,26 +53,55 @@ function buildLocalConfig(config: TempVoiceConfig | null): LocalTempVoiceConfig 
   };
 }
 
+interface TempVoiceDashboardData {
+  config: TempVoiceConfig | null;
+  channels: TempVoiceChannel[];
+  stats: TempVoiceStats | null;
+}
+
 export function useTempVoiceConfig(guildId: string) {
-  const [config, setConfig] = useState<TempVoiceConfig | null>(null);
-  const [channels, setChannels] = useState<TempVoiceChannel[]>([]);
-  const [stats, setStats] = useState<TempVoiceStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const mountedRef = useRef(true);
+  const { data, error: queryError, isLoading, mutate } = useSWR<TempVoiceDashboardData>(
+    ['temp-voice-dashboard', guildId],
+    async () => {
+      const config = await tempVoiceService.getConfig(guildId);
+      if (!config) return { config: null, channels: [], stats: null };
+
+      const [channelsData, stats] = await Promise.all([
+        tempVoiceService
+          .getChannels(guildId)
+          .catch(() => ({ guildId, totalChannels: 0, channels: [] })),
+        tempVoiceService.getStats(guildId).catch(() => null),
+      ]);
+      return { config, channels: channelsData.channels, stats };
+    },
+    { revalidateOnFocus: false },
+  );
+  const config = data?.config ?? null;
+  const channels = data?.channels ?? [];
+  const stats = data?.stats ?? null;
+
+  const setConfig = (nextConfig: TempVoiceConfig | null) =>
+    mutate(
+      (current) => ({
+        config: nextConfig,
+        channels: nextConfig ? (current?.channels ?? []) : [],
+        stats: nextConfig ? (current?.stats ?? null) : null,
+      }),
+      { revalidate: false },
+    );
 
   // Local editable config state
-  const [localConfig, setLocalConfig] = useState<LocalTempVoiceConfig>(() =>
-    buildLocalConfig(null)
-  );
-
-  // Sync localConfig when server config changes (e.g., after setup or fetch)
-  useEffect(() => {
-    if (config) {
-      setLocalConfig(buildLocalConfig(config));
-    }
-  }, [config]);
+  const [localConfigDraft, setLocalConfigDraft] = useState<LocalTempVoiceConfig | null>(null);
+  const serverLocalConfig = useMemo(() => buildLocalConfig(config), [config]);
+  const localConfig = localConfigDraft ?? serverLocalConfig;
+  const setLocalConfig: Dispatch<SetStateAction<LocalTempVoiceConfig>> = (value) => {
+    setLocalConfigDraft((current) => {
+      const previous = current ?? serverLocalConfig;
+      return typeof value === 'function' ? value(previous) : value;
+    });
+  };
 
   // Dirty tracking: compare localConfig to server config
   const isDirty = useMemo(() => {
@@ -97,85 +127,17 @@ export function useTempVoiceConfig(guildId: string) {
     );
   }, [config, localConfig]);
 
-  const fetchAll = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch config first, then channels and stats only if config exists
-      const configData = await tempVoiceService.getConfig(guildId);
-
-      if (!mountedRef.current) return;
-      setConfig(configData);
-
-      if (configData) {
-        // Config exists, fetch channels and stats
-        const [channelsData, statsData] = await Promise.all([
-          tempVoiceService
-            .getChannels(guildId)
-            .catch(() => ({ guildId, totalChannels: 0, channels: [] })),
-          tempVoiceService.getStats(guildId).catch(() => null),
-        ]);
-        if (mountedRef.current) {
-          setChannels(channelsData.channels);
-          setStats(statsData);
-        }
-      } else {
-        // No config, reset channels and stats
-        if (mountedRef.current) {
-          setChannels([]);
-          setStats(null);
-        }
-      }
-    } catch (err) {
-      if (!mountedRef.current) return;
-      const message = getErrorMessage(err);
-
-      // If error says config already exists, try to fetch it directly
-      if (message.toLowerCase().includes('already exists')) {
-        try {
-          const existingConfig = await tempVoiceService.getConfig(guildId);
-          if (mountedRef.current && existingConfig) {
-            setConfig(existingConfig);
-            setError(null);
-            return;
-          }
-        } catch {
-          // Fall through to normal error handling
-        }
-      }
-
-      // Don't show error if config just doesn't exist
-      if (!message.includes('404') && !message.includes('not found')) {
-        setError(message);
-      }
-      // Keep config as null so setup wizard shows
-    } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [guildId]);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    fetchAll();
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [fetchAll]);
-
   const updateConfig = async (updates: TempVoiceConfigUpdate) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await tempVoiceService.updateConfig(guildId, updates);
       setConfig(result);
+      setLocalConfigDraft(null);
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = getErrorMessage(err);
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -185,13 +147,14 @@ export function useTempVoiceConfig(guildId: string) {
   const createConfig = async (configData: TempVoiceConfigUpdate) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await tempVoiceService.createConfig(guildId, configData);
       setConfig(result);
+      setLocalConfigDraft(null);
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = getErrorMessage(err);
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -201,13 +164,14 @@ export function useTempVoiceConfig(guildId: string) {
   const deleteConfig = async () => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       await tempVoiceService.deleteConfig(guildId);
       setConfig(null);
+      setLocalConfigDraft(null);
       return { success: true };
     } catch (err) {
       const errorMessage = getErrorMessage(err);
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -217,10 +181,11 @@ export function useTempVoiceConfig(guildId: string) {
   const setup = async (options: TempVoiceSetupRequest) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await tempVoiceService.setup(guildId, options);
       // Setup returns data.config
       setConfig(result.config);
+      setLocalConfigDraft(null);
       return { success: true, data: result };
     } catch (err) {
       // Check if this is a 409 Conflict (config already exists)
@@ -235,7 +200,8 @@ export function useTempVoiceConfig(guildId: string) {
           const existingConfig = await tempVoiceService.getConfig(guildId);
           if (existingConfig) {
             setConfig(existingConfig);
-            setError(null); // Clear any previous errors
+            setLocalConfigDraft(null);
+            setMutationError(null);
 
             // Also fetch channels and stats
             const [channelsData, statsData] = await Promise.all([
@@ -244,8 +210,10 @@ export function useTempVoiceConfig(guildId: string) {
                 .catch(() => ({ guildId, totalChannels: 0, channels: [] })),
               tempVoiceService.getStats(guildId).catch(() => null),
             ]);
-            setChannels(channelsData.channels);
-            setStats(statsData);
+            await mutate(
+              { config: existingConfig, channels: channelsData.channels, stats: statsData },
+              { revalidate: false },
+            );
 
             return { success: true, data: { config: existingConfig } };
           }
@@ -254,7 +222,7 @@ export function useTempVoiceConfig(guildId: string) {
         }
       }
 
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -264,7 +232,7 @@ export function useTempVoiceConfig(guildId: string) {
   const addJoinChannel = async (channelId: string) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await tempVoiceService.addJoinChannel(guildId, channelId);
       if (config) {
         setConfig({ ...config, joinChannelIds: result.joinChannelIds });
@@ -272,7 +240,7 @@ export function useTempVoiceConfig(guildId: string) {
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = getErrorMessage(err);
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -282,7 +250,7 @@ export function useTempVoiceConfig(guildId: string) {
   const removeJoinChannel = async (channelId: string) => {
     try {
       setSaving(true);
-      setError(null);
+      setMutationError(null);
       const result = await tempVoiceService.removeJoinChannel(guildId, channelId);
       if (config) {
         setConfig({ ...config, joinChannelIds: result.joinChannelIds });
@@ -290,7 +258,7 @@ export function useTempVoiceConfig(guildId: string) {
       return { success: true, data: result };
     } catch (err) {
       const errorMessage = getErrorMessage(err);
-      setError(errorMessage);
+      setMutationError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setSaving(false);
@@ -301,9 +269,11 @@ export function useTempVoiceConfig(guildId: string) {
     config,
     channels,
     stats,
-    loading,
+    loading: isLoading,
     saving,
-    error,
+    error:
+      mutationError ??
+      (queryError ? getErrorMessage(queryError) : null),
     isDirty,
     localConfig,
     setLocalConfig,
@@ -313,7 +283,7 @@ export function useTempVoiceConfig(guildId: string) {
     setup,
     addJoinChannel,
     removeJoinChannel,
-    refetch: fetchAll,
+    refetch: () => mutate(),
     setConfig,
   };
 }
