@@ -3,6 +3,7 @@
 > **⚠️ This guide documents the legacy GitHub Actions CD approach.**
 >
 > **For new deployments, use [Dokploy](./deployment-dokploy.md)** which provides:
+>
 > - Web UI for logs and management
 > - Zero-downtime deployments
 > - Automatic SSL via Traefik
@@ -15,10 +16,10 @@
 
 Catto supports **two deployment environments**:
 
-| Environment | Branch | Path | Domain | Purpose |
-|-------------|--------|------|--------|---------|
-| **Production** | `main` | `/opt/catto` | `api.yourdomain.com` | Stable releases for end users |
-| **Development** | `dev` | `/opt/catto-dev` | `api-dev.yourdomain.com` | Testing and pre-release validation |
+| Environment     | Branch | Path             | Domain                   | Purpose                            |
+| --------------- | ------ | ---------------- | ------------------------ | ---------------------------------- |
+| **Production**  | `main` | `/opt/catto`     | `api.yourdomain.com`     | Stable releases for end users      |
+| **Development** | `dev`  | `/opt/catto-dev` | `api-dev.yourdomain.com` | Testing and pre-release validation |
 
 Both environments auto-deploy via GitHub Actions on push. They can run on the same server (different directories/ports) or separate servers.
 
@@ -80,6 +81,7 @@ curl https://api.yourdomain.com/api/health
 ```
 
 You should see:
+
 ```json
 {
   "status": "ok",
@@ -94,6 +96,7 @@ You should see:
 ## Automated Deploys (GitHub Actions)
 
 The CD pipeline supports **two environments**:
+
 - **Development**: Auto-deploys on push to `dev` branch → `/opt/catto-dev`
 - **Production**: Auto-deploys on push to `main` branch → `/opt/catto`
 
@@ -105,21 +108,21 @@ Configure secrets per environment at **Settings > Secrets and variables > Action
 
 #### Development Environment (dev branch)
 
-| Secret | Description |
-|--------|-------------|
-| `SERVER_HOST_DEV` | Dev server IP or hostname |
-| `SERVER_USER_DEV` | SSH username for dev |
+| Secret                | Description                                   |
+| --------------------- | --------------------------------------------- |
+| `SERVER_HOST_DEV`     | Dev server IP or hostname                     |
+| `SERVER_USER_DEV`     | SSH username for dev                          |
 | `SSH_PRIVATE_KEY_DEV` | SSH private key for dev (ed25519 recommended) |
-| `SERVER_PORT_DEV` | SSH port (optional, defaults to 22) |
+| `SERVER_PORT_DEV`     | SSH port (optional, defaults to 22)           |
 
 #### Production Environment (main branch)
 
-| Secret | Description |
-|--------|-------------|
-| `SERVER_HOST_PROD` | Production server IP or hostname |
-| `SERVER_USER_PROD` | SSH username for production |
+| Secret                 | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `SERVER_HOST_PROD`     | Production server IP or hostname                     |
+| `SERVER_USER_PROD`     | SSH username for production                          |
 | `SSH_PRIVATE_KEY_PROD` | SSH private key for production (ed25519 recommended) |
-| `SERVER_PORT_PROD` | SSH port (optional, defaults to 22) |
+| `SERVER_PORT_PROD`     | SSH port (optional, defaults to 22)                  |
 
 ### Same Server Setup (Recommended for Small Teams)
 
@@ -144,6 +147,7 @@ cp .env.example .env
 ```
 
 **Important:** The deploy script auto-detects the current branch and pulls from `origin <branch>`, so:
+
 - `/opt/catto-dev` must be on the `dev` branch
 - `/opt/catto` must be on the `main` branch
 
@@ -184,6 +188,7 @@ When running dev and prod on the same server, ensure they don't conflict:
 ### Port Allocation
 
 In `/opt/catto-dev/.env`:
+
 ```bash
 # Dev uses different ports
 API_PORT=4001
@@ -197,6 +202,7 @@ CADDY_ACME_EMAIL=your@email.com
 ```
 
 In `/opt/catto/.env` (production):
+
 ```bash
 # Production uses default ports
 API_PORT=4000
@@ -214,6 +220,7 @@ CADDY_ACME_EMAIL=your@email.com
 When running both environments on the same server, **only run Caddy in production**. The dev environment should be accessed directly or share production's Caddy.
 
 **Option 1: Direct access (no SSL for dev)**
+
 ```bash
 # Access dev bot directly via port
 curl http://your-server:4001/api/health
@@ -222,6 +229,7 @@ curl http://your-server:4001/api/health
 **Option 2: Shared Caddy (recommended)**
 
 Disable Caddy in dev's docker-compose:
+
 ```bash
 # In /opt/catto-dev, create docker-compose.override.yml
 cat > docker-compose.override.yml << 'EOF'
@@ -232,6 +240,7 @@ EOF
 ```
 
 Add dev domain to production's Caddyfile:
+
 ```caddyfile
 # In /opt/catto/Caddyfile
 api.yourdomain.com {
@@ -256,12 +265,14 @@ Ensure both `api.yourdomain.com` and `api-dev.yourdomain.com` have DNS A records
 ### Logs
 
 **Production:**
+
 ```bash
 cd /opt/catto
 docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f bot
 ```
 
 **Development:**
+
 ```bash
 cd /opt/catto-dev
 docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f bot
@@ -270,11 +281,13 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f bot
 ### Health Check
 
 **Production:**
+
 ```bash
 curl -s https://api.yourdomain.com/api/health | jq .
 ```
 
 **Development:**
+
 ```bash
 curl -s https://api-dev.yourdomain.com/api/health | jq .
 # Or direct access if no SSL:
@@ -284,12 +297,14 @@ curl -s http://your-server:4001/api/health | jq .
 ### Container Status
 
 **Production:**
+
 ```bash
 cd /opt/catto
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
 **Development:**
+
 ```bash
 cd /opt/catto-dev
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
@@ -300,6 +315,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ### Via git revert (recommended)
 
 **Production:**
+
 ```bash
 git revert HEAD
 git push origin main
@@ -307,6 +323,7 @@ git push origin main
 ```
 
 **Development:**
+
 ```bash
 git revert HEAD
 git push origin dev
@@ -316,37 +333,30 @@ git push origin dev
 ### Manual rollback to specific commit
 
 **Production:**
+
 ```bash
 ssh your-server 'cd /opt/catto && git checkout <sha> && bash scripts/deploy.sh'
 ```
 
 **Development:**
+
 ```bash
 ssh your-server 'cd /opt/catto-dev && git checkout <sha> && bash scripts/deploy.sh'
 ```
 
-## Dashboard (Vercel)
+## Dashboard (Cloudflare Workers)
 
-The Next.js dashboard deploys independently on Vercel.
+The Next.js dashboard deploys independently to Cloudflare Workers through the
+OpenNext adapter:
 
-### Setup
+- Pushes to `main` deploy the development dashboard at `dev.catto.one`.
+- Stable SemVer tags deploy the tagged commit to production at `catto.one`.
+- Browser API requests use the dashboard origin and are proxied to the matching
+  containerized API through the server-only `BOT_API_INTERNAL_URL` setting.
 
-1. Connect your repository to Vercel
-2. Set **Root Directory**: `dashboard`
-3. Set **Framework Preset**: Next.js
-4. Configure environment variables:
-
-**Production (main branch):**
-   - `NEXT_PUBLIC_BOT_API_URL=https://api.yourdomain.com`
-   - `BOT_API_URL=https://api.yourdomain.com`
-
-**Preview (dev branch):**
-   - Override `NEXT_PUBLIC_BOT_API_URL=https://api-dev.yourdomain.com` for the `dev` branch in Vercel settings
-
-5. Vercel auto-deploys:
-   - `main` branch → production dashboard
-   - `dev` branch → preview deployment
-   - PRs → ephemeral preview deployments
+See [Dashboard deployment on Cloudflare](./deployment-cloudflare.md) for the
+Wrangler environments, GitHub secrets, API settings, release process, and
+rollback commands.
 
 ## Architecture Overview
 
@@ -364,7 +374,7 @@ Bot (:4000, API + Discord Gateway)
    +---> Watermark (Rust, image processing)
    +---> Image Gen (Rust, rank/leaderboard/bonk images)
 
-Vercel (dashboard, serverless)
+Cloudflare Workers (dashboard, OpenNext)
    |
    +---> Bot API via HTTPS
 ```
