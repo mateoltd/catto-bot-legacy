@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 30
     environment:
       name: ${{ startsWith(github.ref, 'refs/tags/') && 'production' || 'development' }}
-      url: ${{ startsWith(github.ref, 'refs/tags/') && 'https://catto.one' || 'https://dev.catto.one' }}
+      url: ${{ startsWith(github.ref, 'refs/tags/') && 'https://dash.catto.one' || 'https://dev.catto.one' }}
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -37,7 +37,7 @@ describe('bot API proxy', () => {
 
   it('forwards request bodies and methods', async () => {
     mockFetch.mockResolvedValue(Response.json({ success: true }));
-    const request = new NextRequest('https://catto.one/api/guilds/123', {
+    const request = new NextRequest('https://dash.catto.one/api/guilds/123', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled: true }),
@@ -53,7 +53,7 @@ describe('bot API proxy', () => {
   it('returns a safe gateway error when the bot API is unavailable', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mockFetch.mockRejectedValue(new Error('connection refused'));
-    const request = new NextRequest('https://catto.one/api/users/@me');
+    const request = new NextRequest('https://dash.catto.one/api/users/@me');
 
     const response = await GET(request);
 

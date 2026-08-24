@@ -4,10 +4,10 @@ The Next.js dashboard is deployed to two independent Cloudflare Workers with the
 OpenNext adapter. The Discord bot, API, PostgreSQL, Redis, and Rust services stay
 on the container host.
 
-| Environment | Git trigger                        | Dashboard               | API origin                  | Worker                        |
-| ----------- | ---------------------------------- | ----------------------- | --------------------------- | ----------------------------- |
-| Development | Push to `main`                     | `https://dev.catto.one` | `https://api-dev.catto.one` | `catto-dashboard-development` |
-| Production  | Stable SemVer tag such as `v1.2.0` | `https://catto.one`     | `https://api.catto.one`     | `catto-dashboard-production`  |
+| Environment | Git trigger                        | Dashboard                | API origin                  | Worker                        |
+| ----------- | ---------------------------------- | ------------------------ | --------------------------- | ----------------------------- |
+| Development | Push to `main`                     | `https://dev.catto.one`  | `https://api-dev.catto.one` | `catto-dashboard-development` |
+| Production  | Stable SemVer tag such as `v1.2.0` | `https://dash.catto.one` | `https://api.catto.one`     | `catto-dashboard-production`  |
 
 The dashboard uses same-origin browser requests. Each Worker proxies API traffic
 to its configured `BOT_API_INTERNAL_URL`, so authentication cookies remain scoped
@@ -17,8 +17,9 @@ to the dashboard hostname and cannot collide across environments.
 
 1. Ensure `catto.one` is an active zone in the same Cloudflare account used by
    Wrangler.
-2. Remove any conflicting DNS record for `catto.one` or `dev.catto.one`. Wrangler
-   creates both Custom Domains and their certificates on the first deployment.
+2. Remove any conflicting DNS record for `dash.catto.one` or `dev.catto.one`.
+   Wrangler creates both Custom Domains and their certificates on the first
+   deployment.
 3. Create a scoped Cloudflare API token using the **Edit Cloudflare Workers**
    template. Restrict it to the Catto account and `catto.one` zone.
 4. Record the Cloudflare account ID shown in the dashboard or by
@@ -50,8 +51,8 @@ Configure the containerized API separately for each environment:
 
 | Value           | Development                                    | Production                                 |
 | --------------- | ---------------------------------------------- | ------------------------------------------ |
-| `DASHBOARD_URL` | `https://dev.catto.one`                        | `https://catto.one`                        |
-| `API_ORIGIN`    | `https://dev.catto.one`                        | `https://catto.one`                        |
+| `DASHBOARD_URL` | `https://dev.catto.one`                        | `https://dash.catto.one`                   |
+| `API_ORIGIN`    | `https://dev.catto.one`                        | `https://dash.catto.one`                   |
 | `API_REDIRECT`  | `https://api-dev.catto.one/api/oauth/callback` | `https://api.catto.one/api/oauth/callback` |
 
 Register both `API_REDIRECT` values in the Discord Developer Portal. Do not set

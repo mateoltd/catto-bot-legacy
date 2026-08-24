@@ -33,7 +33,7 @@
     "production": {
       "routes": [
         {
-          "pattern": "catto.one",
+          "pattern": "dash.catto.one",
           "custom_domain": true,
         },
       ],

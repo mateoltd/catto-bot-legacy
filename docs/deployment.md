@@ -350,7 +350,7 @@ The Next.js dashboard deploys independently to Cloudflare Workers through the
 OpenNext adapter:
 
 - Pushes to `main` deploy the development dashboard at `dev.catto.one`.
-- Stable SemVer tags deploy the tagged commit to production at `catto.one`.
+- Stable SemVer tags deploy the tagged commit to production at `dash.catto.one`.
 - Browser API requests use the dashboard origin and are proxied to the matching
   containerized API through the server-only `BOT_API_INTERNAL_URL` setting.
 
