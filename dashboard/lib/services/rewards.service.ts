@@ -159,23 +159,6 @@ export interface ApplyTemplateResponse {
   rewards: Reward[];
 }
 
-export interface UserRewardClaim {
-  id: string;
-  rewardId: string;
-  levelAtClaim: number;
-  xpAtClaim: number;
-  status: string;
-  claimedAt: string;
-  expiresAt: string | null;
-  reward: Reward;
-}
-
-export interface UserRewardsResponse {
-  success: boolean;
-  count: number;
-  claims: UserRewardClaim[];
-}
-
 export const rewardsService = {
   /**
    * Get all rewards for a guild
@@ -251,14 +234,6 @@ export const rewardsService = {
    */
   async applyTemplate(guildId: string, templateName: string): Promise<ApplyTemplateResponse> {
     const response = await botApi.post(`/api/guilds/${guildId}/rewards/templates/${templateName}`);
-    return response.data;
-  },
-
-  /**
-   * Get rewards claimed by a specific user
-   */
-  async getUserRewards(guildId: string, userId: string): Promise<UserRewardsResponse> {
-    const response = await botApi.get(`/api/guilds/${guildId}/rewards/users/${userId}`);
     return response.data;
   },
 };

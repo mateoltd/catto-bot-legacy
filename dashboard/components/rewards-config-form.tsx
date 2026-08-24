@@ -1,76 +1,40 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useRewardsConfig } from '@/hooks/use-rewards-config';
 import { useGuildData } from '@/hooks/use-guild-data';
 import type {
-  XpType,
-  RewardType,
   CreateReward,
   Reward,
-  UserRewardClaim,
+  RewardType,
+  XpType,
 } from '@/lib/services/rewards.service';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { MultiSelectList } from '@/components/ui/multi-select-list';
+import { UnsavedChangesBar } from '@/components/ui/unsaved-changes-bar';
+import {
+  RewardBuilder,
+  type RewardFormState,
+} from '@/components/rewards/reward-builder';
+import { RewardTemplatePicker } from '@/components/rewards/reward-template-picker';
 
 interface RewardsConfigFormProps {
   guildId: string;
 }
 
-interface RewardFormState {
-  level: number;
-  xpType: XpType;
-  rewardType: RewardType;
-  roleId: string;
-  removeRoleIds: string[];
-  channelIds: string[];
-  permissions: string[];
-  message: string;
-  name: string;
-  description: string;
-  stackable: boolean;
-  oneTime: boolean;
-}
-
-// Reward types that are fully implemented in backend
 const SUPPORTED_REWARD_TYPES: { value: RewardType; label: string; description: string }[] = [
   { value: 'ROLE_ADD', label: 'Add Role', description: 'Give a role when level is reached' },
-  {
-    value: 'ROLE_REMOVE',
-    label: 'Remove Role',
-    description: 'Remove a role when level is reached',
-  },
-  {
-    value: 'ROLE_STACK',
-    label: 'Stack Role',
-    description: 'Add role while keeping previous roles',
-  },
-  {
-    value: 'ROLE_REPLACE',
-    label: 'Replace Role',
-    description: 'Add new role and remove specified old roles',
-  },
-  {
-    value: 'PERMISSION_GRANT',
-    label: 'Grant Permissions',
-    description: 'Grant Discord permissions to the user',
-  },
-  {
-    value: 'CHANNEL_ACCESS',
-    label: 'Channel Access',
-    description: 'Grant access to specific channels',
-  },
-  {
-    value: 'ANNOUNCEMENT',
-    label: 'Announcement',
-    description: 'Send an announcement when reward is claimed',
-  },
+  { value: 'ROLE_REMOVE', label: 'Remove Role', description: 'Remove a role when level is reached' },
+  { value: 'ROLE_STACK', label: 'Stack Role', description: 'Add role while keeping previous roles' },
+  { value: 'ROLE_REPLACE', label: 'Replace Role', description: 'Add new role and remove specified old roles' },
+  { value: 'PERMISSION_GRANT', label: 'Grant Permissions', description: 'Grant Discord permissions to the user' },
+  { value: 'CHANNEL_ACCESS', label: 'Channel Access', description: 'Grant access to specific channels' },
+  { value: 'ANNOUNCEMENT', label: 'Announcement', description: 'Send an announcement when reward is claimed' },
 ];
 
-// Discord permissions for PERMISSION_GRANT
 const DISCORD_PERMISSIONS = [
   { value: 'VIEW_CHANNEL', label: 'View Channels' },
   { value: 'SEND_MESSAGES', label: 'Send Messages' },
@@ -88,7 +52,6 @@ const DISCORD_PERMISSIONS = [
 ];
 
 export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
-  const router = useRouter();
   const {
     rewards,
     stats,
@@ -100,7 +63,6 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
     updateReward,
     deleteReward,
     applyTemplate,
-    getUserRewards,
   } = useRewardsConfig(guildId);
   const { roles, textChannels, loading: loadingRoles } = useGuildData(guildId);
 
@@ -129,30 +91,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
 
   // Edit reward form state
   const [editForm, setEditForm] = useState<RewardFormState>(defaultFormState);
-
-  // User claims lookup state
-  const [userIdLookup, setUserIdLookup] = useState('');
-  const [userClaims, setUserClaims] = useState<UserRewardClaim[] | null>(null);
-  const [loadingClaims, setLoadingClaims] = useState(false);
-  const [claimsError, setClaimsError] = useState<string | null>(null);
-
-  const handleLookupUserClaims = async () => {
-    if (!userIdLookup.trim()) return;
-
-    setLoadingClaims(true);
-    setClaimsError(null);
-    setUserClaims(null);
-
-    const result = await getUserRewards(userIdLookup.trim());
-
-    if (result.success && result.claims) {
-      setUserClaims(result.claims);
-    } else {
-      setClaimsError(result.error || 'Failed to fetch user claims');
-    }
-
-    setLoadingClaims(false);
-  };
+  const [initialEditForm, setInitialEditForm] = useState<RewardFormState>(defaultFormState);
 
   const buildRewardData = (
     form: RewardFormState
@@ -217,13 +156,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       setTimeout(() => setSuccess(false), 3000);
       setShowAddForm(false);
       setNewReward(defaultFormState);
-      router.refresh();
     }
   };
 
   const handleStartEdit = (reward: Reward) => {
     setEditingReward(reward);
-    setEditForm({
+    const nextEditForm: RewardFormState = {
       level: reward.level,
       xpType: reward.xpType,
       rewardType: reward.rewardType,
@@ -236,12 +174,15 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       description: reward.description || '',
       stackable: reward.stackable,
       oneTime: reward.oneTime,
-    });
+    };
+    setEditForm(nextEditForm);
+    setInitialEditForm(nextEditForm);
   };
 
   const handleCancelEdit = () => {
     setEditingReward(null);
     setEditForm(defaultFormState);
+    setInitialEditForm(defaultFormState);
   };
 
   const handleSaveEdit = async () => {
@@ -263,6 +204,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       setTimeout(() => setSuccess(false), 3000);
       setEditingReward(null);
       setEditForm(defaultFormState);
+      setInitialEditForm(defaultFormState);
     }
   };
 
@@ -280,7 +222,6 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       setConfirmDeleteId(null);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-      router.refresh();
     }
   };
 
@@ -289,7 +230,6 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
     if (result.success) {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-      router.refresh();
     }
   };
 
@@ -350,7 +290,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
 
       {/* Status Messages */}
       {error && (
-        <div className="glass border-destructive/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-destructive/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5"
             fill="none"
@@ -372,7 +312,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       )}
 
       {success && (
-        <div className="glass border-success/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="glass border-success/50 p-4 flex items-start gap-3">
           <svg
             className="w-5 h-5 text-success flex-shrink-0 mt-0.5"
             fill="none"
@@ -420,429 +360,20 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
         </div>
       )}
 
-      {/* User Claims Lookup */}
-      <Card variant="glass">
-        <CardHeader>
-          <CardTitle>User Reward Claims</CardTitle>
-          <CardDescription>Look up which rewards a user has claimed</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              value={userIdLookup}
-              onChange={(e) => setUserIdLookup(e.target.value)}
-              placeholder="Enter user ID..."
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              onClick={handleLookupUserClaims}
-              disabled={loadingClaims || !userIdLookup.trim()}
-            >
-              {loadingClaims ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Searching...
-                </>
-              ) : (
-                'Look Up'
-              )}
-            </Button>
-          </div>
-
-          {claimsError && (
-            <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3">
-              {claimsError}
-            </div>
-          )}
-
-          {userClaims && (
-            <div className="space-y-2">
-              {userClaims.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  No rewards claimed by this user yet.
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    {userClaims.length} reward{userClaims.length !== 1 ? 's' : ''} claimed
-                  </p>
-                  <div className="max-h-64 overflow-y-auto space-y-2">
-                    {userClaims.map((claim) => {
-                      const role = roles.find((r) => r.id === claim.reward.rewardData.roleId);
-                      return (
-                        <div
-                          key={claim.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/30"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{
-                                backgroundColor: role?.color
-                                  ? `#${role.color.toString(16).padStart(6, '0')}`
-                                  : '#888',
-                              }}
-                            />
-                            <div>
-                              <span className="text-sm font-medium text-foreground">
-                                {claim.reward.name}
-                              </span>
-                              <p className="text-xs text-muted-foreground">
-                                Level {claim.levelAtClaim} - {claim.xpAtClaim.toLocaleString()} XP
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span
-                              className={`text-xs px-1.5 py-0.5 rounded ${
-                                claim.status === 'claimed'
-                                  ? 'bg-success/10 text-success'
-                                  : claim.status === 'pending'
-                                    ? 'bg-warning/10 text-warning'
-                                    : 'bg-muted text-muted-foreground'
-                              }`}
-                            >
-                              {claim.status}
-                            </span>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(claim.claimedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Templates */}
-      {templates.length > 0 && (
-        <Card variant="glass">
-          <CardHeader>
-            <CardTitle>Reward Templates</CardTitle>
-            <CardDescription>
-              {rewards.length === 0
-                ? 'Get started quickly with a pre-made reward configuration'
-                : 'Apply a template to add more rewards to your existing configuration'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {templates.map((template) => (
-                <button
-                  key={template.key}
-                  onClick={() => handleApplyTemplate(template.key)}
-                  disabled={saving}
-                  className="p-4 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-                >
-                  <h4 className="font-medium text-foreground">{template.name}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
-                  <p className="text-xs text-primary mt-2">{template.rewardCount} rewards</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Add Reward Form */}
       {showAddForm && (
-        <Card variant="glass">
-          <CardHeader>
-            <CardTitle>Add New Reward</CardTitle>
-            <CardDescription>Create a new level reward</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Level Required
-                </label>
-                <Input
-                  type="number"
-                  value={newReward.level}
-                  onChange={(e) =>
-                    setNewReward((prev) => ({ ...prev, level: parseInt(e.target.value) || 1 }))
-                  }
-                  min="1"
-                  max="1000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">XP Type</label>
-                <select
-                  value={newReward.xpType}
-                  onChange={(e) =>
-                    setNewReward((prev) => ({ ...prev, xpType: e.target.value as XpType }))
-                  }
-                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  <option value="TEXT">Text XP</option>
-                  <option value="VOICE">Voice XP</option>
-                  <option value="BOTH">Both</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Reward Name
-                </label>
-                <Input
-                  value={newReward.name}
-                  onChange={(e) => setNewReward((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Member Role"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Reward Type
-                </label>
-                <select
-                  value={newReward.rewardType}
-                  onChange={(e) =>
-                    setNewReward((prev) => ({
-                      ...prev,
-                      rewardType: e.target.value as RewardType,
-                      // Reset type-specific fields when changing type
-                      roleId: '',
-                      removeRoleIds: [],
-                      channelIds: [],
-                      permissions: [],
-                      message: '',
-                    }))
-                  }
-                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  {SUPPORTED_REWARD_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {
-                    SUPPORTED_REWARD_TYPES.find((t) => t.value === newReward.rewardType)
-                      ?.description
-                  }
-                </p>
-              </div>
-
-              {/* Role-based reward fields */}
-              {['ROLE_ADD', 'ROLE_REMOVE', 'ROLE_STACK', 'ROLE_REPLACE'].includes(
-                newReward.rewardType
-              ) && (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    {newReward.rewardType === 'ROLE_REMOVE' ? 'Role to Remove' : 'Role to Award'}
-                  </label>
-                  <select
-                    value={newReward.roleId}
-                    onChange={(e) => setNewReward((prev) => ({ ...prev, roleId: e.target.value }))}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    disabled={loadingRoles}
-                  >
-                    <option value="">Select a role...</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* ROLE_REPLACE: roles to remove */}
-              {newReward.rewardType === 'ROLE_REPLACE' && (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Roles to Remove
-                  </label>
-                  <div className="border border-border/50 rounded-lg bg-muted/20 p-3 max-h-40 overflow-y-auto space-y-1">
-                    {roles.map((role) => (
-                      <label
-                        key={role.id}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newReward.removeRoleIds.includes(role.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewReward((prev) => ({
-                                ...prev,
-                                removeRoleIds: [...prev.removeRoleIds, role.id],
-                              }));
-                            } else {
-                              setNewReward((prev) => ({
-                                ...prev,
-                                removeRoleIds: prev.removeRoleIds.filter((id) => id !== role.id),
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-foreground">{role.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {newReward.removeRoleIds.length} role(s) selected to remove
-                  </p>
-                </div>
-              )}
-
-              {/* PERMISSION_GRANT fields */}
-              {newReward.rewardType === 'PERMISSION_GRANT' && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Permissions to Grant
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border border-border/50 rounded-lg bg-muted/20 p-3">
-                    {DISCORD_PERMISSIONS.map((perm) => (
-                      <label
-                        key={perm.value}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newReward.permissions.includes(perm.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewReward((prev) => ({
-                                ...prev,
-                                permissions: [...prev.permissions, perm.value],
-                              }));
-                            } else {
-                              setNewReward((prev) => ({
-                                ...prev,
-                                permissions: prev.permissions.filter((p) => p !== perm.value),
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-foreground">{perm.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {newReward.permissions.length} permission(s) selected
-                  </p>
-                </div>
-              )}
-
-              {/* CHANNEL_ACCESS fields */}
-              {newReward.rewardType === 'CHANNEL_ACCESS' && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Channels to Grant Access
-                  </label>
-                  <div className="border border-border/50 rounded-lg bg-muted/20 p-3 max-h-48 overflow-y-auto space-y-1">
-                    {textChannels.map((channel) => (
-                      <label
-                        key={channel.id}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newReward.channelIds.includes(channel.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewReward((prev) => ({
-                                ...prev,
-                                channelIds: [...prev.channelIds, channel.id],
-                              }));
-                            } else {
-                              setNewReward((prev) => ({
-                                ...prev,
-                                channelIds: prev.channelIds.filter((id) => id !== channel.id),
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-muted-foreground"># {channel.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {newReward.channelIds.length} channel(s) selected
-                  </p>
-                </div>
-              )}
-
-              {/* ANNOUNCEMENT fields */}
-              {newReward.rewardType === 'ANNOUNCEMENT' && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Announcement Message
-                  </label>
-                  <textarea
-                    value={newReward.message}
-                    onChange={(e) => setNewReward((prev) => ({ ...prev, message: e.target.value }))}
-                    placeholder="Congratulations {user}! You've reached level {level}!"
-                    rows={3}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Available variables: {'{user}'}, {'{level}'}, {'{reward}'}
-                  </p>
-                </div>
-              )}
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Description (Optional)
-                </label>
-                <Input
-                  value={newReward.description}
-                  onChange={(e) =>
-                    setNewReward((prev) => ({ ...prev, description: e.target.value }))
-                  }
-                  placeholder="Awarded for reaching level..."
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={newReward.stackable}
-                  onCheckedChange={(checked) =>
-                    setNewReward((prev) => ({ ...prev, stackable: checked }))
-                  }
-                />
-                <label className="text-sm text-foreground">Stackable</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={newReward.oneTime}
-                  onCheckedChange={(checked) =>
-                    setNewReward((prev) => ({ ...prev, oneTime: checked }))
-                  }
-                />
-                <label className="text-sm text-foreground">One-time only</label>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-border/50">
-              <Button variant="outline" onClick={() => setShowAddForm(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="neon"
-                onClick={handleCreateReward}
-                disabled={saving || !isFormValid(newReward)}
-              >
-                {saving ? 'Creating...' : 'Create Reward'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <RewardBuilder
+          value={newReward}
+          onChange={setNewReward}
+          onSubmit={handleCreateReward}
+          onCancel={() => {
+            setShowAddForm(false);
+            setNewReward(defaultFormState);
+          }}
+          roles={roles}
+          textChannels={textChannels}
+          loadingRoles={loadingRoles}
+          saving={saving}
+        />
       )}
 
       {/* Edit Reward Form */}
@@ -875,7 +406,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, xpType: e.target.value as XpType }))
                   }
-                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full border border-border bg-input px-4 py-2 text-foreground outline-none"
                 >
                   <option value="TEXT">Text XP</option>
                   <option value="VOICE">Voice XP</option>
@@ -909,7 +440,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                       message: '',
                     }))
                   }
-                  className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full border border-border bg-input px-4 py-2 text-foreground outline-none"
                 >
                   {SUPPORTED_REWARD_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
@@ -933,7 +464,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   <select
                     value={editForm.roleId}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, roleId: e.target.value }))}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full border border-border bg-input px-4 py-2 text-foreground outline-none"
                     disabled={loadingRoles}
                   >
                     <option value="">Select a role...</option>
@@ -952,37 +483,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Roles to Remove
                   </label>
-                  <div className="border border-border/50 rounded-lg bg-muted/20 p-3 max-h-40 overflow-y-auto space-y-1">
-                    {roles.map((role) => (
-                      <label
-                        key={role.id}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editForm.removeRoleIds.includes(role.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEditForm((prev) => ({
-                                ...prev,
-                                removeRoleIds: [...prev.removeRoleIds, role.id],
-                              }));
-                            } else {
-                              setEditForm((prev) => ({
-                                ...prev,
-                                removeRoleIds: prev.removeRoleIds.filter((id) => id !== role.id),
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-foreground">{role.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {editForm.removeRoleIds.length} role(s) selected to remove
-                  </p>
+                  <MultiSelectList
+                    items={roles.map((role) => ({ value: role.id, label: role.name }))}
+                    value={editForm.removeRoleIds}
+                    onValueChange={(removeRoleIds) => setEditForm((prev) => ({ ...prev, removeRoleIds }))}
+                    searchPlaceholder="Filter roles…"
+                  />
                 </div>
               )}
 
@@ -992,37 +498,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Permissions to Grant
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border border-border/50 rounded-lg bg-muted/20 p-3">
-                    {DISCORD_PERMISSIONS.map((perm) => (
-                      <label
-                        key={perm.value}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editForm.permissions.includes(perm.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEditForm((prev) => ({
-                                ...prev,
-                                permissions: [...prev.permissions, perm.value],
-                              }));
-                            } else {
-                              setEditForm((prev) => ({
-                                ...prev,
-                                permissions: prev.permissions.filter((p) => p !== perm.value),
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-foreground">{perm.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {editForm.permissions.length} permission(s) selected
-                  </p>
+                  <MultiSelectList
+                    items={DISCORD_PERMISSIONS.map((permission) => ({ value: permission.value, label: permission.label }))}
+                    value={editForm.permissions}
+                    onValueChange={(permissions) => setEditForm((prev) => ({ ...prev, permissions }))}
+                    searchPlaceholder="Filter permissions…"
+                  />
                 </div>
               )}
 
@@ -1032,37 +513,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Channels to Grant Access
                   </label>
-                  <div className="border border-border/50 rounded-lg bg-muted/20 p-3 max-h-48 overflow-y-auto space-y-1">
-                    {textChannels.map((channel) => (
-                      <label
-                        key={channel.id}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 rounded cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editForm.channelIds.includes(channel.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEditForm((prev) => ({
-                                ...prev,
-                                channelIds: [...prev.channelIds, channel.id],
-                              }));
-                            } else {
-                              setEditForm((prev) => ({
-                                ...prev,
-                                channelIds: prev.channelIds.filter((id) => id !== channel.id),
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-muted-foreground"># {channel.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {editForm.channelIds.length} channel(s) selected
-                  </p>
+                  <MultiSelectList
+                    items={textChannels.map((channel) => ({ value: channel.id, label: channel.name, prefix: '#' }))}
+                    value={editForm.channelIds}
+                    onValueChange={(channelIds) => setEditForm((prev) => ({ ...prev, channelIds }))}
+                    searchPlaceholder="Filter channels…"
+                  />
                 </div>
               )}
 
@@ -1077,7 +533,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                     onChange={(e) => setEditForm((prev) => ({ ...prev, message: e.target.value }))}
                     placeholder="Congratulations {user}! You've reached level {level}!"
                     rows={3}
-                    className="w-full px-4 py-2 bg-input border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    className="w-full resize-none border border-border bg-input px-4 py-2 text-foreground outline-none"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Available variables: {'{user}'}, {'{level}'}, {'{reward}'}
@@ -1124,17 +580,18 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               <Button variant="outline" onClick={handleCancelEdit}>
                 Cancel
               </Button>
-              <Button
-                variant="neon"
-                onClick={handleSaveEdit}
-                disabled={saving || !isFormValid(editForm)}
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <UnsavedChangesBar
+        visible={!!editingReward && JSON.stringify(editForm) !== JSON.stringify(initialEditForm)}
+        saving={saving}
+        disabled={!isFormValid(editForm)}
+        onSave={handleSaveEdit}
+        message="This reward has unsaved changes"
+      />
 
       {/* Rewards List */}
       {sortedLevels.length > 0 ? (
@@ -1166,7 +623,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                     return (
                       <div
                         key={reward.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                        className={`flex items-center justify-between p-3 border transition-colors ${
                           reward.enabled
                             ? 'bg-muted/20 border-border/30'
                             : 'bg-muted/10 border-border/20 opacity-60'
@@ -1311,6 +768,25 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {templates.length > 0 && (
+        <details className="border-t border-border pt-2">
+          <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-sm text-muted-foreground hover:text-foreground">
+            <span>Reward templates</span>
+            <span className="text-xs tabular-nums">{templates.length}</span>
+          </summary>
+          <div className="pb-2 pt-1">
+            <p className="mb-3 text-xs text-muted-foreground">
+              Optional starting points for common reward setups.
+            </p>
+            <RewardTemplatePicker
+              templates={templates}
+              saving={saving}
+              onApply={handleApplyTemplate}
+            />
+          </div>
+        </details>
       )}
     </div>
   );
