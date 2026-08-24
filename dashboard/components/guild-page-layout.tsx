@@ -57,19 +57,34 @@ export default function GuildPageLayout({
     if (accessDenied) router.replace(`/guilds/${guild.id}`);
   }, [accessDenied, guild.id, router]);
 
+  useEffect(() => {
+    const htmlOverflow = document.documentElement.style.overflow;
+    const bodyOverflow = document.body.style.overflow;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.documentElement.style.overflow = htmlOverflow;
+      document.body.style.overflow = bodyOverflow;
+    };
+  }, []);
+
   return (
     <GuildDashboardContext.Provider value={{ guild, user, access }}>
-      <div className="min-h-screen bg-background">
-        <DashboardTopbar
-          showServersLink
-          trailing={
-            <div className="md:hidden">
-              <UserDropdown user={user} />
-            </div>
-          }
-        />
+      <div className="flex h-dvh flex-col overflow-hidden bg-background">
+        <div className="shrink-0">
+          <DashboardTopbar
+            showServersLink
+            trailing={
+              <div className="md:hidden">
+                <UserDropdown user={user} />
+              </div>
+            }
+          />
+        </div>
 
-        <div className="border-b border-border bg-card px-4 py-4 sm:hidden">
+        <div className="shrink-0 border-b border-border bg-card px-4 py-4 sm:hidden">
           <ServerIdentity
             guild={guild}
             iconUrl={guildIconUrl}
@@ -77,7 +92,7 @@ export default function GuildPageLayout({
           />
         </div>
 
-        <nav className="scrollbar-none flex overflow-x-auto border-b border-border bg-card px-2 sm:hidden">
+        <nav className="scrollbar-none flex shrink-0 overflow-x-auto border-b border-border bg-card px-2 sm:hidden">
           {navigation.map((item) => (
             <GuildNavigationLink
               key={item.id}
@@ -88,8 +103,8 @@ export default function GuildPageLayout({
           ))}
         </nav>
 
-        <div className="grid w-full md:grid-cols-[224px_minmax(0,1fr)]">
-          <aside className="sticky top-12 hidden h-[calc(100vh-3rem)] border-r border-border bg-card md:flex md:flex-col">
+        <div className="grid min-h-0 w-full flex-1 md:grid-cols-[224px_minmax(0,1fr)]">
+          <aside className="hidden min-h-0 border-r border-border bg-card md:flex md:flex-col">
             <GuildSidebar
               guild={guild}
               access={access}
@@ -97,7 +112,7 @@ export default function GuildPageLayout({
             />
           </aside>
 
-          <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+          <main className="min-h-0 min-w-0 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
             {accessDenied ? null : children}
           </main>
         </div>
