@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import type { DiscordUser, UserSession } from './types';
 import { botApiUrl } from './server/bot-api';
@@ -29,7 +30,7 @@ async function fetchUserSession(token: string): Promise<UserSession | null> {
   }
 }
 
-export async function getUserSession(): Promise<UserSession | null> {
+export const getUserSession = cache(async (): Promise<UserSession | null> => {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('DASHBOARD_AUTH')?.value;
@@ -37,4 +38,4 @@ export async function getUserSession(): Promise<UserSession | null> {
   } catch {
     return null;
   }
-}
+});

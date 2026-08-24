@@ -43,7 +43,7 @@ vi.mock('recharts', () => ({
   Cell: () => <div data-testid="cell" />,
 }));
 
-import AnalyticsPage from '@/app/mod/[guildId]/analytics/page';
+import AnalyticsPage from '@/app/mod/(protected)/[guildId]/analytics/page';
 
 describe('AnalyticsPage', () => {
   beforeEach(() => {
