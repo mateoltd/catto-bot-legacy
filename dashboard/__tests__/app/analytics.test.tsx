@@ -119,32 +119,21 @@ describe('AnalyticsPage', () => {
     expect(screen.getByText('12.3%')).toBeInTheDocument();
   });
 
-  it('period selector buttons render', () => {
+  it('requests analytics again for the selected period', () => {
     mockUseSWR.mockReturnValue({ data: undefined, isLoading: false });
 
     render(<AnalyticsPage />);
+    mockUseSWR.mockClear();
 
-    expect(screen.getByText('7d')).toBeInTheDocument();
-    expect(screen.getByText('30d')).toBeInTheDocument();
-    expect(screen.getByText('90d')).toBeInTheDocument();
-  });
+    fireEvent.click(screen.getByText('7d'));
 
-  it('clicking period button changes active selection', () => {
-    mockUseSWR.mockReturnValue({ data: undefined, isLoading: false });
-
-    render(<AnalyticsPage />);
-
-    const btn7d = screen.getByText('7d');
-    const btn30d = screen.getByText('30d');
-
-    // 30d is the default active period
-    expect(btn30d.className).toContain('border-[var(--mono-500)]');
-    expect(btn7d.className).not.toContain('border-[var(--mono-500)]');
-
-    // Click 7d
-    fireEvent.click(btn7d);
-
-    expect(btn7d.className).toContain('border-[var(--mono-500)]');
-    expect(btn30d.className).not.toContain('border-[var(--mono-500)]');
+    expect(mockUseSWR).toHaveBeenCalledWith(
+      ['evidence-analytics', 'guild-123', '7d'],
+      expect.any(Function),
+    );
+    expect(mockUseSWR).toHaveBeenCalledWith(
+      ['case-analytics', 'guild-123', '7d'],
+      expect.any(Function),
+    );
   });
 });

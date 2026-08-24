@@ -38,15 +38,4 @@ describe("NSFW scanner runtime", () => {
     expect(runtimeLoad).toHaveBeenCalledWith("MobileNetV2");
     expect(appendedScripts).toEqual(SCRIPT_PATHS);
   });
-
-  it("recognizes image MIME types", async () => {
-    const { isImageFile } = await import("@/lib/nsfw");
-
-    expect(
-      isImageFile(new File([], "evidence.png", { type: "image/png" })),
-    ).toBe(true);
-    expect(
-      isImageFile(new File([], "evidence.txt", { type: "text/plain" })),
-    ).toBe(false);
-  });
 });

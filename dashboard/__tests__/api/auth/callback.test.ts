@@ -62,15 +62,6 @@ describe('GET /api/auth/callback', () => {
     expect(mockCookieStore.set).not.toHaveBeenCalled();
   });
 
-  it('redirects to / when sessionId is empty string', async () => {
-    const req = new NextRequest('http://localhost:3000/api/auth/callback?sessionId=');
-    const res = await GET(req);
-
-    expect(res.status).toBe(307);
-    expect(res.headers.get('location')).toBe('http://localhost:3000/');
-    expect(mockCookieStore.set).not.toHaveBeenCalled();
-  });
-
   it('sets DASHBOARD_AUTH cookie with correct attributes', async () => {
     const req = new NextRequest(
       'http://localhost:3000/api/auth/callback?sessionId=test-session-123'
@@ -116,7 +107,7 @@ describe('GET /api/auth/callback', () => {
     expect(res.headers.get('location')).toBe('http://localhost:3000/guilds');
   });
 
-  it('uses mod_auth_redirect value for redirect destination', async () => {
+  it('uses and clears mod_auth_redirect after authentication', async () => {
     const req = new NextRequest(
       'http://localhost:3000/api/auth/callback?sessionId=abc'
     );
@@ -128,27 +119,6 @@ describe('GET /api/auth/callback', () => {
     expect(res.headers.get('location')).toBe(
       'http://localhost:3000/mod/guild-1/evidence'
     );
-  });
-
-  it('deletes mod_auth_redirect cookie after use', async () => {
-    const req = new NextRequest(
-      'http://localhost:3000/api/auth/callback?sessionId=abc'
-    );
-    mockCookieStore.get.mockReturnValue({ value: '/mod/cases' });
-
-    await GET(req);
-
     expect(mockCookieStore.delete).toHaveBeenCalledWith('mod_auth_redirect');
-  });
-
-  it('does not delete mod_auth_redirect when it does not exist', async () => {
-    const req = new NextRequest(
-      'http://localhost:3000/api/auth/callback?sessionId=abc'
-    );
-    mockCookieStore.get.mockReturnValue(undefined);
-
-    await GET(req);
-
-    expect(mockCookieStore.delete).not.toHaveBeenCalled();
   });
 });

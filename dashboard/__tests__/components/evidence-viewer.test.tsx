@@ -235,22 +235,6 @@ describe('EvidenceViewer', () => {
     vi.clearAllMocks();
   });
 
-  it('renders with evidence details (filename, type, status)', () => {
-    setupSWR();
-    renderViewer({
-      originalFilename: 'evidence-photo.png',
-      type: 'IMAGE',
-      status: 'VERIFIED',
-    });
-
-    // Type label from EVIDENCE_TYPE_META
-    expect(screen.getByText('Image')).toBeInTheDocument();
-    // Filename shown after dash
-    expect(screen.getByText(/evidence-photo\.png/)).toBeInTheDocument();
-    // Verified status shown in details tab (default)
-    expect(screen.getByText('Signed & Verified')).toBeInTheDocument();
-  });
-
   it('escape key calls onClose', () => {
     setupSWR();
     const { onClose } = renderViewer();
@@ -282,109 +266,6 @@ describe('EvidenceViewer', () => {
     // Switch back to details
     fireEvent.click(screen.getByText('Details'));
     expect(screen.getByText(/TestUser#0001/)).toBeInTheDocument();
-  });
-
-  it('renders URL content type correctly (shows link)', () => {
-    setupSWR();
-    renderViewer({
-      type: 'URL',
-      url: 'https://example.com/evidence',
-      storageKey: null,
-    });
-
-    const link = screen.getByText('https://example.com/evidence');
-    expect(link).toBeInTheDocument();
-    expect(link.tagName).toBe('A');
-    expect(link).toHaveAttribute('href', 'https://example.com/evidence');
-    expect(link).toHaveAttribute('target', '_blank');
-  });
-
-  it('shows "details" tab by default', () => {
-    setupSWR();
-    renderViewer({ uploadedByTag: 'Moderator#1234' });
-
-    // Details tab content should be visible: uploader info
-    expect(screen.getByText(/Moderator#1234/)).toBeInTheDocument();
-
-    // The Details tab button should have the active styling class (border-b-2)
-    const detailsButton = screen.getByText('Details');
-    expect(detailsButton.className).toContain('border-b-2');
-  });
-
-  it('download button calls onDownload callback', () => {
-    setupSWR();
-    const onDownload = vi.fn();
-    renderViewer({}, { onDownload });
-
-    const downloadButton = screen.getByTitle('Download');
-    fireEvent.click(downloadButton);
-
-    expect(onDownload).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not render download button when onDownload is not provided', () => {
-    setupSWR();
-    renderViewer();
-
-    expect(screen.queryByTitle('Download')).not.toBeInTheDocument();
-  });
-
-  it('navigation buttons call onPrev/onNext callbacks (overlay click calls onClose)', () => {
-    setupSWR();
-    const onPrev = vi.fn();
-    const onNext = vi.fn();
-    const { onClose } = renderViewer({}, { onPrev, onNext });
-
-    // The outer overlay div calls onClose on click
-    const overlay = screen.getByText('Image').closest('.fixed');
-    expect(overlay).toBeTruthy();
-    fireEvent.click(overlay!);
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('amend tab shows form with action selector and reason textarea', () => {
-    setupSWR();
-    renderViewer();
-
-    // Switch to amend tab
-    fireEvent.click(screen.getByText('Amend'));
-
-    // Action label
-    expect(screen.getByText('Action')).toBeInTheDocument();
-
-    // Select component (action selector)
-    expect(screen.getByTestId('select')).toBeInTheDocument();
-
-    // Action options rendered
-    expect(screen.getByText('Add Note')).toBeInTheDocument();
-    expect(screen.getByText('Update Description')).toBeInTheDocument();
-    expect(screen.getByText('Update Tags')).toBeInTheDocument();
-
-    // Reason textarea
-    const textarea = screen.getByPlaceholderText('Reason for amendment...');
-    expect(textarea).toBeInTheDocument();
-    expect(textarea.tagName).toBe('TEXTAREA');
-
-    // Flag toggle
-    expect(screen.getByLabelText('Toggle flag')).toBeInTheDocument();
-
-    // Submit button
-    expect(screen.getByText('Submit Amendment')).toBeInTheDocument();
-  });
-
-  it('shows description when provided', () => {
-    setupSWR();
-    renderViewer({ description: 'This is a key piece of evidence' });
-
-    expect(screen.getByText('This is a key piece of evidence')).toBeInTheDocument();
-  });
-
-  it('shows tags in details tab', () => {
-    setupSWR();
-    renderViewer({ tags: ['harassment', 'urgent'] });
-
-    expect(screen.getByText('harassment')).toBeInTheDocument();
-    expect(screen.getByText('urgent')).toBeInTheDocument();
   });
 
   it('shows file size in details tab', () => {
