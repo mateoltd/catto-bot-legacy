@@ -77,7 +77,7 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Example />);
+    render(<Intl><Example /></Intl>);
 
     expect(screen.getByLabelText("Voice XP award engine")).toBeInTheDocument();
     expect(screen.getByLabelText("Session duration")).toHaveValue(1);
