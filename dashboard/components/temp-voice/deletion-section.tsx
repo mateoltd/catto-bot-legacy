@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from 'next-intl';
 
 interface DeletionSectionProps {
   deleteEmptyAfterMs: number;
@@ -11,18 +12,19 @@ interface DeletionSectionProps {
 }
 
 export default function DeletionSection({ deleteEmptyAfterMs, onUpdate }: DeletionSectionProps) {
+  const t = useTranslations('TempVoice');
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle>Auto-Delete Settings</CardTitle>
+        <CardTitle>{t('autoDeleteSettings')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Empty temporary channels are deleted automatically.
+          {t('deleteWhenEmptyDescription')}
         </p>
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            Delay Before Delete (seconds)
+            {t('deleteDelay')}
           </label>
           <Input
             type="number"

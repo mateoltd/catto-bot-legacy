@@ -53,9 +53,9 @@ describe('RewardBuilder', () => {
     fireEvent.click(screen.getByText('Veteran'));
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
-    expect(screen.getByLabelText('Reward name')).toHaveValue('Veteran — Level 10');
+    expect(screen.getByLabelText(/reward name/i)).toHaveValue('Veteran — Level 10');
     expect(screen.getByText('Level 10')).toBeInTheDocument();
-    expect(screen.getByText('VOICE')).toBeInTheDocument();
+    expect(screen.getByText('Voice')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /create reward/i }));
     expect(onSubmit).toHaveBeenCalledOnce();
@@ -68,6 +68,6 @@ describe('RewardBuilder', () => {
     fireEvent.click(screen.getByRole('button', { name: /continue/i }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Choose a role to continue.');
-    expect(screen.queryByLabelText('Reward name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/reward name/i)).not.toBeInTheDocument();
   });
 });

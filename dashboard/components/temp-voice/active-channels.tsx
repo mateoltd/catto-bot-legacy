@@ -2,12 +2,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { TempVoiceChannel } from '@/lib/services/temp-voice.service';
+import { useFormatter, useTranslations } from 'next-intl';
 
 interface ActiveChannelsProps {
   channels: TempVoiceChannel[];
 }
 
 export default function ActiveChannels({ channels }: ActiveChannelsProps) {
+  const t = useTranslations('TempVoice');
+  const format = useFormatter();
   if (channels.length === 0) {
     return null;
   }
@@ -15,8 +18,8 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle>Active Channels ({channels.length})</CardTitle>
-        <CardDescription>Currently active temporary voice channels</CardDescription>
+        <CardTitle>{t('activeChannelsCount', { count: channels.length })}</CardTitle>
+        <CardDescription>{t('activeChannelsDescription')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -46,33 +49,33 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
                   </span>
                   {channel.permissions?.isLocked && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-warning/10 text-warning">
-                      Locked
+                      {t('locked')}
                     </span>
                   )}
                   {channel.permissions?.isHidden && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      Hidden
+                      {t('hidden')}
                     </span>
                   )}
                 </div>
                 <span className="text-sm text-muted-foreground">
                   {channel.memberCount || 0}
-                  {channel.userLimit ? `/${channel.userLimit}` : ''} users
+                  {channel.userLimit ? `/${channel.userLimit}` : ''} {t('users')}
                 </span>
               </div>
 
               {/* Channel Info */}
               <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
-                <span>Owner: {channel.ownerUsername || channel.ownerId}</span>
-                {channel.categoryName && <span>Category: {channel.categoryName}</span>}
+                <span>{t('owner', { owner: channel.ownerUsername || channel.ownerId })}</span>
+                {channel.categoryName && <span>{t('category', { category: channel.categoryName })}</span>}
                 {channel.bitrate && <span>{Math.round(channel.bitrate / 1000)}kbps</span>}
-                <span>Created: {new Date(channel.createdAt).toLocaleString()}</span>
+                <span>{t('created', { date: format.dateTime(new Date(channel.createdAt), { dateStyle: 'short', timeStyle: 'short' }) })}</span>
               </div>
 
               {/* Members List */}
               {channel.members && channel.members.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Members:</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t('members')}</p>
                   <div className="flex flex-wrap gap-2">
                     {channel.members.map((member) => (
                       <div
@@ -92,7 +95,7 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
                           {member.displayName || member.username}
                         </span>
                         {member.id === channel.ownerId && (
-                          <span className="text-primary text-[10px]">(owner)</span>
+                          <span className="text-primary text-[10px]">{t('ownerBadge')}</span>
                         )}
                       </div>
                     ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRewardsConfig } from '@/hooks/use-rewards-config';
 import { useGuildData } from '@/hooks/use-guild-data';
 import type {
@@ -26,33 +27,34 @@ interface RewardsConfigFormProps {
   guildId: string;
 }
 
-const SUPPORTED_REWARD_TYPES: { value: RewardType; label: string; description: string }[] = [
-  { value: 'ROLE_ADD', label: 'Add Role', description: 'Give a role when level is reached' },
-  { value: 'ROLE_REMOVE', label: 'Remove Role', description: 'Remove a role when level is reached' },
-  { value: 'ROLE_STACK', label: 'Stack Role', description: 'Add role while keeping previous roles' },
-  { value: 'ROLE_REPLACE', label: 'Replace Role', description: 'Add new role and remove specified old roles' },
-  { value: 'PERMISSION_GRANT', label: 'Grant Permissions', description: 'Grant Discord permissions to the user' },
-  { value: 'CHANNEL_ACCESS', label: 'Channel Access', description: 'Grant access to specific channels' },
-  { value: 'ANNOUNCEMENT', label: 'Announcement', description: 'Send an announcement when reward is claimed' },
-];
-
-const DISCORD_PERMISSIONS = [
-  { value: 'VIEW_CHANNEL', label: 'View Channels' },
-  { value: 'SEND_MESSAGES', label: 'Send Messages' },
-  { value: 'EMBED_LINKS', label: 'Embed Links' },
-  { value: 'ATTACH_FILES', label: 'Attach Files' },
-  { value: 'ADD_REACTIONS', label: 'Add Reactions' },
-  { value: 'USE_EXTERNAL_EMOJIS', label: 'Use External Emojis' },
-  { value: 'READ_MESSAGE_HISTORY', label: 'Read Message History' },
-  { value: 'CONNECT', label: 'Connect to Voice' },
-  { value: 'SPEAK', label: 'Speak in Voice' },
-  { value: 'STREAM', label: 'Video/Stream' },
-  { value: 'PRIORITY_SPEAKER', label: 'Priority Speaker' },
-  { value: 'CREATE_INSTANT_INVITE', label: 'Create Invites' },
-  { value: 'CHANGE_NICKNAME', label: 'Change Nickname' },
-];
-
 export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
+  const t = useTranslations('Rewards');
+  const rewardTypes: { value: RewardType; label: string; description: string }[] = [
+    { value: 'ROLE_ADD', label: t('typeRoleAdd'), description: t('typeRoleAddDescription') },
+    { value: 'ROLE_REMOVE', label: t('typeRoleRemove'), description: t('typeRoleRemoveDescription') },
+    { value: 'ROLE_STACK', label: t('typeRoleStack'), description: t('typeRoleStackDescription') },
+    { value: 'ROLE_REPLACE', label: t('typeRoleReplace'), description: t('typeRoleReplaceDescription') },
+    { value: 'PERMISSION_GRANT', label: t('typePermissions'), description: t('typePermissionsDescription') },
+    { value: 'CHANNEL_ACCESS', label: t('typeChannelAccess'), description: t('typeChannelAccessDescription') },
+    { value: 'ANNOUNCEMENT', label: t('typeAnnouncement'), description: t('typeAnnouncementDescription') },
+  ];
+  const permissions = [
+    { value: 'VIEW_CHANNEL', label: t('permissionViewChannels') },
+    { value: 'SEND_MESSAGES', label: t('permissionSendMessages') },
+    { value: 'EMBED_LINKS', label: t('permissionEmbedLinks') },
+    { value: 'ATTACH_FILES', label: t('permissionAttachFiles') },
+    { value: 'ADD_REACTIONS', label: t('permissionAddReactions') },
+    { value: 'USE_EXTERNAL_EMOJIS', label: t('permissionExternalEmojis') },
+    { value: 'READ_MESSAGE_HISTORY', label: t('permissionHistory') },
+    { value: 'CONNECT', label: t('permissionConnect') },
+    { value: 'SPEAK', label: t('permissionSpeak') },
+    { value: 'STREAM', label: t('permissionStream') },
+    { value: 'PRIORITY_SPEAKER', label: t('permissionPrioritySpeaker') },
+    { value: 'CREATE_INSTANT_INVITE', label: t('permissionInvites') },
+    { value: 'CHANGE_NICKNAME', label: t('permissionNickname') },
+  ];
+  const xpTypeLabel = (type: XpType) =>
+    type === 'TEXT' ? t('xpText') : type === 'VOICE' ? t('xpVoice') : t('xpBoth');
   const {
     rewards,
     stats,
@@ -245,7 +247,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
           <CardContent className="py-12">
             <div className="flex items-center justify-center gap-3">
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-muted-foreground">Loading rewards configuration...</span>
+              <span className="text-muted-foreground">{t('loading')}</span>
             </div>
           </CardContent>
         </Card>
@@ -273,8 +275,8 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Level Rewards</h2>
-          <p className="text-muted-foreground mt-1">Configure rewards for reaching XP levels</p>
+          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
+          <p className="text-muted-foreground mt-1">{t('description')}</p>
         </div>
         <Button variant="neon" onClick={() => setShowAddForm(true)}>
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,7 +287,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Add Reward
+          {t('addReward')}
         </Button>
       </div>
 
@@ -306,7 +308,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
             />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-destructive">Error</h3>
+            <h3 className="text-sm font-medium text-destructive">{t('errorTitle')}</h3>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
           </div>
         </div>
@@ -323,8 +325,8 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-success">Success</h3>
-            <p className="text-sm text-success/80 mt-1">Changes saved successfully!</p>
+            <h3 className="text-sm font-medium text-success">{t('successTitle')}</h3>
+            <p className="text-sm text-success/80 mt-1">{t('saved')}</p>
           </div>
         </div>
       )}
@@ -335,19 +337,19 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
           <Card variant="glass">
             <CardContent className="py-4">
               <div className="text-2xl font-bold text-primary">{stats.totalRewards}</div>
-              <div className="text-sm text-muted-foreground">Total Rewards</div>
+              <div className="text-sm text-muted-foreground">{t('totalRewards')}</div>
             </CardContent>
           </Card>
           <Card variant="glass">
             <CardContent className="py-4">
               <div className="text-2xl font-bold text-primary">{stats.enabledRewards}</div>
-              <div className="text-sm text-muted-foreground">Enabled</div>
+              <div className="text-sm text-muted-foreground">{t('enabled')}</div>
             </CardContent>
           </Card>
           <Card variant="glass">
             <CardContent className="py-4">
               <div className="text-2xl font-bold text-primary">{stats.totalClaims}</div>
-              <div className="text-sm text-muted-foreground">Total Claims</div>
+              <div className="text-sm text-muted-foreground">{t('totalClaims')}</div>
             </CardContent>
           </Card>
           <Card variant="glass">
@@ -355,7 +357,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               <div className="text-2xl font-bold text-primary">
                 {Object.keys(rewardsByLevel).length}
               </div>
-              <div className="text-sm text-muted-foreground">Levels with Rewards</div>
+              <div className="text-sm text-muted-foreground">{t('levelsWithRewards')}</div>
             </CardContent>
           </Card>
         </div>
@@ -381,14 +383,14 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       {editingReward && (
         <Card variant="glass" className="border-primary/50">
           <CardHeader>
-            <CardTitle>Edit Reward</CardTitle>
-            <CardDescription>Modify reward settings</CardDescription>
+            <CardTitle>{t('editReward')}</CardTitle>
+            <CardDescription>{t('editRewardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Level Required
+                  {t('levelRequired')}
                 </label>
                 <Input
                   type="number"
@@ -401,7 +403,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">XP Type</label>
+                <label className="block text-sm font-medium text-foreground mb-2">{t('xpType')}</label>
                 <Select
                   value={editForm.xpType}
                   onValueChange={(value) =>
@@ -412,25 +414,25 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TEXT">Text XP</SelectItem>
-                    <SelectItem value="VOICE">Voice XP</SelectItem>
-                    <SelectItem value="BOTH">Both</SelectItem>
+                    <SelectItem value="TEXT">{t('xpText')}</SelectItem>
+                    <SelectItem value="VOICE">{t('xpVoice')}</SelectItem>
+                    <SelectItem value="BOTH">{t('xpBoth')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Reward Name
+                  {t('rewardName')}
                 </label>
                 <Input
                   value={editForm.name}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Member Role"
+                  placeholder={t('rewardNamePlaceholder')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Reward Type
+                  {t('rewardType')}
                 </label>
                 <Select
                   value={editForm.rewardType}
@@ -450,7 +452,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {SUPPORTED_REWARD_TYPES.map((type) => (
+                    {rewardTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}
                       </SelectItem>
@@ -458,7 +460,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {SUPPORTED_REWARD_TYPES.find((t) => t.value === editForm.rewardType)?.description}
+                  {rewardTypes.find((type) => type.value === editForm.rewardType)?.description}
                 </p>
               </div>
 
@@ -468,7 +470,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               ) && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    {editForm.rewardType === 'ROLE_REMOVE' ? 'Role to Remove' : 'Role to Award'}
+                    {editForm.rewardType === 'ROLE_REMOVE' ? t('roleToRemove') : t('roleToAward')}
                   </label>
                   <Select
                     value={editForm.roleId || '_none'}
@@ -484,7 +486,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">Select a role...</SelectItem>
+                      <SelectItem value="_none">{t('selectRole')}</SelectItem>
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
@@ -499,13 +501,13 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               {editForm.rewardType === 'ROLE_REPLACE' && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Roles to Remove
+                    {t('rolesToRemove')}
                   </label>
                   <MultiSelectList
                     items={roles.map((role) => ({ value: role.id, label: role.name }))}
                     value={editForm.removeRoleIds}
                     onValueChange={(removeRoleIds) => setEditForm((prev) => ({ ...prev, removeRoleIds }))}
-                    searchPlaceholder="Filter roles…"
+                    searchPlaceholder={t('filterRoles')}
                   />
                 </div>
               )}
@@ -514,13 +516,13 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               {editForm.rewardType === 'PERMISSION_GRANT' && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Permissions to Grant
+                    {t('permissionsToGrant')}
                   </label>
                   <MultiSelectList
-                    items={DISCORD_PERMISSIONS.map((permission) => ({ value: permission.value, label: permission.label }))}
+                    items={permissions}
                     value={editForm.permissions}
                     onValueChange={(permissions) => setEditForm((prev) => ({ ...prev, permissions }))}
-                    searchPlaceholder="Filter permissions…"
+                    searchPlaceholder={t('filterPermissions')}
                   />
                 </div>
               )}
@@ -529,13 +531,13 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               {editForm.rewardType === 'CHANNEL_ACCESS' && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Channels to Grant Access
+                    {t('channelsToGrant')}
                   </label>
                   <MultiSelectList
                     items={textChannels.map((channel) => ({ value: channel.id, label: channel.name, prefix: '#' }))}
                     value={editForm.channelIds}
                     onValueChange={(channelIds) => setEditForm((prev) => ({ ...prev, channelIds }))}
-                    searchPlaceholder="Filter channels…"
+                    searchPlaceholder={t('filterChannels')}
                   />
                 </div>
               )}
@@ -544,31 +546,31 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
               {editForm.rewardType === 'ANNOUNCEMENT' && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Announcement Message
+                    {t('announcementMessage')}
                   </label>
                   <textarea
                     value={editForm.message}
                     onChange={(e) => setEditForm((prev) => ({ ...prev, message: e.target.value }))}
-                    placeholder="Congratulations {user}! You've reached level {level}!"
+                    placeholder={t('announcementPlaceholderEdit')}
                     rows={3}
                     className="w-full resize-none border border-border bg-input px-4 py-2 text-foreground outline-none"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Available variables: {'{user}'}, {'{level}'}, {'{reward}'}
+                    {t('availableVariables', { variables: '{user}, {level}, {reward}' })}
                   </p>
                 </div>
               )}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Description (Optional)
+                  {t('descriptionOptional')}
                 </label>
                 <Input
                   value={editForm.description}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, description: e.target.value }))
                   }
-                  placeholder="Awarded for reaching level..."
+                  placeholder={t('editDescriptionPlaceholder')}
                 />
               </div>
             </div>
@@ -581,7 +583,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                     setEditForm((prev) => ({ ...prev, stackable: checked }))
                   }
                 />
-                <label className="text-sm text-foreground">Stackable</label>
+                <label className="text-sm text-foreground">{t('stackable')}</label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -590,13 +592,13 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                     setEditForm((prev) => ({ ...prev, oneTime: checked }))
                   }
                 />
-                <label className="text-sm text-foreground">One-time only</label>
+                <label className="text-sm text-foreground">{t('oneTimeOnly')}</label>
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-border/50">
               <Button variant="outline" onClick={handleCancelEdit}>
-                Cancel
+                {t('cancel')}
               </Button>
             </div>
           </CardContent>
@@ -608,7 +610,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
         saving={saving}
         disabled={!isFormValid(editForm)}
         onSave={handleSaveEdit}
-        message="This reward has unsaved changes"
+        message={t('unsavedReward')}
       />
 
       {/* Rewards List */}
@@ -618,10 +620,9 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
             <Card key={level} variant="glass">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">
-                  Level {level}
+                  {t('level', { level })}
                   <span className="text-sm font-normal text-muted-foreground ml-2">
-                    ({rewardsByLevel[level].length} reward
-                    {rewardsByLevel[level].length !== 1 ? 's' : ''})
+                    ({t('rewardCount', { count: rewardsByLevel[level].length })})
                   </span>
                 </CardTitle>
               </CardHeader>
@@ -629,8 +630,8 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                 <div className="space-y-2">
                   {rewardsByLevel[level].map((reward) => {
                     const role = roles.find((r) => r.id === reward.rewardData.roleId);
-                    const rewardTypeInfo = SUPPORTED_REWARD_TYPES.find(
-                      (t) => t.value === reward.rewardType
+                    const rewardTypeInfo = rewardTypes.find(
+                      (type) => type.value === reward.rewardType
                     );
                     const isRoleReward = [
                       'ROLE_ADD',
@@ -669,19 +670,19 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                             )}
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                {reward.xpType}
+                                {xpTypeLabel(reward.xpType)}
                               </span>
                               <span className="text-xs px-1.5 py-0.5 rounded bg-secondary/50 text-secondary-foreground">
                                 {rewardTypeInfo?.label || reward.rewardType}
                               </span>
                               {reward.stackable && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                  Stackable
+                                  {t('stackable')}
                                 </span>
                               )}
                               {reward.oneTime && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                  One-time
+                                  {t('oneTime')}
                                 </span>
                               )}
                             </div>
@@ -698,6 +699,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                             size="sm"
                             onClick={() => handleStartEdit(reward)}
                             disabled={saving}
+                            aria-label={t('editRewardNamed', { name: reward.name })}
                           >
                             <svg
                               className="w-4 h-4 text-muted-foreground"
@@ -720,7 +722,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                                 size="sm"
                                 onClick={() => setConfirmDeleteId(null)}
                               >
-                                Cancel
+                                {t('cancel')}
                               </Button>
                               <Button
                                 variant="destructive"
@@ -728,7 +730,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                                 onClick={() => handleDeleteReward(reward.id)}
                                 disabled={saving}
                               >
-                                Confirm
+                                {t('confirm')}
                               </Button>
                             </div>
                           ) : (
@@ -736,6 +738,7 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => setConfirmDeleteId(reward.id)}
+                              aria-label={t('deleteRewardNamed', { name: reward.name })}
                             >
                               <svg
                                 className="w-4 h-4 text-destructive"
@@ -777,12 +780,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
                 d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
               />
             </svg>
-            <h3 className="text-lg font-medium text-foreground mb-2">No Rewards Configured</h3>
+            <h3 className="text-lg font-medium text-foreground mb-2">{t('noRewards')}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Create your first reward or use a template to get started.
+              {t('noRewardsDescription')}
             </p>
             <Button variant="neon" onClick={() => setShowAddForm(true)}>
-              Add Your First Reward
+              {t('addFirstReward')}
             </Button>
           </CardContent>
         </Card>
@@ -791,12 +794,12 @@ export default function RewardsConfigForm({ guildId }: RewardsConfigFormProps) {
       {templates.length > 0 && (
         <details className="border-t border-border pt-2">
           <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-sm text-muted-foreground hover:text-foreground">
-            <span>Reward templates</span>
+            <span>{t('templates')}</span>
             <span className="text-xs tabular-nums">{templates.length}</span>
           </summary>
           <div className="pb-2 pt-1">
             <p className="mb-3 text-xs text-muted-foreground">
-              Optional starting points for common reward setups.
+              {t('templatesDescription')}
             </p>
             <RewardTemplatePicker
               templates={templates}

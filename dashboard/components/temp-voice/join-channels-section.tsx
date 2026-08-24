@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { TempVoiceConfig } from '@/lib/services/temp-voice.service';
 import type { Channel } from '@/lib/types';
+import { useTranslations } from 'next-intl';
 
 interface JoinChannelsSectionProps {
   config: TempVoiceConfig;
@@ -23,12 +24,13 @@ export default function JoinChannelsSection({
   onAddJoinChannel,
   onRemoveJoinChannel,
 }: JoinChannelsSectionProps) {
+  const t = useTranslations('TempVoice');
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle>Join Channels</CardTitle>
+        <CardTitle>{t('joinChannels')}</CardTitle>
         <CardDescription>
-          Voice channels that create temp channels when users join
+          {t('joinChannelsDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -47,22 +49,22 @@ export default function JoinChannelsSection({
                     size="sm"
                     onClick={() => onRemoveJoinChannel(channelId)}
                     disabled={saving}
-                    aria-label={`Remove ${channel?.name || channelId}`}
+                    aria-label={t('removeJoinChannelNamed', { name: channel?.name || channelId })}
                   >
-                    Remove
+                    {t('remove')}
                   </Button>
                 </div>
               );
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground py-2">No join channels configured</p>
+          <p className="text-sm text-muted-foreground py-2">{t('noJoinChannels')}</p>
         )}
 
         {!loadingChannels && voiceChannels.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Add Join Channel
+              {t('addJoinChannel')}
             </label>
             <Select
               value=""
@@ -70,7 +72,7 @@ export default function JoinChannelsSection({
               disabled={saving}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a voice channel..." />
+                <SelectValue placeholder={t('selectVoiceChannel')} />
               </SelectTrigger>
               <SelectContent>
                 {voiceChannels

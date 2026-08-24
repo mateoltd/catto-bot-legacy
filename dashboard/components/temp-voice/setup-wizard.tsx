@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +27,10 @@ export default function SetupWizard({
   voiceChannels,
   loadingChannels,
 }: SetupWizardProps) {
+  const t = useTranslations('TempVoice');
   const [mode, setMode] = useState<'create' | 'existing'>('create');
-  const [categoryName, setCategoryName] = useState('Temp Voice');
-  const [joinChannelName, setJoinChannelName] = useState('Join to Create');
+  const [categoryName, setCategoryName] = useState(t('defaultCategoryName'));
+  const [joinChannelName, setJoinChannelName] = useState(t('defaultJoinChannelName'));
   const [selectedChannelId, setSelectedChannelId] = useState('');
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -43,10 +45,10 @@ export default function SetupWizard({
           : await onSetupExisting(selectedChannelId);
 
       if (!result.success) {
-        setSetupError(result.error || 'Setup failed');
+        setSetupError(result.error || t('setupFailed'));
       }
     } catch (err) {
-      setSetupError(err instanceof Error ? err.message : 'Setup failed');
+      setSetupError(err instanceof Error ? err.message : t('setupFailed'));
     } finally {
       setIsSettingUp(false);
     }
@@ -57,9 +59,9 @@ export default function SetupWizard({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Temporary Voice Channels</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
         <p className="text-muted-foreground mt-1">
-          Let users create their own temporary voice channels
+          {t('description')}
         </p>
       </div>
 
@@ -80,12 +82,12 @@ export default function SetupWizard({
           </svg>
           <div className="flex-1">
             <h3 className="text-sm font-medium text-destructive">
-              {setupError ? 'Setup Error' : 'Error Loading Config'}
+              {setupError ? t('setupError') : t('loadError')}
             </h3>
             <p className="text-sm text-destructive/80 mt-1">{displayedError}</p>
             {displayedError.toLowerCase().includes('already exists') && (
               <p className="text-xs text-muted-foreground mt-2">
-                Configuration already exists. Click retry to load your existing settings.
+                {t('alreadyExistsHelp')}
               </p>
             )}
           </div>
@@ -97,17 +99,16 @@ export default function SetupWizard({
               onRetry();
             }}
           >
-            Retry
+            {t('retry')}
           </Button>
         </div>
       )}
 
       <Card variant="glass">
         <CardHeader>
-          <CardTitle>Setup Temporary Voice</CardTitle>
+          <CardTitle>{t('setupTitle')}</CardTitle>
           <CardDescription>
-            Create a &quot;Join to Create&quot; voice channel. When users join it, a new temporary
-            channel is created for them.
+            {t('setupDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -115,10 +116,10 @@ export default function SetupWizard({
           <OptionSelector
             value={mode}
             onValueChange={setMode}
-            ariaLabel="Setup method"
+            ariaLabel={t('setupMethod')}
             options={[
-              { value: 'create', label: 'Create New', description: 'Create a category and join channel' },
-              { value: 'existing', label: 'Use Existing', description: 'Pick a voice channel as the join trigger' },
+              { value: 'create', label: t('createNew'), description: t('createNewDescription') },
+              { value: 'existing', label: t('useExisting'), description: t('useExistingDescription') },
             ]}
           />
 
@@ -126,40 +127,40 @@ export default function SetupWizard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Category Name
+                  {t('categoryName')}
                 </label>
                 <Input
                   value={categoryName}
                   onChange={(e) => setCategoryName(e.target.value)}
-                  placeholder="Temp Voice"
+                  placeholder={t('defaultCategoryName')}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Category to organize temp voice channels
+                  {t('categoryNameDescription')}
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Join Channel Name
+                  {t('joinChannelName')}
                 </label>
                 <Input
                   value={joinChannelName}
                   onChange={(e) => setJoinChannelName(e.target.value)}
-                  placeholder="Join to Create"
+                  placeholder={t('defaultJoinChannelName')}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Channel users join to create their own
+                  {t('joinChannelNameDescription')}
                 </p>
               </div>
             </div>
           ) : (
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Select Voice Channel
+                {t('selectVoiceChannelLabel')}
               </label>
               {loadingChannels ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
                   <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  Loading channels...
+                  {t('loadingChannels')}
                 </div>
               ) : voiceChannels.length > 0 ? (
                 <Select
@@ -167,7 +168,7 @@ export default function SetupWizard({
                   onValueChange={setSelectedChannelId}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a voice channel..." />
+                    <SelectValue placeholder={t('selectVoiceChannel')} />
                   </SelectTrigger>
                   <SelectContent>
                     {voiceChannels.map((channel) => (
@@ -179,11 +180,11 @@ export default function SetupWizard({
                 </Select>
               ) : (
                 <p className="text-sm text-muted-foreground py-2">
-                  No voice channels found in this server.
+                  {t('noVoiceChannels')}
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-1.5">
-                This channel will be used as the &quot;Join to Create&quot; trigger
+                {t('existingChannelDescription')}
               </p>
             </div>
           )}
@@ -191,8 +192,8 @@ export default function SetupWizard({
           <div className="pt-4 border-t border-border/50">
             <p className="text-sm text-muted-foreground mb-4">
               {mode === 'create'
-                ? 'This will create a category, a "Join to Create" voice channel, and an admin-only log channel with a webhook for logging events.'
-                : 'This will set up the temp voice system using the selected channel as the join trigger.'}
+                ? t('createSetupSummary')
+                : t('existingSetupSummary')}
             </p>
             <Button
               variant="neon"
@@ -202,10 +203,10 @@ export default function SetupWizard({
               {isSettingUp ? (
                 <>
                   <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  Setting up...
+                  {t('settingUp')}
                 </>
               ) : (
-                'Setup Temp Voice'
+                t('setupButton')
               )}
             </Button>
           </div>

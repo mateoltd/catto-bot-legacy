@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 import type { RewardTemplate } from '@/lib/services/rewards.service';
 
 interface RewardTemplatePickerProps {
@@ -9,14 +10,14 @@ interface RewardTemplatePickerProps {
   onApply: (templateKey: string) => void;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  ROLES: 'Roles',
-  ECONOMY: 'Economy',
-  ACCESS: 'Access',
-  MIXED: 'Mixed rewards',
-};
-
 export function RewardTemplatePicker({ templates, saving = false, onApply }: RewardTemplatePickerProps) {
+  const t = useTranslations('Rewards');
+  const categoryLabels: Record<string, string> = {
+    ROLES: t('categoryRoles'),
+    ECONOMY: t('categoryEconomy'),
+    ACCESS: t('categoryAccess'),
+    MIXED: t('categoryMixed'),
+  };
   return (
     <div className="divide-y divide-border/60 border border-border/60 bg-card/40">
       {templates.map((template) => (
@@ -28,8 +29,8 @@ export function RewardTemplatePicker({ templates, saving = false, onApply }: Rew
             <h4 className="text-sm font-medium text-foreground">{template.name}</h4>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">{template.description}</p>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {CATEGORY_LABELS[template.category] ?? template.category} · {template.rewardCount}{' '}
-              {template.rewardCount === 1 ? 'reward' : 'rewards'}
+              {categoryLabels[template.category] ?? template.category} ·{' '}
+              {t('rewardCount', { count: template.rewardCount })}
             </p>
           </div>
           <Button
@@ -39,9 +40,9 @@ export function RewardTemplatePicker({ templates, saving = false, onApply }: Rew
             disabled={saving}
             onClick={() => onApply(template.key)}
             className="shrink-0 self-start text-muted-foreground sm:self-auto"
-            aria-label={`Use ${template.name} template`}
+            aria-label={t('useTemplateNamed', { name: template.name })}
           >
-            Use
+            {t('use')}
           </Button>
         </article>
       ))}

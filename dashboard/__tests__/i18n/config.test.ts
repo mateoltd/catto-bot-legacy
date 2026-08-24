@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
+import { createTranslator } from 'next-intl';
 import {
   DEFAULT_LOCALE,
   isAppLocale,
   matchAcceptLanguage,
   matchSupportedLocale,
 } from '@/i18n/config';
+import englishMessages from '@/messages/en-US.json';
+import spanishMessages from '@/messages/es-ES.json';
+
+function messageKeys(value: Record<string, unknown>, prefix = ''): string[] {
+  return Object.entries(value).flatMap(([key, child]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    return child && typeof child === 'object'
+      ? messageKeys(child as Record<string, unknown>, path)
+      : [path];
+  });
+}
 
 describe('dashboard locale configuration', () => {
   it('matches exact, regional, and underscore locale variants', () => {
@@ -24,5 +36,18 @@ describe('dashboard locale configuration', () => {
     expect(matchAcceptLanguage('es-ES;q=0, en-GB;q=0.7')).toBe('en-US');
     expect(matchAcceptLanguage('de-DE')).toBeNull();
     expect(matchAcceptLanguage(null) ?? DEFAULT_LOCALE).toBe('en-US');
+  });
+
+  it('keeps every locale catalog structurally complete', () => {
+    expect(messageKeys(spanishMessages).sort()).toEqual(messageKeys(englishMessages).sort());
+  });
+
+  it('preserves bot template variables as literal placeholders', () => {
+    const english = createTranslator({ locale: 'en-US', messages: englishMessages });
+    const spanish = createTranslator({ locale: 'es-ES', messages: spanishMessages });
+
+    expect(english('Rewards.announcementPlaceholder')).toContain('{user}');
+    expect(english('Rewards.announcementPlaceholderEdit')).toContain('{level}');
+    expect(spanish('TempVoice.customPatternPlaceholder')).toContain('{username}');
   });
 });
