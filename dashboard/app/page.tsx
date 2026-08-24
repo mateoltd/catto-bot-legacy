@@ -10,22 +10,19 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between border-b border-border px-5 sm:px-7">
+      <header className="absolute inset-x-0 top-0 z-10 flex h-12 items-center justify-between border-b border-border px-5 sm:px-7">
         <BrandMark href="/" />
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           Dashboard
         </span>
       </header>
 
-      <div className="grid min-h-screen pt-16 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.55fr)]">
+      <div className="grid min-h-screen pt-12 lg:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.55fr)]">
         <DashboardVisual />
 
         <section className="flex items-center border-t border-border bg-card p-7 sm:p-12 lg:border-l lg:border-t-0">
           <div className="w-full">
-            <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-              Authentication
-            </p>
-            <h1 className="mb-8 mt-3 text-2xl font-semibold text-foreground">Sign in</h1>
+            <h1 className="mb-8 text-2xl font-semibold text-foreground">Sign in</h1>
             <LoginButton />
           </div>
         </section>

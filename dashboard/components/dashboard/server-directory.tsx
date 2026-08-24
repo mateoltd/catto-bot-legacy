@@ -5,6 +5,7 @@ import {
   IconAlertTriangle,
   IconServer,
 } from '@tabler/icons-react';
+import { ServerAccessBadges } from '@/components/dashboard/server-access-badges';
 import { ServerCard } from '@/components/dashboard/server-card';
 import {
   ServerToolbar,
@@ -28,18 +29,23 @@ export function ServerDirectory({
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState<ServerViewMode>('grid');
 
-  const sortedGuilds = useMemo(() => {
+  const { availableGuilds, unavailableGuilds } = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-
-    return guilds
+    const filteredGuilds = guilds
       .filter((guild) => guild.name.toLocaleLowerCase().includes(normalizedQuery))
       .sort((left, right) => {
-        const leftAvailable = Number(left.canConfigure || left.canModerate);
-        const rightAvailable = Number(right.canConfigure || right.canModerate);
-        if (leftAvailable !== rightAvailable) return rightAvailable - leftAvailable;
         if (left.owner !== right.owner) return Number(right.owner) - Number(left.owner);
         return left.name.localeCompare(right.name);
       });
+
+    return {
+      availableGuilds: filteredGuilds.filter(
+        (guild) => guild.canConfigure || guild.canModerate,
+      ),
+      unavailableGuilds: filteredGuilds.filter(
+        (guild) => !guild.canConfigure && !guild.canModerate,
+      ),
+    };
   }, [guilds, query]);
 
   const availableCount = guilds.filter(
@@ -50,9 +56,6 @@ export function ServerDirectory({
     <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 border-b border-border pb-6">
         <div>
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-            Server configuration
-          </p>
           <h1 className="text-2xl font-semibold text-foreground">Choose a server</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {availableCount} of {guilds.length} servers available
@@ -84,7 +87,7 @@ export function ServerDirectory({
         />
       </div>
 
-      {sortedGuilds.length === 0 ? (
+      {availableGuilds.length === 0 && unavailableGuilds.length === 0 ? (
         <div className="border border-border bg-card px-6 py-14 text-center">
           <IconServer size={28} className="mx-auto mb-3 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">
@@ -96,18 +99,46 @@ export function ServerDirectory({
               : 'Try another server name.'}
           </p>
         </div>
-      ) : (
-        <div
-          className={
-            viewMode === 'grid'
-              ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'
-              : 'flex flex-col gap-2'
-          }
+      ) : null}
+
+      {availableGuilds.length > 0 && (
+        <section aria-labelledby="available-servers-heading">
+          <h2 id="available-servers-heading" className="mb-3 text-sm font-medium text-foreground">
+            Available servers
+          </h2>
+          <div
+            className={
+              viewMode === 'grid'
+                ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-3'
+                : 'flex flex-col gap-2'
+            }
+          >
+            {availableGuilds.map((guild) => (
+              <DashboardServerCard key={guild.id} guild={guild} compact={viewMode === 'list'} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {unavailableGuilds.length > 0 && (
+        <section
+          aria-labelledby="other-servers-heading"
+          className={availableGuilds.length > 0 ? 'mt-8 border-t border-border pt-6' : undefined}
         >
-          {sortedGuilds.map((guild) => (
-            <DashboardServerCard key={guild.id} guild={guild} compact={viewMode === 'list'} />
-          ))}
-        </div>
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h2 id="other-servers-heading" className="text-sm font-medium text-muted-foreground">
+              Other servers
+            </h2>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {unavailableGuilds.length}
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {unavailableGuilds.map((guild) => (
+              <DashboardServerCard key={guild.id} guild={guild} compact />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );
@@ -117,17 +148,15 @@ function DashboardServerCard({ guild, compact }: { guild: DashboardGuild; compac
   const isAvailable = guild.canConfigure || guild.canModerate;
   const status = !guild.botInstalled
     ? 'Bot not connected'
-    : guild.canConfigure && guild.canModerate
-      ? guild.owner
-        ? 'Owner + moderation access'
-        : 'Configuration + moderation access'
-      : guild.canConfigure
-        ? guild.owner
-          ? 'Owner access'
-          : 'Configuration access'
-        : guild.canModerate
-          ? 'Moderation access'
-          : 'No dashboard access';
+    : isAvailable
+      ? (
+          <ServerAccessBadges
+            canConfigure={guild.canConfigure}
+            canModerate={guild.canModerate}
+            focusable={false}
+          />
+        )
+      : 'No dashboard access';
 
   return (
     <ServerCard

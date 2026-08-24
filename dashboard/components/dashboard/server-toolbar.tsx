@@ -29,7 +29,7 @@ export function ServerToolbar({
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Search by server name"
-          className="h-11 w-full border border-border bg-card pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-muted-foreground"
+          className="h-11 w-full border border-border bg-card pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground"
         />
       </label>
       <button

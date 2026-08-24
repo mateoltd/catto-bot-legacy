@@ -11,10 +11,7 @@ export default function ModLoginPage() {
           <IconShieldLock size={18} className="text-muted-foreground" />
         </div>
         <div className="p-7 sm:p-9">
-          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-            Restricted surface
-          </p>
-          <h1 className="mt-4 text-xl font-semibold text-foreground">Moderation dashboard</h1>
+          <h1 className="text-xl font-semibold text-foreground">Moderation dashboard</h1>
           <p className="mb-7 mt-2 text-sm leading-6 text-muted-foreground">
             Sign in with Discord. Access is granted from your server roles and Catto permission
             overrides.

@@ -39,6 +39,14 @@ export interface GuildUpdateResponse {
   };
 }
 
+export interface GuildStats {
+  memberCount: number;
+  channelCount: number;
+  roleCount: number;
+  databaseUsers: number;
+  joinedAt: string | null;
+}
+
 export const guildService = {
   /**
    * Get channels and roles for a guild
@@ -54,6 +62,11 @@ export const guildService = {
   async getGuild(guildId: string): Promise<GuildInfo> {
     const response = await botApi.get(`/api/guilds/${guildId}`);
     return response.data;
+  },
+
+  async getStats(guildId: string): Promise<GuildStats> {
+    const response = await botApi.get<{ stats: GuildStats }>(`/api/guilds/${guildId}/stats`);
+    return response.data.stats;
   },
 
   /**

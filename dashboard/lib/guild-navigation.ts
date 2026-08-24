@@ -25,6 +25,16 @@ export interface GuildNavigationItem {
   shortcut?: string;
 }
 
+export function isGuildNavigationItemActive(
+  pathname: string,
+  item: GuildNavigationItem,
+): boolean {
+  return (
+    pathname === item.href ||
+    (!['overview', 'moderation'].includes(item.id) && pathname.startsWith(`${item.href}/`))
+  );
+}
+
 interface GuildNavigationSection {
   label: string;
   items: GuildNavigationItem[];

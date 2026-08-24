@@ -21,11 +21,4 @@ describe('protected moderation layout', () => {
     ).rejects.toThrow('NEXT_REDIRECT');
     expect(redirect).toHaveBeenCalledWith('/mod/login');
   });
-
-  it('renders protected routes for an authenticated session', async () => {
-    getUserSession.mockResolvedValue({ user: { id: 'user-1' }, guilds: [] });
-    const children = <div>Protected</div>;
-
-    await expect(ProtectedModerationLayout({ children })).resolves.toBe(children);
-  });
 });

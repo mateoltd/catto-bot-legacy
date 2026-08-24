@@ -1,56 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { guildService } from '@/lib/services/guild.service';
-import type { Channel, Role } from '@/lib/types';
 
 export function useGuildData(guildId: string) {
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await guildService.getChannelsAndRoles(guildId);
-        if (mounted) {
-          setChannels(data.channels || []);
-          setRoles(data.roles || []);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch guild data');
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      mounted = false;
-    };
-  }, [guildId]);
-
-  const voiceChannels = channels.filter(
-    (c) => c.type === 'voice' || c.type === 'stage'
+  const { data, error, isLoading } = useSWR(
+    ['guild-channels-roles', guildId],
+    () => guildService.getChannelsAndRoles(guildId),
+    { revalidateOnFocus: false },
   );
-  const textChannels = channels.filter((c) => c.type === 'text');
+  const channels = data?.channels ?? [];
+  const roles = data?.roles ?? [];
+  const voiceChannels = channels.filter(
+    (channel) => channel.type === 'voice' || channel.type === 'stage',
+  );
+  const textChannels = channels.filter((channel) => channel.type === 'text');
 
   return {
     channels,
     roles,
     voiceChannels,
     textChannels,
-    loading,
-    error,
+    loading: isLoading,
+    error: error instanceof Error ? error.message : error ? 'Failed to fetch guild data' : null,
   };
 }
