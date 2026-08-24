@@ -9,6 +9,7 @@
 
 # production
 /build
+/public/vendor/nsfwjs/
 
 # debug
 npm-debug.log*
