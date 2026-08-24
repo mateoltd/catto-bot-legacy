@@ -1,6 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import messages from '@/messages/en-US.json';
 
 // ALL mock state must be hoisted since vi.mock factory runs before module initialization
 const { mockUseParams, mockUseSWR } = vi.hoisted(() => {
@@ -45,6 +47,14 @@ vi.mock('recharts', () => ({
 
 import AnalyticsPage from '@/app/mod/(protected)/[guildId]/analytics/page';
 
+function renderPage() {
+  return render(
+    <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+      <AnalyticsPage />
+    </NextIntlClientProvider>,
+  );
+}
+
 describe('AnalyticsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,15 +68,15 @@ describe('AnalyticsPage', () => {
   it('shows loading state during data fetch', () => {
     mockUseSWR.mockReturnValue({ data: undefined, isLoading: true });
 
-    render(<AnalyticsPage />);
+    renderPage();
 
-    expect(screen.getByText('Loading analytics...')).toBeInTheDocument();
+    expect(screen.getByText('Loading analytics…')).toBeInTheDocument();
   });
 
   it('shows empty state when no data', () => {
     mockUseSWR.mockReturnValue({ data: undefined, isLoading: false });
 
-    render(<AnalyticsPage />);
+    renderPage();
 
     expect(screen.getByText('No data yet')).toBeInTheDocument();
     expect(
@@ -102,7 +112,7 @@ describe('AnalyticsPage', () => {
       return { data: undefined, isLoading: false };
     });
 
-    render(<AnalyticsPage />);
+    renderPage();
 
     expect(screen.getByText('Total Evidence')).toBeInTheDocument();
     expect(screen.getByText('15')).toBeInTheDocument();
@@ -122,7 +132,7 @@ describe('AnalyticsPage', () => {
   it('requests analytics again for the selected period', () => {
     mockUseSWR.mockReturnValue({ data: undefined, isLoading: false });
 
-    render(<AnalyticsPage />);
+    renderPage();
     mockUseSWR.mockClear();
 
     fireEvent.click(screen.getByText('7d'));

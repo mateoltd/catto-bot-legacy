@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import useSWR, { useSWRConfig } from "swr";
 import { getModDashboardAccess } from "@/lib/services/mod.service";
 import { AccountSwitcher } from "@/components/mod/account-switcher";
@@ -27,6 +28,8 @@ export default function GuildModLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const t = useTranslations("Moderation");
+  const navigationT = useTranslations("Navigation");
   const params = useParams();
   const router = useRouter();
   const guildId = params.guildId as string;
@@ -178,7 +181,7 @@ export default function GuildModLayout({
             type="button"
             onClick={() => setSidebarOpen(true)}
             className="p-1 text-muted-foreground hover:text-foreground md:hidden"
-            aria-label="Open server navigation"
+            aria-label={navigationT("openServerNavigation")}
           >
             <IconMenu2 size={20} />
           </button>
@@ -198,7 +201,7 @@ export default function GuildModLayout({
               className="text-xs uppercase tracking-widest text-[var(--mod-text-dim)]"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              Checking access...
+              {t("checkingAccess")}
             </p>
           </div>
         </div>
@@ -219,11 +222,10 @@ export default function GuildModLayout({
               className="text-sm uppercase tracking-widest text-[var(--mono-white)]"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              Access Denied
+              {t("accessDenied")}
             </h1>
             <p className="max-w-xs text-sm text-[var(--mod-text-muted)]">
-              You don&apos;t have permission to view this server&apos;s
-              moderation dashboard.
+              {t("accessDeniedDescription")}
             </p>
           </div>
         </div>
@@ -235,7 +237,7 @@ export default function GuildModLayout({
     <GuildSidebar
       guild={{
         id: guildId,
-        name: guildInfo?.name ?? "Loading…",
+        name: guildInfo?.name ?? t("loading"),
         icon: guildInfo?.icon ?? null,
       }}
       access={{ canConfigure: access.canConfigure, canModerate: true }}
@@ -264,7 +266,7 @@ export default function GuildModLayout({
                   type="button"
                   onClick={closeSidebar}
                   className="p-1 text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
-                  aria-label="Close server navigation"
+                  aria-label={navigationT("closeServerNavigation")}
                 >
                   <IconX size={18} />
                 </button>
