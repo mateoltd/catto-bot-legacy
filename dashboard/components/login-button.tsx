@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 export function LoginButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,8 +12,7 @@ export function LoginButton() {
     setError(null);
 
     try {
-      const redirectUrl = window.location.origin;
-      window.location.href = `${BOT_API_URL}/api/oauth/login?redirect_uri=${encodeURIComponent(redirectUrl)}`;
+      window.location.href = '/api/oauth/login';
     } catch {
       setIsLoading(false);
       setError('Failed to initiate login. Please try again.');

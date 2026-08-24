@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { IconSettings } from '@/lib/mod-icons';
 import { useUserMe } from '@/hooks/use-user-me';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 interface AccountSwitcherProps {
   variant?: 'sidebar' | 'inline';
 }
@@ -38,7 +36,7 @@ export function AccountSwitcher({ variant = 'sidebar' }: AccountSwitcherProps) {
 
   const handleSwitch = () => {
     document.cookie = `mod_auth_redirect=/mod; path=/; max-age=300; SameSite=Lax`;
-    window.open(`${BOT_API_URL}/api/oauth/login`, 'auth', 'width=500,height=700');
+    window.open('/api/oauth/login', 'auth', 'width=500,height=700');
   };
 
   const isInline = variant === 'inline';

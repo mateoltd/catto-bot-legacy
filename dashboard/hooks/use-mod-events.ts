@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 export interface ModEvent {
   type:
     | 'evidence:created'
@@ -39,7 +37,7 @@ export function useModEvents({ guildId, enabled = true, onEvent }: UseModEventsO
       eventSourceRef.current = null;
     }
 
-    const url = `${BOT_API_URL}/api/guilds/${guildId}/moderation/events`;
+    const url = `/api/guilds/${guildId}/moderation/events`;
     const es = new EventSource(url, { withCredentials: true });
     eventSourceRef.current = es;
 

@@ -44,8 +44,8 @@ DASHBOARD_URL=http://localhost:3000
 Create `dashboard/.env.local` with:
 
 ```env
-# Bot API URL (must match where the bot's HTTP API is running)
-NEXT_PUBLIC_BOT_API_URL=http://localhost:4000
+# Server-only bot API URL (must be reachable by the dashboard runtime)
+BOT_API_INTERNAL_URL=http://localhost:4000
 ```
 
 Or copy from the example:
@@ -64,15 +64,16 @@ pnpm dev
 
 The dashboard will be available at `http://localhost:3000`.
 
-Make sure the bot is also running (`pnpm dev` in the project root) — the dashboard calls the bot's REST API for all data.
+Make sure the bot is also running (`pnpm dev` in the project root). Browser requests use the
+dashboard's same-origin `/api/*` routes, which proxy to `BOT_API_INTERNAL_URL` on the server.
 
 ## OAuth Login Flow
 
 When a user clicks **Login** on the dashboard, this is the full flow:
 
 ```
-1. Dashboard redirects to bot API
-   GET http://localhost:4000/api/oauth/login
+1. Dashboard redirects through its same-origin API proxy
+   GET http://localhost:3000/api/oauth/login
                     │
                     ▼
 2. Bot redirects to Discord
@@ -91,8 +92,8 @@ When a user clicks **Login** on the dashboard, this is the full flow:
    POST https://discord.com/api/v10/oauth2/token
                     │
                     ▼
-6. Bot redirects to dashboard with token
-   GET http://localhost:3000/api/auth/callback?token=...
+6. Bot redirects to dashboard with an opaque session ID
+   GET http://localhost:3000/api/auth/callback?sessionId=...
                     │
                     ▼
 7. Dashboard sets DASHBOARD_AUTH cookie
@@ -101,6 +102,11 @@ When a user clicks **Login** on the dashboard, this is the full flow:
 
 The critical point: the `API_REDIRECT` env var must match exactly what you registered in the Discord Developer Portal. The `DASHBOARD_URL` must match the URL where the dashboard is running.
 
+The `DASHBOARD_AUTH` cookie is host-only. Do not configure `COOKIE_DOMAIN`: development and
+production dashboard hosts must not share sessions. Each dashboard deployment should use its own
+`BOT_API_INTERNAL_URL`, and the corresponding bot deployment must redirect back to that dashboard's
+exact origin via `DASHBOARD_URL`.
+
 ## Mod Dashboard Authentication
 
 The `/mod/*` routes are protected by a Next.js middleware that checks for the `DASHBOARD_AUTH` cookie. Unauthenticated users are redirected to `/mod/login`.
@@ -108,7 +114,7 @@ The `/mod/*` routes are protected by a Next.js middleware that checks for the `D
 The mod login page reuses the same bot-backend OAuth flow described above. When the user clicks **Authenticate with Discord**:
 
 1. A `mod_auth_redirect` cookie is set with value `/mod` (expires in 5 minutes)
-2. The browser is redirected to `BOT_API_URL/api/oauth/login`
+2. The browser is redirected to the same-origin `/api/oauth/login` proxy
 3. The standard OAuth flow runs (Discord authorize -> bot callback -> dashboard callback)
 4. The dashboard auth callback checks for the `mod_auth_redirect` cookie
 5. If present, it redirects to `/mod` instead of the default `/guilds`
@@ -117,7 +123,7 @@ This means no separate OAuth application or auth library is needed — the mod d
 
 ### Account Switcher
 
-The sidebar includes an `AccountSwitcher` component at the bottom. It fetches the current user from `BOT_API_URL/api/users/@me` (using the `DASHBOARD_AUTH` cookie) and provides:
+The sidebar includes an `AccountSwitcher` component at the bottom. It fetches the current user from the same-origin `/api/users/@me` endpoint and provides:
 
 - **Switch Account** — opens the OAuth flow in a popup window
 - **Log Out** — calls `POST /api/oauth/logout` to clear the cookie, then redirects to `/mod/login`
@@ -127,7 +133,7 @@ The sidebar includes an `AccountSwitcher` component at the bottom. It fetches th
 ### Login button does nothing
 
 The dashboard can't reach the bot API. Check that:
-- `NEXT_PUBLIC_BOT_API_URL` in `dashboard/.env.local` points to the running bot (default: `http://localhost:4000`)
+- `BOT_API_INTERNAL_URL` in `dashboard/.env.local` points to the running bot (default: `http://localhost:4000`)
 - The bot is actually running
 
 ### Discord says "Invalid redirect URI"
@@ -149,21 +155,15 @@ DASHBOARD_URL=http://localhost:3000
 
 ### 401 on API calls
 
-- Verify the bot is running and accessible at the URL configured in `NEXT_PUBLIC_BOT_API_URL`
+- Verify the bot is running and accessible from the dashboard runtime at `BOT_API_INTERNAL_URL`
 - Check that the `DASHBOARD_AUTH` cookie is being set (inspect cookies in browser dev tools)
 - Try logging out and logging in again
 
-### CORS errors in browser console
+### API proxy errors
 
-When `API_ORIGIN=*` (the default), the bot automatically uses `DASHBOARD_URL` as the CORS origin since cookie-based auth requires a specific origin (browsers reject the `*` wildcard with `credentials: 'include'`).
-
-If you still get CORS errors, set `API_ORIGIN` explicitly:
-
-```env
-API_ORIGIN=http://localhost:3000
-```
-
-For production, set it to your dashboard's domain.
+The browser never calls the bot API origin directly. If `/api/*` requests return a gateway or
+connection error, verify that `BOT_API_INTERNAL_URL` is reachable from the dashboard runtime. Keep
+this variable server-only; it must not use the `NEXT_PUBLIC_` prefix.
 
 ## Related
 

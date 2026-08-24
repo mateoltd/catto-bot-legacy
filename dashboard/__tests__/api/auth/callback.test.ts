@@ -50,6 +50,7 @@ describe('GET /api/auth/callback', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it('redirects to / when no sessionId param', async () => {
@@ -85,6 +86,22 @@ describe('GET /api/auth/callback', () => {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
+  });
+
+  it('keeps DASHBOARD_AUTH host-only even when a legacy cookie domain is configured', async () => {
+    vi.stubEnv('COOKIE_DOMAIN', '.catto.one');
+    const req = new NextRequest(
+      'https://dev.catto.one/api/auth/callback?sessionId=test-session-123'
+    );
+    mockCookieStore.get.mockReturnValue(undefined);
+
+    await GET(req);
+
+    expect(mockCookieStore.set).toHaveBeenCalledWith(
+      'DASHBOARD_AUTH',
+      'test-session-123',
+      expect.not.objectContaining({ domain: expect.anything() })
+    );
   });
 
   it('redirects to /guilds by default when no redirect cookie', async () => {

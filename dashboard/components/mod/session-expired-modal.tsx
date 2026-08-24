@@ -4,8 +4,6 @@ import { useSyncExternalStore } from 'react';
 import { onSessionExpired } from '@/lib/auth-events';
 import { IconAlertTriangle } from '@/lib/mod-icons';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 // External store for session expired state
 let sessionExpired = false;
 const listeners = new Set<() => void>();
@@ -44,7 +42,7 @@ export function SessionExpiredModal() {
     // Save the current route so we return here after re-auth
     const currentPath = window.location.pathname + window.location.search;
     document.cookie = `mod_auth_redirect=${encodeURIComponent(currentPath)}; path=/; max-age=300; SameSite=Lax`;
-    window.location.href = `${BOT_API_URL}/api/oauth/login`;
+    window.location.href = '/api/oauth/login';
   };
 
   return (

@@ -12,9 +12,7 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies();
 
-  // Set the auth cookie (value is now the opaque session ID)
-  // COOKIE_DOMAIN (e.g. ".catto.one") shares the cookie across subdomains
-  // so client-side requests to the bot API subdomain include it.
+  // Keep the opaque session cookie host-only so environments cannot share sessions.
   const cookieOptions: Parameters<typeof cookieStore.set>[2] = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -22,9 +20,6 @@ export async function GET(request: NextRequest) {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
   };
-  if (process.env.COOKIE_DOMAIN) {
-    cookieOptions.domain = process.env.COOKIE_DOMAIN;
-  }
   cookieStore.set('DASHBOARD_AUTH', sessionId, cookieOptions);
 
   // Check if there's a redirect destination (e.g. set by /mod/login)

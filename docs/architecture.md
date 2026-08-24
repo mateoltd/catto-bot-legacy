@@ -138,13 +138,13 @@ This document describes the system architecture of Catto v2.x and how components
 2. Login → bot /api/oauth/login → Discord OAuth2 → bot /api/oauth/callback
                 │
                 ▼
-3. Bot redirects to dashboard /api/auth/callback with token
+3. Bot redirects to dashboard /api/auth/callback with an opaque session ID
                 │
                 ▼
 4. Dashboard sets DASHBOARD_AUTH cookie
                 │
                 ▼
-5. Dashboard calls bot REST API with cookie for all data
+5. Dashboard calls same-origin /api routes, which forward the cookie to the bot
 ```
 
 ## Directory Structure

@@ -65,7 +65,7 @@ describe('mod.service', () => {
   it('creates axios instance with correct base URL and credentials', () => {
     // createCallArgs was captured at module init time, not affected by clearAllMocks
     expect(createCallArgs.value).toBeDefined();
-    expect(createCallArgs.value.baseURL).toContain('/api');
+    expect(createCallArgs.value.baseURL).toBe('/api');
     expect(createCallArgs.value.withCredentials).toBe(true);
   });
 

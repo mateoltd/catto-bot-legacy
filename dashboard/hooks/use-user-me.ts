@@ -2,8 +2,6 @@
 
 import useSWR from 'swr';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 interface UserInfo {
   id: string;
   username: string;
@@ -23,7 +21,7 @@ export interface UserMeData {
 }
 
 async function fetchUserMe(): Promise<UserMeData> {
-  const res = await fetch(`${BOT_API_URL}/api/users/@me`, { credentials: 'include' });
+  const res = await fetch('/api/users/@me', { credentials: 'include' });
   const data = await res.json();
   if (!data?.user) throw new Error('No user data');
   return data as UserMeData;

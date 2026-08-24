@@ -3,9 +3,8 @@ export const dynamic = 'force-dynamic';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getUserSession } from '@/lib/auth';
+import { botApiUrl } from '@/lib/server/bot-api';
 import { ServerPicker } from '@/components/mod/server-picker';
-
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
 
 /**
  * Full check: bot presence + user membership + dashboard permissions.
@@ -16,7 +15,7 @@ async function getAccessibleGuildIds(
   authCookie: string
 ): Promise<string[] | null> {
   try {
-    const res = await fetch(`${BOT_API_URL}/api/guilds/accessible`, {
+    const res = await fetch(botApiUrl('/api/guilds/accessible'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,7 +40,7 @@ async function getAccessibleGuildIds(
  */
 async function getBotGuildIds(authCookie: string): Promise<Set<string> | null> {
   try {
-    const res = await fetch(`${BOT_API_URL}/api/guilds`, {
+    const res = await fetch(botApiUrl('/api/guilds'), {
       headers: { Cookie: `DASHBOARD_AUTH=${authCookie}` },
       cache: 'no-store',
     });

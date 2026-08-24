@@ -135,6 +135,6 @@ describe('SessionExpiredModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Log in with Discord' }));
 
-    expect(window.location.href).toBe('http://localhost:4000/api/oauth/login');
+    expect(window.location.href).toBe('/api/oauth/login');
   });
 });

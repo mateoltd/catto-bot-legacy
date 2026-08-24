@@ -2,8 +2,7 @@ import axios from 'axios';
 import { cookies } from 'next/headers';
 import { unstable_cache } from 'next/cache';
 import type { DiscordUser, UserSession } from './types';
-
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
+import { botApiUrl } from './server/bot-api';
 
 /**
  * Get the current authenticated user and their guilds from the session cookie
@@ -19,7 +18,7 @@ export async function getCurrentUser(): Promise<DiscordUser | null> {
 async function fetchUserSession(token: string): Promise<UserSession | null> {
   try {
     console.log('Fetching user session from bot API...');
-    const response = await axios.get(`${BOT_API_URL}/api/users/@me`, {
+    const response = await axios.get(botApiUrl('/api/users/@me'), {
       headers: {
         Cookie: `DASHBOARD_AUTH=${token}`,
       },

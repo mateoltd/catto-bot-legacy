@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 export function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -12,7 +10,7 @@ export function LogoutButton() {
 
     try {
       // Call Sapphire's OAuth logout endpoint
-      await fetch(`${BOT_API_URL}/api/oauth/logout`, {
+      await fetch('/api/oauth/logout', {
         method: 'POST',
         credentials: 'include',
       });

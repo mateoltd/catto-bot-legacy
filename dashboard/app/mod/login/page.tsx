@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { IconBrandDiscord } from '@/lib/mod-icons';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 export default function ModLoginPage() {
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +13,7 @@ export default function ModLoginPage() {
     if (!existing) {
       document.cookie = `mod_auth_redirect=/mod; path=/; max-age=300; SameSite=Lax`;
     }
-    window.location.href = `${BOT_API_URL}/api/oauth/login`;
+    window.location.href = '/api/oauth/login';
   };
 
   return (

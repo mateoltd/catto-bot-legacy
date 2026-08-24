@@ -34,8 +34,6 @@ type ViewMode = 'grid' | 'list';
 
 const STORAGE_KEY_VIEW = 'mod:view-mode';
 const STORAGE_KEY_RECENT = 'mod:recent-guilds';
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
-
 interface UserModStats {
   totalActions: number;
   last30dActions: number;
@@ -106,7 +104,7 @@ export function ServerPicker({ session }: ServerPickerProps) {
       const guildSlice = currentModGuilds.slice(0, 5);
       const results = await Promise.allSettled(
         guildSlice.map((g) =>
-          fetch(`${BOT_API_URL}/api/guilds/${g.id}/moderation/cases?limit=200`, {
+          fetch(`/api/guilds/${g.id}/moderation/cases?limit=200`, {
             credentials: 'include',
           })
             .then((r) => r.json())

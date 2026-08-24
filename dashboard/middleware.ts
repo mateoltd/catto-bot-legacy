@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { botApiUrl } from '@/lib/server/bot-api';
 
-const BOT_API_URL = process.env.NEXT_PUBLIC_BOT_API_URL || 'http://localhost:4000';
+export const runtime = 'experimental-edge';
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Only protect /mod/* routes (exclude /mod/login itself)
@@ -24,7 +25,7 @@ export async function proxy(request: NextRequest) {
 
     // Validate session by calling the bot API
     try {
-      const response = await fetch(`${BOT_API_URL}/api/users/@me`, {
+      const response = await fetch(botApiUrl('/api/users/@me'), {
         headers: {
           Cookie: `DASHBOARD_AUTH=${sessionCookie.value}`,
         },
