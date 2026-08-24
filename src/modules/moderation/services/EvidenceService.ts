@@ -5,16 +5,21 @@
  * integrity verification, and evidence queries.
  */
 
-import { container } from '@sapphire/framework';
-import type { Evidence, EvidenceAmendment, MessageSnapshot } from '@prisma/client';
-import type { Guild, TextChannel, Message } from 'discord.js';
-import { Buffer } from 'node:buffer';
-import { randomUUID } from 'node:crypto';
-import axios from 'axios';
-import { storageService, StorageService } from '#lib/storage/StorageService.js';
-import { signingService, SigningService } from '#lib/storage/SigningService.js';
-import { WeightGate } from '#lib/validation/WeightGate.js';
-import { CONFIG } from '#config.js';
+import { container } from "@sapphire/framework";
+import {
+  Prisma,
+  type Evidence,
+  type EvidenceAmendment,
+  type MessageSnapshot,
+} from "@prisma/client";
+import type { Guild, TextChannel, Message } from "discord.js";
+import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
+import axios from "axios";
+import { storageService, StorageService } from "#lib/storage/StorageService.js";
+import { signingService, SigningService } from "#lib/storage/SigningService.js";
+import { WeightGate } from "#lib/validation/WeightGate.js";
+import { CONFIG } from "#config.js";
 import type {
   UploadInitParams,
   UploadInitResult,
@@ -26,10 +31,10 @@ import type {
   SerializedAttachment,
   SerializedSticker,
   SerializedReaction,
-} from '../domain/evidence-types.js';
-import { mimeToEvidenceType, isDiscordUrl } from '../domain/evidence-types.js';
-import { fetchOGData } from '#lib/utils/ogFetcher.js';
-import { publish, ModEventChannels } from '#lib/redis.js';
+} from "../domain/evidence-types.js";
+import { mimeToEvidenceType, isDiscordUrl } from "../domain/evidence-types.js";
+import { fetchOGData } from "#lib/utils/ogFetcher.js";
+import { publish, ModEventChannels } from "#lib/redis.js";
 
 export class EvidenceService {
   // ─── Upload Flow ───
@@ -43,7 +48,9 @@ export class EvidenceService {
       where: { guildId: params.guildId, caseNumber: params.caseNumber },
     });
     if (!modCase)
-      throw new Error(`Case #${params.caseNumber} not found in guild ${params.guildId}`);
+      throw new Error(
+        `Case #${params.caseNumber} not found in guild ${params.guildId}`,
+      );
 
     // Determine evidence type from MIME
     const type = mimeToEvidenceType(params.mimeType);
@@ -57,7 +64,7 @@ export class EvidenceService {
         uploadedById: params.uploadedById,
         uploadedByTag: params.uploadedByTag,
         type,
-        status: 'PENDING',
+        status: "PENDING",
         originalFilename: params.filename,
         mimeType: params.mimeType,
         sizeBytes: params.sizeBytes,
@@ -72,7 +79,7 @@ export class EvidenceService {
       params.guildId,
       params.caseNumber,
       evidence.id,
-      params.filename
+      params.filename,
     );
 
     // Update evidence with storage key
@@ -82,20 +89,20 @@ export class EvidenceService {
     });
 
     // Generate presigned upload URL
-    let uploadUrl = '';
+    let uploadUrl = "";
     const uploadFields: Record<string, string> = {};
 
     if (storageService.isConfigured) {
       const presigned = await storageService.generateUploadUrl(
         storageKey,
         params.mimeType,
-        params.sizeBytes
+        params.sizeBytes,
       );
       uploadUrl = presigned.uploadUrl;
     }
 
     container.logger.debug(
-      `[EvidenceService.initiateUpload] evidenceId=${evidence.id}, storageKey=${storageKey}, hasUploadUrl=${!!uploadUrl}`
+      `[EvidenceService.initiateUpload] evidenceId=${evidence.id}, storageKey=${storageKey}, hasUploadUrl=${!!uploadUrl}`,
     );
 
     return {
@@ -108,27 +115,32 @@ export class EvidenceService {
   /**
    * Step 2: Confirm upload — verifies hash, signs, and sets status to VERIFIED.
    */
-  async confirmUpload(evidenceId: string, contentHash: string): Promise<Evidence> {
+  async confirmUpload(
+    evidenceId: string,
+    contentHash: string,
+  ): Promise<Evidence> {
     const evidence = await container.prisma.evidence.findUnique({
       where: { id: evidenceId },
     });
-    if (!evidence) throw new Error('Evidence not found');
-    if (evidence.status !== 'PENDING' && evidence.status !== 'PROCESSING') {
-      throw new Error(`Evidence is in ${evidence.status} state, cannot confirm`);
+    if (!evidence) throw new Error("Evidence not found");
+    if (evidence.status !== "PENDING" && evidence.status !== "PROCESSING") {
+      throw new Error(
+        `Evidence is in ${evidence.status} state, cannot confirm`,
+      );
     }
 
     // Verify file exists in storage
     if (evidence.storageKey) {
       if (!storageService.isConfigured) {
         throw new Error(
-          'Storage is not configured but evidence has a storage key — cannot verify upload'
+          "Storage is not configured but evidence has a storage key — cannot verify upload",
         );
       }
       const exists = await storageService.verifyUpload(evidence.storageKey);
       container.logger.debug(
-        `[EvidenceService.confirmUpload] storageConfigured=${storageService.isConfigured}, verifyResult=${exists}`
+        `[EvidenceService.confirmUpload] storageConfigured=${storageService.isConfigured}, verifyResult=${exists}`,
       );
-      if (!exists) throw new Error('File not found in storage');
+      if (!exists) throw new Error("File not found in storage");
     }
 
     // Sign the content
@@ -140,14 +152,18 @@ export class EvidenceService {
 
     // Record upload weight
     if (evidence.sizeBytes) {
-      await WeightGate.recordUpload(evidence.uploadedById, evidence.guildId, evidence.sizeBytes);
+      await WeightGate.recordUpload(
+        evidence.uploadedById,
+        evidence.guildId,
+        evidence.sizeBytes,
+      );
     }
 
     // Update to VERIFIED
     const confirmed = await container.prisma.evidence.update({
       where: { id: evidenceId },
       data: {
-        status: 'VERIFIED',
+        status: "VERIFIED",
         contentHash,
         hmacSignature,
       },
@@ -155,7 +171,7 @@ export class EvidenceService {
 
     // Publish real-time event
     await publish(ModEventChannels.MOD_EVENTS(confirmed.guildId), {
-      type: 'evidence:created',
+      type: "evidence:created",
       guildId: confirmed.guildId,
       caseNumber: confirmed.caseNumber,
       evidenceId: confirmed.id,
@@ -178,12 +194,15 @@ export class EvidenceService {
     if (!modCase) throw new Error(`Case #${params.caseNumber} not found`);
 
     // Auto-detect Discord URLs
-    const type = params.type === 'URL' && isDiscordUrl(params.url) ? 'DISCORD_URL' : params.type;
+    const type =
+      params.type === "URL" && isDiscordUrl(params.url)
+        ? "DISCORD_URL"
+        : params.type;
 
     // Fetch OG metadata for enrichment
     let metadata: Record<string, unknown> | undefined;
 
-    if (type === 'DISCORD_URL') {
+    if (type === "DISCORD_URL") {
       // Attempt to resolve Discord message content
       try {
         const match = params.url.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
@@ -191,9 +210,13 @@ export class EvidenceService {
           const [, , channelId, messageId] = match;
           const guild = container.client.guilds.cache.get(params.guildId);
           if (guild) {
-            const channel = await guild.channels.fetch(channelId!).catch(() => null);
+            const channel = await guild.channels
+              .fetch(channelId!)
+              .catch(() => null);
             if (channel?.isTextBased()) {
-              const msg = await (channel as import('discord.js').TextChannel).messages
+              const msg = await (
+                channel as import("discord.js").TextChannel
+              ).messages
                 .fetch(messageId!)
                 .catch(() => null);
               if (msg) {
@@ -201,7 +224,7 @@ export class EvidenceService {
                   og: {
                     title: msg.author.tag,
                     description: msg.content.slice(0, 200) || undefined,
-                    siteName: 'Discord',
+                    siteName: "Discord",
                   },
                 };
               }
@@ -226,11 +249,11 @@ export class EvidenceService {
         uploadedById: params.uploadedById,
         uploadedByTag: params.uploadedByTag,
         type,
-        status: 'VERIFIED', // URLs are immediately verified
+        status: "VERIFIED", // URLs are immediately verified
         url: params.url,
         description: params.description,
         metadata: (metadata ?? undefined) as
-          | import('@prisma/client').Prisma.InputJsonValue
+          | import("@prisma/client").Prisma.InputJsonValue
           | undefined,
         tags: params.tags ?? [],
       },
@@ -238,7 +261,7 @@ export class EvidenceService {
 
     // Publish real-time event
     await publish(ModEventChannels.MOD_EVENTS(params.guildId), {
-      type: 'evidence:created',
+      type: "evidence:created",
       guildId: params.guildId,
       caseNumber: params.caseNumber,
       evidenceId: urlEvidence.id,
@@ -256,10 +279,11 @@ export class EvidenceService {
    */
   async captureMessageRange(
     guild: Guild,
-    params: CaptureParams
+    params: CaptureParams,
   ): Promise<{ snapshot: MessageSnapshot; evidence?: Evidence }> {
     const channel = await guild.channels.fetch(params.channelId);
-    if (!channel?.isTextBased()) throw new Error('Channel not found or not text-based');
+    if (!channel?.isTextBased())
+      throw new Error("Channel not found or not text-based");
 
     const textChannel = channel as TextChannel;
 
@@ -298,15 +322,16 @@ export class EvidenceService {
     }
 
     let sortedMessages = [...collected.values()].sort(
-      (a, b) => a.createdTimestamp - b.createdTimestamp
+      (a, b) => a.createdTimestamp - b.createdTimestamp,
     );
 
-    if (sortedMessages.length === 0) throw new Error('No messages found in the specified range');
+    if (sortedMessages.length === 0)
+      throw new Error("No messages found in the specified range");
 
     // Cap the number of messages to prevent memory issues with large snapshots
     if (sortedMessages.length > CONFIG.MAX_SNAPSHOT_MESSAGES) {
       container.logger.warn(
-        `[EvidenceService] Snapshot capped from ${sortedMessages.length} to ${CONFIG.MAX_SNAPSHOT_MESSAGES} messages`
+        `[EvidenceService] Snapshot capped from ${sortedMessages.length} to ${CONFIG.MAX_SNAPSHOT_MESSAGES} messages`,
       );
       sortedMessages = sortedMessages.slice(0, CONFIG.MAX_SNAPSHOT_MESSAGES);
     }
@@ -335,7 +360,7 @@ export class EvidenceService {
         const serialized: SerializedAttachment = {
           url: attachment.url,
           proxyUrl: attachment.proxyURL,
-          filename: attachment.name ?? 'unknown',
+          filename: attachment.name ?? "unknown",
           size: attachment.size,
           contentType: attachment.contentType,
         };
@@ -343,7 +368,7 @@ export class EvidenceService {
         if (storageService.isConfigured) {
           try {
             const response = await axios.get(attachment.url, {
-              responseType: 'arraybuffer',
+              responseType: "arraybuffer",
               timeout: 30000, // 30 second timeout to prevent hanging on slow/malicious URLs
             });
             if (response.status === 200) {
@@ -351,18 +376,21 @@ export class EvidenceService {
               const key = StorageService.buildSnapshotMediaKey(
                 params.guildId,
                 mediaPrefix,
-                attachment.name ?? `attachment_${attachment.id}`
+                attachment.name ?? `attachment_${attachment.id}`,
               );
               await storageService.uploadBuffer(
                 key,
                 buffer,
-                attachment.contentType ?? 'application/octet-stream'
+                attachment.contentType ?? "application/octet-stream",
               );
               serialized.storageKey = key;
             }
           } catch (archiveError) {
             serialized.archiveFailed = true;
-            container.logger.warn(`Failed to archive attachment ${attachment.id}:`, archiveError);
+            container.logger.warn(
+              `Failed to archive attachment ${attachment.id}:`,
+              archiveError,
+            );
           }
         }
 
@@ -373,14 +401,18 @@ export class EvidenceService {
         attachments.push(serialized);
       }
 
-      const stickers: SerializedSticker[] = [...msg.stickers.values()].map((s) => ({
-        id: s.id,
-        name: s.name,
-        format: s.format.toString(),
-        url: s.url,
-      }));
+      const stickers: SerializedSticker[] = [...msg.stickers.values()].map(
+        (s) => ({
+          id: s.id,
+          name: s.name,
+          format: s.format.toString(),
+          url: s.url,
+        }),
+      );
 
-      const reactions: SerializedReaction[] = [...msg.reactions.cache.values()].map((r) => ({
+      const reactions: SerializedReaction[] = [
+        ...msg.reactions.cache.values(),
+      ].map((r) => ({
         emoji: r.emoji.toString(),
         count: r.count,
       }));
@@ -415,10 +447,12 @@ export class EvidenceService {
         firstMessageId: params.firstMessageId,
         lastMessageId: params.lastMessageId ?? null,
         messageCount: sortedMessages.length,
-        snapshotData: snapshotEntries as unknown as import('@prisma/client').Prisma.InputJsonValue,
-        mediaStorageKeys: mediaStorageKeys.length > 0 ? mediaStorageKeys : undefined,
+        snapshotData:
+          snapshotEntries as unknown as import("@prisma/client").Prisma.InputJsonValue,
+        mediaStorageKeys:
+          mediaStorageKeys.length > 0 ? mediaStorageKeys : undefined,
         contentHash,
-        hmacSignature: '', // Will be updated after evidence creation if applicable
+        hmacSignature: "", // Will be updated after evidence creation if applicable
       },
     });
 
@@ -433,11 +467,11 @@ export class EvidenceService {
           caseNumber: params.caseNumber!,
           uploadedById: params.capturedById,
           uploadedByTag: params.capturedByTag,
-          type: 'MESSAGE_SNAPSHOT',
-          status: 'VERIFIED',
+          type: "MESSAGE_SNAPSHOT",
+          status: "VERIFIED",
           snapshotId: snapshot.id,
           contentHash,
-          hmacSignature: '', // Placeholder, will be updated below
+          hmacSignature: "", // Placeholder, will be updated below
           description: `Message snapshot: ${sortedMessages.length} message(s) from #${textChannel.name}`,
         },
       });
@@ -480,7 +514,7 @@ export class EvidenceService {
           });
         }
       } catch {
-        container.logger.warn('Failed to delete captured messages');
+        container.logger.warn("Failed to delete captured messages");
       }
     }
 
@@ -494,17 +528,18 @@ export class EvidenceService {
   async createEvidenceFromSnapshot(
     snapshotId: string,
     caseId: string,
-    caseNumber: number
+    caseNumber: number,
   ): Promise<Evidence> {
     const snapshot = await container.prisma.messageSnapshot.findUnique({
       where: { id: snapshotId },
     });
-    if (!snapshot) throw new Error('Snapshot not found');
+    if (!snapshot) throw new Error("Snapshot not found");
 
     const guild = container.client.guilds.cache.get(snapshot.guildId);
     const channelName = guild
-      ? ((await guild.channels.fetch(snapshot.channelId).catch(() => null))?.name ?? 'unknown')
-      : 'unknown';
+      ? ((await guild.channels.fetch(snapshot.channelId).catch(() => null))
+          ?.name ?? "unknown")
+      : "unknown";
 
     const evidence = await container.prisma.evidence.create({
       data: {
@@ -513,8 +548,8 @@ export class EvidenceService {
         caseNumber,
         uploadedById: snapshot.capturedById,
         uploadedByTag: snapshot.capturedByTag,
-        type: 'MESSAGE_SNAPSHOT',
-        status: 'VERIFIED',
+        type: "MESSAGE_SNAPSHOT",
+        status: "VERIFIED",
         snapshotId: snapshot.id,
         contentHash: snapshot.contentHash,
         hmacSignature: snapshot.hmacSignature,
@@ -524,7 +559,7 @@ export class EvidenceService {
 
     // Publish real-time event
     await publish(ModEventChannels.MOD_EVENTS(snapshot.guildId), {
-      type: 'evidence:created',
+      type: "evidence:created",
       guildId: snapshot.guildId,
       caseNumber,
       evidenceId: evidence.id,
@@ -538,10 +573,13 @@ export class EvidenceService {
   /**
    * Get all evidence for a case.
    */
-  async getEvidenceForCase(guildId: string, caseNumber: number): Promise<Evidence[]> {
+  async getEvidenceForCase(
+    guildId: string,
+    caseNumber: number,
+  ): Promise<Evidence[]> {
     return container.prisma.evidence.findMany({
       where: { guildId, caseNumber },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
       include: { snapshot: true },
     });
   }
@@ -558,8 +596,13 @@ export class EvidenceService {
       status?: string;
       caseNumber?: number;
       tags?: string[];
-    }
-  ): Promise<{ evidence: Evidence[]; total: number; page: number; totalPages: number }> {
+    },
+  ): Promise<{
+    evidence: Evidence[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const page = Math.max(1, options.page ?? 1);
     const limit = Math.min(100, Math.max(1, options.limit ?? 50));
     const skip = (page - 1) * limit;
@@ -568,14 +611,15 @@ export class EvidenceService {
     if (options.type) where.type = options.type;
     if (options.status) where.status = options.status;
     if (options.caseNumber) where.caseNumber = options.caseNumber;
-    if (options.tags && options.tags.length > 0) where.tags = { hasSome: options.tags };
+    if (options.tags && options.tags.length > 0)
+      where.tags = { hasSome: options.tags };
 
     const [evidence, total] = await Promise.all([
       container.prisma.evidence.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         include: { snapshot: true },
       }),
       container.prisma.evidence.count({ where }),
@@ -596,8 +640,20 @@ export class EvidenceService {
   async searchEvidence(
     guildId: string,
     searchQuery: string,
-    options: { page?: number; limit?: number } = {}
-  ): Promise<{ evidence: Evidence[]; total: number; page: number; totalPages: number }> {
+    options: {
+      page?: number;
+      limit?: number;
+      type?: string;
+      status?: string;
+      caseNumber?: number;
+      tags?: string[];
+    } = {},
+  ): Promise<{
+    evidence: Evidence[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     if (!searchQuery || searchQuery.length < 2) {
       return { evidence: [], total: 0, page: 1, totalPages: 1 };
     }
@@ -606,26 +662,47 @@ export class EvidenceService {
     const limit = Math.min(100, Math.max(1, options.limit ?? 50));
     const skip = (page - 1) * limit;
 
-    // Use raw query for full-text search with ranking
-    type EvidenceWithSnapshotRaw = Omit<Evidence, 'snapshot'> & {
+    // Keep search and facets on the database. The expression is mirrored by a
+    // GIN index so a six-figure evidence corpus is never scanned in the browser.
+    const filters: Prisma.Sql[] = [Prisma.sql`e."guildId" = ${guildId}`];
+    if (options.type) filters.push(Prisma.sql`e.type::text = ${options.type}`);
+    if (options.status)
+      filters.push(Prisma.sql`e.status::text = ${options.status}`);
+    if (options.caseNumber)
+      filters.push(Prisma.sql`e."caseNumber" = ${options.caseNumber}`);
+    if (options.tags?.length)
+      filters.push(Prisma.sql`e.tags && ${options.tags}::text[]`);
+
+    const document = Prisma.sql`to_tsvector(
+      'simple'::regconfig,
+      COALESCE(e."originalFilename", '') || ' ' ||
+      COALESCE(e.url, '') || ' ' ||
+      COALESCE(e.description, '') || ' ' ||
+      COALESCE(e."uploadedByTag", '')
+    )`;
+    const query = Prisma.sql`websearch_to_tsquery('simple'::regconfig, ${searchQuery})`;
+    filters.push(Prisma.sql`${document} @@ ${query}`);
+    const where = Prisma.join(filters, " AND ");
+
+    type EvidenceWithSnapshotRaw = Omit<Evidence, "snapshot"> & {
       snapshot: Record<string, unknown> | null;
     };
-    const rawResults = await container.prisma.$queryRaw<EvidenceWithSnapshotRaw[]>`
+    const rawResults = await container.prisma.$queryRaw<
+      EvidenceWithSnapshotRaw[]
+    >`
       SELECT e.*, row_to_json(s.*) as snapshot
       FROM evidence e
       LEFT JOIN message_snapshots s ON e."snapshotId" = s.id
-      WHERE e."guildId" = ${guildId}
-        AND e.search_vector @@ plainto_tsquery('english', ${searchQuery})
-      ORDER BY ts_rank(e.search_vector, plainto_tsquery('english', ${searchQuery})) DESC
+      WHERE ${where}
+      ORDER BY ts_rank(${document}, ${query}) DESC, e."createdAt" DESC, e.id DESC
       LIMIT ${limit} OFFSET ${skip}
     `;
     const evidence = rawResults as unknown as Evidence[];
 
     const countResult = await container.prisma.$queryRaw<[{ count: bigint }]>`
       SELECT COUNT(*) as count
-      FROM evidence
-      WHERE "guildId" = ${guildId}
-        AND search_vector @@ plainto_tsquery('english', ${searchQuery})
+      FROM evidence e
+      WHERE ${where}
     `;
     const total = Number(countResult[0]?.count ?? 0);
 
@@ -643,7 +720,10 @@ export class EvidenceService {
   async getEvidenceById(evidenceId: string): Promise<Evidence | null> {
     return container.prisma.evidence.findUnique({
       where: { id: evidenceId },
-      include: { snapshot: true, amendments: { orderBy: { createdAt: 'asc' } } },
+      include: {
+        snapshot: true,
+        amendments: { orderBy: { createdAt: "asc" } },
+      },
     });
   }
 
@@ -653,14 +733,17 @@ export class EvidenceService {
   async getEvidenceHistory(evidenceId: string): Promise<EvidenceAmendment[]> {
     return container.prisma.evidenceAmendment.findMany({
       where: { evidenceId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
   /**
    * Get evidence summary for a case (for embeds).
    */
-  async getEvidenceSummary(guildId: string, caseNumber: number): Promise<EvidenceSummary> {
+  async getEvidenceSummary(
+    guildId: string,
+    caseNumber: number,
+  ): Promise<EvidenceSummary> {
     const items = await container.prisma.evidence.findMany({
       where: { guildId, caseNumber },
       select: { type: true, status: true, sizeBytes: true, createdAt: true },
@@ -677,13 +760,13 @@ export class EvidenceService {
       byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
       totalSizeBytes += item.sizeBytes ?? 0;
       if (!latestAt || item.createdAt > latestAt) latestAt = item.createdAt;
-      if (item.type !== 'DISCORD_URL') hasNonDiscordUrl = true;
+      if (item.type !== "DISCORD_URL") hasNonDiscordUrl = true;
     }
 
     return {
       total: items.length,
-      byType: byType as EvidenceSummary['byType'],
-      byStatus: byStatus as EvidenceSummary['byStatus'],
+      byType: byType as EvidenceSummary["byType"],
+      byStatus: byStatus as EvidenceSummary["byStatus"],
       totalSizeBytes,
       latestAt,
       hasWeakEvidenceOnly: items.length > 0 && !hasNonDiscordUrl,
@@ -699,11 +782,11 @@ export class EvidenceService {
     const evidence = await container.prisma.evidence.findUnique({
       where: { id: params.evidenceId },
     });
-    if (!evidence) throw new Error('Evidence not found');
+    if (!evidence) throw new Error("Evidence not found");
 
     // Record previous value based on action type
     let previousValue: string | undefined;
-    if (params.action === 'DESCRIPTION_UPDATED') {
+    if (params.action === "DESCRIPTION_UPDATED") {
       previousValue = JSON.stringify({ description: evidence.description });
     }
 
@@ -720,22 +803,22 @@ export class EvidenceService {
     });
 
     // Apply the amendment
-    if (params.action === 'DESCRIPTION_UPDATED' && params.newValue) {
+    if (params.action === "DESCRIPTION_UPDATED" && params.newValue) {
       await container.prisma.evidence.update({
         where: { id: params.evidenceId },
         data: { description: params.newValue },
       });
-    } else if (params.action === 'FLAGGED') {
+    } else if (params.action === "FLAGGED") {
       await container.prisma.evidence.update({
         where: { id: params.evidenceId },
-        data: { status: 'FLAGGED' },
+        data: { status: "FLAGGED" },
       });
-    } else if (params.action === 'UNFLAGGED') {
+    } else if (params.action === "UNFLAGGED") {
       await container.prisma.evidence.update({
         where: { id: params.evidenceId },
-        data: { status: 'VERIFIED' },
+        data: { status: "VERIFIED" },
       });
-    } else if (params.action === 'TAGS_UPDATED' && params.newValue) {
+    } else if (params.action === "TAGS_UPDATED" && params.newValue) {
       try {
         const tags = JSON.parse(params.newValue) as string[];
 
@@ -745,7 +828,7 @@ export class EvidenceService {
         const TAG_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
         if (!Array.isArray(tags)) {
-          throw new Error('Tags must be an array');
+          throw new Error("Tags must be an array");
         }
         if (tags.length > MAX_TAG_COUNT) {
           throw new Error(`Maximum ${MAX_TAG_COUNT} tags allowed`);
@@ -753,7 +836,10 @@ export class EvidenceService {
 
         const validatedTags = tags
           .map((t) => String(t).trim().toLowerCase())
-          .filter((t) => t.length > 0 && t.length <= MAX_TAG_LENGTH && TAG_PATTERN.test(t));
+          .filter(
+            (t) =>
+              t.length > 0 && t.length <= MAX_TAG_LENGTH && TAG_PATTERN.test(t),
+          );
 
         await container.prisma.evidence.update({
           where: { id: params.evidenceId },
@@ -766,9 +852,9 @@ export class EvidenceService {
 
     // Publish real-time event
     const eventType =
-      params.action === 'FLAGGED' || params.action === 'UNFLAGGED'
-        ? 'evidence:status-changed'
-        : 'evidence:amended';
+      params.action === "FLAGGED" || params.action === "UNFLAGGED"
+        ? "evidence:status-changed"
+        : "evidence:amended";
     await publish(ModEventChannels.MOD_EVENTS(evidence.guildId), {
       type: eventType,
       guildId: evidence.guildId,
@@ -793,30 +879,36 @@ export class EvidenceService {
       note: string;
       addedById: string;
       addedByTag: string;
-    }
+    },
   ): Promise<Evidence> {
     const MAX_NOTE_LENGTH = 1000;
 
-    if (typeof timestamp.time !== 'number' || isNaN(timestamp.time) || timestamp.time < 0) {
-      throw new Error('Timestamp time must be a non-negative number');
+    if (
+      typeof timestamp.time !== "number" ||
+      isNaN(timestamp.time) ||
+      timestamp.time < 0
+    ) {
+      throw new Error("Timestamp time must be a non-negative number");
     }
 
     const trimmedNote = timestamp.note.trim();
     if (!trimmedNote) {
-      throw new Error('Timestamp note cannot be empty');
+      throw new Error("Timestamp note cannot be empty");
     }
     if (trimmedNote.length > MAX_NOTE_LENGTH) {
-      throw new Error(`Timestamp note exceeds maximum length of ${MAX_NOTE_LENGTH} characters`);
+      throw new Error(
+        `Timestamp note exceeds maximum length of ${MAX_NOTE_LENGTH} characters`,
+      );
     }
     timestamp = { ...timestamp, note: trimmedNote };
 
     const evidence = await container.prisma.evidence.findUnique({
       where: { id: evidenceId },
     });
-    if (!evidence) throw new Error('Evidence not found');
+    if (!evidence) throw new Error("Evidence not found");
 
-    if (evidence.type !== 'VIDEO') {
-      throw new Error('Timestamps can only be added to video evidence');
+    if (evidence.type !== "VIDEO") {
+      throw new Error("Timestamps can only be added to video evidence");
     }
 
     // Get existing timestamps or initialize
@@ -849,7 +941,10 @@ export class EvidenceService {
     const updated = await container.prisma.evidence.update({
       where: { id: evidenceId },
       data: {
-        metadata: { ...metadata, timestamps } as import('@prisma/client').Prisma.InputJsonValue,
+        metadata: {
+          ...metadata,
+          timestamps,
+        } as import("@prisma/client").Prisma.InputJsonValue,
       },
     });
 
@@ -859,7 +954,7 @@ export class EvidenceService {
         evidenceId,
         amendedById: timestamp.addedById,
         amendedByTag: timestamp.addedByTag,
-        action: 'TIMESTAMP_ADDED',
+        action: "TIMESTAMP_ADDED",
         newValue: JSON.stringify(newTimestamp),
       },
     });
@@ -874,15 +969,15 @@ export class EvidenceService {
     evidenceId: string,
     timestampId: string,
     removedById: string,
-    removedByTag: string
+    removedByTag: string,
   ): Promise<Evidence> {
     const evidence = await container.prisma.evidence.findUnique({
       where: { id: evidenceId },
     });
-    if (!evidence) throw new Error('Evidence not found');
+    if (!evidence) throw new Error("Evidence not found");
 
-    if (evidence.type !== 'VIDEO') {
-      throw new Error('Timestamps can only be removed from video evidence');
+    if (evidence.type !== "VIDEO") {
+      throw new Error("Timestamps can only be removed from video evidence");
     }
 
     const metadata = (evidence.metadata as Record<string, unknown>) ?? {};
@@ -897,7 +992,7 @@ export class EvidenceService {
       }>) ?? [];
 
     const removedTimestamp = timestamps.find((t) => t.id === timestampId);
-    if (!removedTimestamp) throw new Error('Timestamp not found');
+    if (!removedTimestamp) throw new Error("Timestamp not found");
 
     const filtered = timestamps.filter((t) => t.id !== timestampId);
 
@@ -907,7 +1002,7 @@ export class EvidenceService {
         metadata: {
           ...metadata,
           timestamps: filtered,
-        } as import('@prisma/client').Prisma.InputJsonValue,
+        } as import("@prisma/client").Prisma.InputJsonValue,
       },
     });
 
@@ -917,7 +1012,7 @@ export class EvidenceService {
         evidenceId,
         amendedById: removedById,
         amendedByTag: removedByTag,
-        action: 'TIMESTAMP_REMOVED',
+        action: "TIMESTAMP_REMOVED",
         previousValue: JSON.stringify(removedTimestamp),
       },
     });
@@ -934,7 +1029,7 @@ export class EvidenceService {
     const evidence = await container.prisma.evidence.findUnique({
       where: { id: evidenceId },
     });
-    if (!evidence) throw new Error('Evidence not found');
+    if (!evidence) throw new Error("Evidence not found");
 
     if (evidence.url) return evidence.url;
 
@@ -943,9 +1038,9 @@ export class EvidenceService {
     }
 
     container.logger.debug(
-      `[EvidenceService.generateViewUrl] evidenceId=${evidenceId}, hasUrl=${!!evidence.url}, hasStorageKey=${!!evidence.storageKey}, storageConfigured=${storageService.isConfigured}`
+      `[EvidenceService.generateViewUrl] evidenceId=${evidenceId}, hasUrl=${!!evidence.url}, hasStorageKey=${!!evidence.storageKey}, storageConfigured=${storageService.isConfigured}`,
     );
-    throw new Error('No viewable content for this evidence item');
+    throw new Error("No viewable content for this evidence item");
   }
 
   /**
@@ -955,10 +1050,12 @@ export class EvidenceService {
     const evidence = await container.prisma.evidence.findUnique({
       where: { id: evidenceId },
     });
-    if (!evidence) throw new Error('Evidence not found');
+    if (!evidence) throw new Error("Evidence not found");
 
-    if (!evidence.storageKey) throw new Error('No downloadable file for this evidence item');
-    if (!storageService.isConfigured) throw new Error('Storage is not configured');
+    if (!evidence.storageKey)
+      throw new Error("No downloadable file for this evidence item");
+    if (!storageService.isConfigured)
+      throw new Error("Storage is not configured");
 
     const filename = evidence.originalFilename ?? `evidence_${evidenceId}`;
     return storageService.generateDownloadUrl(evidence.storageKey, filename);
@@ -972,7 +1069,7 @@ export class EvidenceService {
   async getNextCaseNumber(guildId: string): Promise<number> {
     const lastCase = await container.prisma.modCase.findFirst({
       where: { guildId },
-      orderBy: { caseNumber: 'desc' },
+      orderBy: { caseNumber: "desc" },
     });
 
     return (lastCase?.caseNumber ?? 0) + 1;
