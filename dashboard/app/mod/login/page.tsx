@@ -1,8 +1,11 @@
 import { IconShieldLock } from '@tabler/icons-react';
+import { getTranslations } from 'next-intl/server';
 import { BrandMark } from '@/components/dashboard/brand-mark';
 import { LoginButton } from '@/components/login-button';
 
-export default function ModLoginPage() {
+export default async function ModLoginPage() {
+  const t = await getTranslations('Auth');
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md border border-border bg-card">
@@ -11,12 +14,11 @@ export default function ModLoginPage() {
           <IconShieldLock size={18} className="text-muted-foreground" />
         </div>
         <div className="p-7 sm:p-9">
-          <h1 className="text-xl font-semibold text-foreground">Moderation dashboard</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t('moderationTitle')}</h1>
           <p className="mb-7 mt-2 text-sm leading-6 text-muted-foreground">
-            Sign in with Discord. Access is granted from your server roles and Catto permission
-            overrides.
+            {t('moderationDescription')}
           </p>
-          <LoginButton redirectPath="/guilds" label="Authenticate with Discord" />
+          <LoginButton redirectPath="/guilds" label={t('authenticateWithDiscord')} />
         </div>
       </div>
     </main>

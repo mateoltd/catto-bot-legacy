@@ -1,6 +1,7 @@
 'use client';
 
 import { IconSettings, IconShield } from '@tabler/icons-react';
+import { useTranslations } from 'next-intl';
 import {
   Tooltip,
   TooltipContent,
@@ -22,18 +23,19 @@ export function ServerAccessBadges({
   className,
   focusable = true,
 }: ServerAccessBadgesProps) {
+  const t = useTranslations('Access');
   if (!canConfigure && !canModerate) return null;
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className={cn('flex items-center gap-1.5', className)} aria-label="Server access">
+      <div className={cn('flex items-center gap-1.5', className)} aria-label={t('serverAccess')}>
         {canConfigure && (
-          <AccessBadge label="Configuration" focusable={focusable}>
+          <AccessBadge label={t('configuration')} focusable={focusable}>
             <IconSettings size={13} stroke={1.5} aria-hidden="true" />
           </AccessBadge>
         )}
         {canModerate && (
-          <AccessBadge label="Moderation" focusable={focusable}>
+          <AccessBadge label={t('moderation')} focusable={focusable}>
             <IconShield size={13} stroke={1.5} aria-hidden="true" />
           </AccessBadge>
         )}

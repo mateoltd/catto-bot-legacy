@@ -1,6 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import messages from '@/messages/en-US.json';
 
 // ALL mock state must be hoisted since vi.mock factory runs before module initialization
 const { mockOnSessionExpired, capturedCallback } = vi.hoisted(() => {
@@ -42,15 +44,23 @@ describe('SessionExpiredModal', () => {
     vi.restoreAllMocks();
   });
 
+  function renderModal() {
+    return render(
+      <NextIntlClientProvider locale="en-US" messages={messages} timeZone="UTC">
+        <SessionExpiredModal />
+      </NextIntlClientProvider>,
+    );
+  }
+
   it('opens only after the session-expired event', () => {
-    render(<SessionExpiredModal />);
-    expect(screen.queryByText('Session Expired')).not.toBeInTheDocument();
+    renderModal();
+    expect(screen.queryByText('Session expired')).not.toBeInTheDocument();
 
     act(() => {
       capturedCallback.current?.();
     });
 
-    expect(screen.getByText('Session Expired')).toBeInTheDocument();
+    expect(screen.getByText('Session expired')).toBeInTheDocument();
   });
 
   it('preserves the current route and redirects to OAuth login', () => {
@@ -61,7 +71,7 @@ describe('SessionExpiredModal', () => {
 
     const cookieSpy = vi.spyOn(document, 'cookie', 'set');
 
-    render(<SessionExpiredModal />);
+    renderModal();
 
     act(() => {
       capturedCallback.current?.();

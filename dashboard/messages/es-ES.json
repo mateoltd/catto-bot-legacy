@@ -1,0 +1,104 @@
+{
+  "Metadata": {
+    "title": "Panel de Catto",
+    "description": "Configura y modera servidores de Discord con Catto.",
+    "moderationTitle": "Panel de moderación",
+    "moderationDescription": "Panel de moderación para gestionar pruebas y casos"
+  },
+  "Auth": {
+    "dashboardLabel": "Panel",
+    "signIn": "Iniciar sesión",
+    "continueWithDiscord": "Continuar con Discord",
+    "authenticateWithDiscord": "Autenticarse con Discord",
+    "connecting": "Conectando…",
+    "moderationTitle": "Panel de moderación",
+    "moderationDescription": "Inicia sesión con Discord. El acceso se concede según tus roles del servidor y las excepciones de permisos de Catto."
+  },
+  "Account": {
+    "menuLabel": "Menú de cuenta de {name}",
+    "switchAccount": "Cambiar de cuenta",
+    "signOut": "Cerrar sesión"
+  },
+  "Locale": {
+    "label": "Idioma",
+    "change": "Cambiar el idioma del panel",
+    "updateFailed": "No se pudo cambiar el idioma del panel.",
+    "en-US": "English (US)",
+    "es-ES": "Español",
+    "fr-FR": "Français"
+  },
+  "Navigation": {
+    "dashboardLabel": "Panel de Catto",
+    "servers": "Servidores",
+    "openServerNavigation": "Abrir la navegación del servidor",
+    "closeServerNavigation": "Cerrar la navegación del servidor",
+    "server": "Servidor",
+    "configuration": "Configuración",
+    "moderation": "Moderación",
+    "overview": "Resumen",
+    "textXp": "XP de texto",
+    "voiceXp": "XP de voz",
+    "rewards": "Recompensas",
+    "tempVoice": "Voz temporal",
+    "logging": "Registros",
+    "cases": "Casos",
+    "evidence": "Pruebas",
+    "users": "Usuarios",
+    "analytics": "Analíticas"
+  },
+  "Access": {
+    "serverAccess": "Acceso al servidor",
+    "configuration": "Configuración",
+    "moderation": "Moderación"
+  },
+  "Servers": {
+    "choose": "Elige un servidor",
+    "availableCount": "{available} de {total, plural, one {# servidor disponible} other {# servidores disponibles}}",
+    "noticeForbidden": "Ya no tienes acceso al panel de ese servidor.",
+    "noticeUnavailable": "Ese servidor no está disponible para el bot o tu acceso ha cambiado.",
+    "noticeBotApi": "La API del bot no está disponible. Ahora mismo no se pueden verificar las conexiones de los servidores.",
+    "noticeModerationApi": "No se pudo verificar el acceso de moderación. El acceso de configuración sigue disponible.",
+    "search": "Buscar servidores",
+    "searchPlaceholder": "Buscar por nombre del servidor",
+    "useListView": "Usar vista de lista",
+    "useGridView": "Usar vista de cuadrícula",
+    "noShared": "No se encontraron servidores compartidos",
+    "noMatching": "No hay servidores coincidentes",
+    "noSharedDescription": "Inicia sesión con una cuenta que comparta un servidor con Catto.",
+    "noMatchingDescription": "Prueba con otro nombre de servidor.",
+    "available": "Servidores disponibles",
+    "other": "Otros servidores",
+    "botNotConnected": "Bot no conectado",
+    "noDashboardAccess": "Sin acceso al panel"
+  },
+  "Overview": {
+    "description": "Una instantánea en directo de tu comunidad y del alcance de Catto.",
+    "community": "Comunidad",
+    "members": "Miembros",
+    "channels": "Canales",
+    "roles": "Roles",
+    "memberCoverage": "Cobertura de miembros",
+    "memberCoverageDescription": "Miembros con un perfil de Catto, utilizado para XP, recompensas e historial de moderación.",
+    "trackedMembers": "Miembros registrados",
+    "tracked": "registrados",
+    "total": "total",
+    "workspace": "Espacio de trabajo",
+    "serverOwner": "Propietario del servidor",
+    "serverManager": "Gestor del servidor",
+    "cattoJoined": "Catto se unió",
+    "yourAccess": "Tu acceso",
+    "configurationAndModeration": "Configuración y moderación",
+    "configuration": "Configuración",
+    "moderation": "Moderación",
+    "serverId": "ID del servidor",
+    "moderationWorkspace": "Espacio de moderación",
+    "moderationDescription": "Revisa casos, pruebas, historial de usuarios y analíticas del servidor.",
+    "openModeration": "Abrir moderación"
+  },
+  "Session": {
+    "expiredTitle": "La sesión ha caducado",
+    "expiredSubtitle": "Vuelve a iniciar sesión para continuar",
+    "expiredDescription": "Tu sesión ha caducado o ya no es válida. Autentícate con Discord para reanudar tu trabajo.",
+    "login": "Iniciar sesión con Discord"
+  }
+}

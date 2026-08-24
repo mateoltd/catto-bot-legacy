@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { createContext, useContext, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { AccountMenu } from '@/components/dashboard/account-menu';
 import { DashboardTopbar } from '@/components/dashboard/dashboard-topbar';
 import { GuildNavigationLink } from '@/components/dashboard/guild-navigation-link';
@@ -44,10 +45,12 @@ export default function GuildPageLayout({
 }: GuildPageLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations('Navigation');
   const guildIconUrl = guild.icon
     ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=96`
     : null;
-  const navigation = getGuildNavigation(guild.id, access).flatMap((section) => section.items);
+  const navigation = getGuildNavigation(guild.id, access, t).flatMap((section) => section.items);
   const activeItem = navigation.find((item) => isGuildNavigationItemActive(pathname, item));
   const configurationPrefix = `/guilds/${guild.id}/`;
   const configurationRoute = pathname.startsWith(configurationPrefix);
@@ -88,7 +91,8 @@ export default function GuildPageLayout({
           <ServerIdentity
             guild={guild}
             iconUrl={guildIconUrl}
-            pageTitle={activeItem?.label ?? 'Overview'}
+            pageTitle={activeItem?.label ?? t('overview')}
+            locale={locale}
           />
         </div>
 
@@ -125,10 +129,12 @@ function ServerIdentity({
   guild,
   iconUrl,
   pageTitle,
+  locale,
 }: {
   guild: Guild;
   iconUrl: string | null;
   pageTitle: string;
+  locale: string;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -136,7 +142,7 @@ function ServerIdentity({
         <Image src={iconUrl} alt="" width={36} height={36} className="h-9 w-9 shrink-0" />
       ) : (
         <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-muted font-mono text-sm text-foreground">
-          {guild.name.charAt(0).toLocaleUpperCase()}
+          {guild.name.charAt(0).toLocaleUpperCase(locale)}
         </div>
       )}
       <div className="min-w-0">

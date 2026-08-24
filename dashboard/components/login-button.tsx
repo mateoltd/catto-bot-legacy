@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { IconBrandDiscord } from '@tabler/icons-react';
+import { useTranslations } from 'next-intl';
 
 interface LoginButtonProps {
   redirectPath?: string;
@@ -10,9 +11,10 @@ interface LoginButtonProps {
 
 export function LoginButton({
   redirectPath,
-  label = 'Continue with Discord',
+  label,
 }: LoginButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations('Auth');
 
   return (
     <form
@@ -34,7 +36,7 @@ export function LoginButton({
         className="flex h-12 w-full items-center justify-center gap-2 border border-muted-foreground bg-foreground px-5 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-background hover:bg-white disabled:bg-muted-foreground"
       >
         <IconBrandDiscord size={19} />
-        {isLoading ? 'Connecting…' : label}
+        {isLoading ? t('connecting') : (label ?? t('continueWithDiscord'))}
       </button>
     </form>
   );

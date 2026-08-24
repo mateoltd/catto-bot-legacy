@@ -5,6 +5,7 @@ import {
   IconAlertTriangle,
   IconServer,
 } from '@tabler/icons-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { ServerAccessBadges } from '@/components/dashboard/server-access-badges';
 import { ServerCard } from '@/components/dashboard/server-card';
 import {
@@ -26,16 +27,18 @@ export function ServerDirectory({
   isModerationApiAvailable,
   notice,
 }: ServerDirectoryProps) {
+  const locale = useLocale();
+  const t = useTranslations('Servers');
   const [query, setQuery] = useState('');
   const [viewMode, setViewMode] = useState<ServerViewMode>('grid');
 
   const { availableGuilds, unavailableGuilds } = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
+    const normalizedQuery = query.trim().toLocaleLowerCase(locale);
     const filteredGuilds = guilds
-      .filter((guild) => guild.name.toLocaleLowerCase().includes(normalizedQuery))
+      .filter((guild) => guild.name.toLocaleLowerCase(locale).includes(normalizedQuery))
       .sort((left, right) => {
         if (left.owner !== right.owner) return Number(right.owner) - Number(left.owner);
-        return left.name.localeCompare(right.name);
+        return left.name.localeCompare(right.name, locale);
       });
 
     return {
@@ -46,7 +49,7 @@ export function ServerDirectory({
         (guild) => !guild.canConfigure && !guild.canModerate,
       ),
     };
-  }, [guilds, query]);
+  }, [guilds, locale, query]);
 
   const availableCount = guilds.filter(
     (guild) => guild.canConfigure || guild.canModerate,
@@ -56,9 +59,9 @@ export function ServerDirectory({
     <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 border-b border-border pb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Choose a server</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t('choose')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {availableCount} of {guilds.length} servers available
+            {t('availableCount', { available: availableCount, total: guilds.length })}
           </p>
         </div>
       </div>
@@ -68,12 +71,12 @@ export function ServerDirectory({
           <IconAlertTriangle className="mt-0.5 shrink-0" size={17} />
           <p>
             {notice === 'forbidden'
-              ? 'You no longer have dashboard access to that server.'
+              ? t('noticeForbidden')
               : notice === 'unavailable'
-                ? 'That server is not available to the bot or your access changed.'
+                ? t('noticeUnavailable')
                 : !isBotApiAvailable
-                  ? 'The bot API is unavailable. Server connections cannot be verified right now.'
-                  : 'Moderation access could not be verified. Configuration access is still available.'}
+                  ? t('noticeBotApi')
+                  : t('noticeModerationApi')}
           </p>
         </div>
       )}
@@ -91,12 +94,12 @@ export function ServerDirectory({
         <div className="border border-border bg-card px-6 py-14 text-center">
           <IconServer size={28} className="mx-auto mb-3 text-muted-foreground" />
           <h2 className="text-sm font-medium text-foreground">
-            {guilds.length === 0 ? 'No shared servers found' : 'No matching servers'}
+            {guilds.length === 0 ? t('noShared') : t('noMatching')}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {guilds.length === 0
-              ? 'Sign in with an account that shares a server with Catto.'
-              : 'Try another server name.'}
+              ? t('noSharedDescription')
+              : t('noMatchingDescription')}
           </p>
         </div>
       ) : null}
@@ -104,7 +107,7 @@ export function ServerDirectory({
       {availableGuilds.length > 0 && (
         <section aria-labelledby="available-servers-heading">
           <h2 id="available-servers-heading" className="mb-3 text-sm font-medium text-foreground">
-            Available servers
+            {t('available')}
           </h2>
           <div
             className={
@@ -127,7 +130,7 @@ export function ServerDirectory({
         >
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <h2 id="other-servers-heading" className="text-sm font-medium text-muted-foreground">
-              Other servers
+              {t('other')}
             </h2>
             <span className="text-xs tabular-nums text-muted-foreground">
               {unavailableGuilds.length}
@@ -145,9 +148,10 @@ export function ServerDirectory({
 }
 
 function DashboardServerCard({ guild, compact }: { guild: DashboardGuild; compact: boolean }) {
+  const t = useTranslations('Servers');
   const isAvailable = guild.canConfigure || guild.canModerate;
   const status = !guild.botInstalled
-    ? 'Bot not connected'
+    ? t('botNotConnected')
     : isAvailable
       ? (
           <ServerAccessBadges
@@ -156,7 +160,7 @@ function DashboardServerCard({ guild, compact }: { guild: DashboardGuild; compac
             focusable={false}
           />
         )
-      : 'No dashboard access';
+      : t('noDashboardAccess');
 
   return (
     <ServerCard

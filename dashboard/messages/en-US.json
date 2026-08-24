@@ -1,0 +1,104 @@
+{
+  "Metadata": {
+    "title": "Catto Dashboard",
+    "description": "Configure and moderate Discord servers with Catto.",
+    "moderationTitle": "Moderation dashboard",
+    "moderationDescription": "Moderation dashboard for evidence and case management"
+  },
+  "Auth": {
+    "dashboardLabel": "Dashboard",
+    "signIn": "Sign in",
+    "continueWithDiscord": "Continue with Discord",
+    "authenticateWithDiscord": "Authenticate with Discord",
+    "connecting": "Connecting…",
+    "moderationTitle": "Moderation dashboard",
+    "moderationDescription": "Sign in with Discord. Access is granted from your server roles and Catto permission overrides."
+  },
+  "Account": {
+    "menuLabel": "Account menu for {name}",
+    "switchAccount": "Switch account",
+    "signOut": "Sign out"
+  },
+  "Locale": {
+    "label": "Language",
+    "change": "Change dashboard language",
+    "updateFailed": "The dashboard language could not be changed.",
+    "en-US": "English (US)",
+    "es-ES": "Español",
+    "fr-FR": "Français"
+  },
+  "Navigation": {
+    "dashboardLabel": "Catto dashboard",
+    "servers": "Servers",
+    "openServerNavigation": "Open server navigation",
+    "closeServerNavigation": "Close server navigation",
+    "server": "Server",
+    "configuration": "Configuration",
+    "moderation": "Moderation",
+    "overview": "Overview",
+    "textXp": "Text XP",
+    "voiceXp": "Voice XP",
+    "rewards": "Rewards",
+    "tempVoice": "Temp voice",
+    "logging": "Logging",
+    "cases": "Cases",
+    "evidence": "Evidence",
+    "users": "Users",
+    "analytics": "Analytics"
+  },
+  "Access": {
+    "serverAccess": "Server access",
+    "configuration": "Configuration",
+    "moderation": "Moderation"
+  },
+  "Servers": {
+    "choose": "Choose a server",
+    "availableCount": "{available} of {total, plural, one {# server} other {# servers}} available",
+    "noticeForbidden": "You no longer have dashboard access to that server.",
+    "noticeUnavailable": "That server is not available to the bot or your access changed.",
+    "noticeBotApi": "The bot API is unavailable. Server connections cannot be verified right now.",
+    "noticeModerationApi": "Moderation access could not be verified. Configuration access is still available.",
+    "search": "Search servers",
+    "searchPlaceholder": "Search by server name",
+    "useListView": "Use list view",
+    "useGridView": "Use grid view",
+    "noShared": "No shared servers found",
+    "noMatching": "No matching servers",
+    "noSharedDescription": "Sign in with an account that shares a server with Catto.",
+    "noMatchingDescription": "Try another server name.",
+    "available": "Available servers",
+    "other": "Other servers",
+    "botNotConnected": "Bot not connected",
+    "noDashboardAccess": "No dashboard access"
+  },
+  "Overview": {
+    "description": "A live snapshot of your community and Catto's reach.",
+    "community": "Community",
+    "members": "Members",
+    "channels": "Channels",
+    "roles": "Roles",
+    "memberCoverage": "Member coverage",
+    "memberCoverageDescription": "Members with a Catto profile, used for XP, rewards, and moderation history.",
+    "trackedMembers": "Tracked members",
+    "tracked": "tracked",
+    "total": "total",
+    "workspace": "Workspace",
+    "serverOwner": "Server owner",
+    "serverManager": "Server manager",
+    "cattoJoined": "Catto joined",
+    "yourAccess": "Your access",
+    "configurationAndModeration": "Configuration and moderation",
+    "configuration": "Configuration",
+    "moderation": "Moderation",
+    "serverId": "Server ID",
+    "moderationWorkspace": "Moderation workspace",
+    "moderationDescription": "Review cases, evidence, user history, and server analytics.",
+    "openModeration": "Open moderation"
+  },
+  "Session": {
+    "expiredTitle": "Session expired",
+    "expiredSubtitle": "Please log in again to continue",
+    "expiredDescription": "Your session has expired or is no longer valid. Authenticate with Discord to resume your work.",
+    "login": "Log in with Discord"
+  }
+}

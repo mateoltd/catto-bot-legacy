@@ -1,19 +1,21 @@
 export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { BrandMark } from '@/components/dashboard/brand-mark';
 import { LoginButton } from '@/components/login-button';
 import { getCurrentUser } from '@/lib/auth';
 
 export default async function Home() {
   if (await getCurrentUser()) redirect('/guilds');
+  const t = await getTranslations('Auth');
 
   return (
     <main className="min-h-screen bg-background">
       <header className="absolute inset-x-0 top-0 z-10 flex h-12 items-center justify-between border-b border-border px-5 sm:px-7">
         <BrandMark href="/" />
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Dashboard
+          {t('dashboardLabel')}
         </span>
       </header>
 
@@ -22,7 +24,7 @@ export default async function Home() {
 
         <section className="flex items-center border-t border-border bg-card p-7 sm:p-12 lg:border-l lg:border-t-0">
           <div className="w-full">
-            <h1 className="mb-8 text-2xl font-semibold text-foreground">Sign in</h1>
+            <h1 className="mb-8 text-2xl font-semibold text-foreground">{t('signIn')}</h1>
             <LoginButton />
           </div>
         </section>

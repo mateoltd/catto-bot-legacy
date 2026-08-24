@@ -1,10 +1,15 @@
 import type React from 'react';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: 'Mod Dashboard | Catto',
-  description: 'Moderation dashboard for evidence and case management',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Metadata');
+
+  return {
+    title: t('moderationTitle'),
+    description: t('moderationDescription'),
+  };
+}
 
 export default function ModLayout({ children }: { children: React.ReactNode }) {
   return (

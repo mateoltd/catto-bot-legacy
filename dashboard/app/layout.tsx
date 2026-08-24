@@ -1,6 +1,8 @@
 import type React from 'react';
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { SessionExpiredModal } from '@/components/mod/session-expired-modal';
 import './globals.css';
 
@@ -14,20 +16,28 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono',
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: 'Catto Dashboard',
-    template: '%s | Catto',
-  },
-  description: 'Configure and moderate Discord servers with Catto.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Metadata');
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return {
+    title: {
+      default: t('title'),
+      template: '%s | Catto',
+    },
+    description: t('description'),
+  };
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+
   return (
-    <html lang="en" className="dark">
+    <html lang={locale} className="dark">
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        {children}
-        <SessionExpiredModal />
+        <NextIntlClientProvider messages={messages}>
+          {children}
+          <SessionExpiredModal />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

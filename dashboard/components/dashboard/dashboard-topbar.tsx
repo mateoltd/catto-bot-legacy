@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { IconArrowLeft } from '@tabler/icons-react';
+import { useTranslations } from 'next-intl';
 import { BrandMark } from '@/components/dashboard/brand-mark';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +17,8 @@ export function DashboardTopbar({
   trailing,
   contentClassName,
 }: DashboardTopbarProps) {
+  const t = useTranslations('Navigation');
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <div
@@ -32,12 +35,12 @@ export function DashboardTopbar({
               <span className="hidden h-6 w-px bg-border sm:block" aria-hidden="true" />
               <Link
                 href="/guilds"
-                aria-label="Servers"
+                aria-label={t('servers')}
                 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
               >
                 <IconArrowLeft size={14} aria-hidden="true" />
-                <span className="hidden sm:inline">Servers</span>
-                <span className="sr-only sm:hidden">Servers</span>
+                <span className="hidden sm:inline">{t('servers')}</span>
+                <span className="sr-only sm:hidden">{t('servers')}</span>
               </Link>
             </>
           )}
