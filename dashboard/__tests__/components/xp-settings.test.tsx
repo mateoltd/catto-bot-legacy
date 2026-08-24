@@ -48,6 +48,55 @@ describe("XP settings", () => {
     ).toBeInTheDocument();
   });
 
+  it("edits voice awards through the shared award controls", () => {
+    function Example() {
+      const [value, setValue] = useState({
+        xpPerMinute: 5,
+        minSessionMinutes: 1,
+        xpMode: "PER_MINUTE" as "PER_MINUTE" | "PER_SESSION",
+      });
+
+      return (
+        <XPAwardSettings
+          kind="voice"
+          value={value}
+          onChange={(change) =>
+            setValue((current) => ({ ...current, ...change }))
+          }
+        />
+      );
+    }
+
+    render(<Example />);
+
+    expect(screen.getByLabelText("Voice XP award engine")).toBeInTheDocument();
+    expect(screen.getByLabelText("Session duration")).toHaveValue(1);
+    const sessionSlider = screen.getByRole("slider", {
+      name: "Minimum voice session",
+    });
+    expect(sessionSlider).toBeInTheDocument();
+    expect(
+      screen.getByRole("slider", { name: "Voice XP per minute" }),
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(sessionSlider, { key: "ArrowRight" });
+    expect(screen.getByLabelText("Session duration")).toHaveValue(2);
+
+    fireEvent.change(screen.getByLabelText("Earning rate"), {
+      target: { value: "8" },
+    });
+    expect(screen.getByText("240 XP")).toBeInTheDocument();
+    expect(
+      screen.getByText("A 60-minute session is worth 480 XP."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "On exit" }));
+    expect(screen.getByText(/when they leave/)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("XP is credited when the session ends"),
+    ).toBeInTheDocument();
+  });
+
   it("adds and removes explicit curve thresholds without comma-separated editing", () => {
     function Example() {
       const [value, setValue] = useState<LevelCurveValue>({
