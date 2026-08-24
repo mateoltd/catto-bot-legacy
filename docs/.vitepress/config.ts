@@ -36,6 +36,10 @@ export default defineConfig({
             { text: 'Getting Started', link: '/getting-started' },
             { text: 'Dashboard Setup', link: '/dashboard' },
             { text: 'Architecture', link: '/architecture' },
+            {
+              text: 'Dashboard Deployment (Cloudflare)',
+              link: '/deployment-cloudflare',
+            },
             { text: 'Deployment (Dokploy)', link: '/deployment-dokploy' },
             { text: 'Deployment (Legacy)', link: '/deployment' },
             { text: 'Coding Rules', link: '/RULES' },
