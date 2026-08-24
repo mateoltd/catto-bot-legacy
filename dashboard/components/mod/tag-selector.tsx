@@ -87,7 +87,7 @@ export function TagSelector({ value, onChange }: TagSelectorProps) {
             }
           }}
           placeholder="Custom tag..."
-          className="w-32 border border-[var(--mod-border)] bg-[var(--mono-950)] px-2 py-1 text-xs text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+          className="w-32 border border-[var(--mod-border)] bg-[var(--mono-950)] px-2 py-1 text-xs text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
         />
         <button
           type="button"

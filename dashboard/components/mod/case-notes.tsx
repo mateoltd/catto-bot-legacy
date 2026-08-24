@@ -134,7 +134,7 @@ export function CaseNotes({ guildId, caseNumber }: CaseNotesProps) {
           }}
           placeholder="Add a note..."
           maxLength={2000}
-          className="min-w-0 flex-1 border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+          className="min-w-0 flex-1 border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
         />
         <button
           onClick={handleSend}

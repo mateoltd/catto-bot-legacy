@@ -132,7 +132,7 @@ export default function UsersPage() {
             onChange={handleSearchChange}
             placeholder="Search by username or ID..."
             aria-label="Search users by username or ID"
-            className="w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2 pl-9 pr-4 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+            className="w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2 pl-9 pr-4 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
           />
         </div>
         <Select

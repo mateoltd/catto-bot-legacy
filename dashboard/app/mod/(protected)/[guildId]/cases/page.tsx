@@ -177,7 +177,7 @@ export default function CasesPage() {
           value={localSearch}
           onChange={handleSearchChange}
           placeholder="Search by user or ID..."
-          className="w-40 border border-[var(--mod-border)] bg-[var(--mono-950)] px-2.5 py-1.5 text-xs text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+          className="w-40 border border-[var(--mod-border)] bg-[var(--mono-950)] px-2.5 py-1.5 text-xs text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
         />
       </div>
 

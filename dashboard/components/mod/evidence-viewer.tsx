@@ -321,7 +321,7 @@ export function EvidenceViewer({
                       value={amendNewValue}
                       onChange={(e) => setAmendNewValue(e.target.value)}
                       placeholder="New description..."
-                      className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+                      className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
                     />
                   </div>
                 )}
@@ -344,7 +344,7 @@ export function EvidenceViewer({
                     onChange={(e) => setAmendReason(e.target.value)}
                     placeholder="Reason for amendment..."
                     rows={2}
-                    className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+                    className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
                   />
                 </div>
 

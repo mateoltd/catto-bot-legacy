@@ -110,6 +110,14 @@
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
+  input:focus,
+  textarea:focus,
+  select:focus,
+  [data-slot='select-trigger']:focus {
+    box-shadow: none !important;
+    outline: none;
+  }
+
   :disabled {
     @apply cursor-not-allowed opacity-50;
   }

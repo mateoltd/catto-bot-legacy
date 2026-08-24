@@ -216,14 +216,14 @@ export function EvidenceUpload({ guildId, caseNumber, onUploadComplete }: Eviden
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://..."
-            className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+            className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
           />
           <input
             type="text"
             value={urlDescription}
             onChange={(e) => setUrlDescription(e.target.value)}
             placeholder="Description (optional)"
-            className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none focus:border-[var(--mono-500)]"
+            className="w-full border border-[var(--mod-border)] bg-[var(--mono-950)] px-3 py-2 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
           />
           {urlError && <p className="text-xs text-red-400">{urlError}</p>}
           <button

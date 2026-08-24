@@ -69,7 +69,7 @@ export function EvidenceSearch({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
-        className="w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2 pl-9 pr-9 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none transition-[border-color] duration-75 focus:border-[var(--mono-500)]"
+        className="w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2 pl-9 pr-9 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
       />
       {value && (
         <button
