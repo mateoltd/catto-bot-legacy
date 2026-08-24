@@ -59,7 +59,7 @@ export function LocaleSwitcher() {
           id={selectId}
           aria-label={t('change')}
           size="sm"
-          className="w-9 px-1.5 text-xs data-[size=sm]:h-7 sm:w-36 sm:px-2"
+          className="w-9 px-1.5 text-xs data-[size=sm]:h-[42px] sm:w-36 sm:px-2"
         >
           <IconLanguage size={15} aria-hidden="true" />
           <SelectValue className="hidden sm:flex" />
