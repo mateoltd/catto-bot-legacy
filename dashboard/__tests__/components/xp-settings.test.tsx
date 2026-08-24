@@ -42,7 +42,11 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Intl><Example /></Intl>);
+    render(
+      <Intl>
+        <Example />
+      </Intl>,
+    );
     expect(screen.getAllByText(/10–20 XP/)).not.toHaveLength(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Exact" }));
@@ -77,7 +81,11 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Intl><Example /></Intl>);
+    render(
+      <Intl>
+        <Example />
+      </Intl>,
+    );
 
     expect(screen.getByLabelText("Voice XP award engine")).toBeInTheDocument();
     expect(screen.getByLabelText("Session duration")).toHaveValue(1);
@@ -100,11 +108,13 @@ describe("XP settings", () => {
       screen.getByText("A 60-minute session is worth 480 XP."),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "On exit" }));
+    const onExit = screen.getByRole("radio", { name: /On exit/ });
+    fireEvent.click(onExit);
+    expect(onExit).toHaveAttribute("aria-checked", "true");
     expect(screen.getByText(/when they leave/)).toBeInTheDocument();
     expect(
-      screen.getByLabelText("XP is credited when the session ends"),
-    ).toBeInTheDocument();
+      screen.queryByLabelText("XP is credited when the session ends"),
+    ).not.toBeInTheDocument();
   });
 
   it("adds and removes explicit curve thresholds without comma-separated editing", () => {
@@ -128,7 +138,11 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Intl><Example /></Intl>);
+    render(
+      <Intl>
+        <Example />
+      </Intl>,
+    );
     fireEvent.change(screen.getByLabelText("Level 3 total XP"), {
       target: { value: "475" },
     });
@@ -166,7 +180,11 @@ describe("XP settings", () => {
       );
     }
 
-    render(<Intl><Example /></Intl>);
+    render(
+      <Intl>
+        <Example />
+      </Intl>,
+    );
 
     const curve = screen.getByLabelText("Interactive XP requirement curve");
     expect(curve).toBeInTheDocument();
