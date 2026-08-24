@@ -9,6 +9,7 @@ import {
   IconCamera,
   IconClipboard,
 } from '@/lib/mod-icons';
+import { useTranslations } from 'next-intl';
 
 interface SpeedDialItem {
   label: string;
@@ -17,6 +18,7 @@ interface SpeedDialItem {
 }
 
 export function FloatingActionButton() {
+  const t = useTranslations('Moderation');
   const [expanded, setExpanded] = useState(false);
   const isMobile = useIsMobile();
   const fabRef = useRef<HTMLDivElement>(null);
@@ -66,7 +68,7 @@ export function FloatingActionButton() {
 
   const items: SpeedDialItem[] = [
     {
-      label: 'Upload File',
+      label: t('uploadFile'),
       icon: IconFile,
       action: () => {
         setExpanded(false);
@@ -74,7 +76,7 @@ export function FloatingActionButton() {
       },
     },
     {
-      label: 'Add URL',
+      label: t('addUrl'),
       icon: IconLink,
       action: () => {
         setExpanded(false);
@@ -82,14 +84,14 @@ export function FloatingActionButton() {
       },
     },
     {
-      label: 'Quick Photo',
+      label: t('quickPhoto'),
       icon: IconCamera,
       action: () => {
         cameraRef.current?.click();
       },
     },
     {
-      label: 'Paste Image',
+      label: t('pasteImage'),
       icon: IconClipboard,
       action: handlePasteImage,
     },
@@ -116,6 +118,7 @@ export function FloatingActionButton() {
       {/* Main FAB button */}
       <button
         onClick={() => setExpanded((prev) => !prev)}
+        aria-label={expanded ? t('closeEvidenceActions') : t('openEvidenceActions')}
         className="flex h-14 w-14 items-center justify-center bg-[var(--mono-700)] shadow-lg transition-[background-color,transform] duration-150 hover:bg-[var(--mono-600)]"
         style={{ borderRadius: '50%' }}
       >

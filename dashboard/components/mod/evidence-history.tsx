@@ -6,6 +6,7 @@ import { getEvidenceHistory } from '@/lib/services/mod.service';
 import { IconX } from '@/lib/mod-icons';
 import { AmendmentTimeline } from './amendment-timeline';
 import { useEscapeClose } from '@/hooks/use-escape-close';
+import { useTranslations } from 'next-intl';
 
 interface EvidenceHistoryProps {
   guildId: string;
@@ -14,6 +15,7 @@ interface EvidenceHistoryProps {
 }
 
 export function EvidenceHistory({ guildId, evidenceId, onClose }: EvidenceHistoryProps) {
+  const t = useTranslations('Moderation');
   const { data: amendments = [], isLoading: loading } = useSWR(
     ['evidence-history', guildId, evidenceId],
     () => getEvidenceHistory(guildId, evidenceId),
@@ -29,9 +31,10 @@ export function EvidenceHistory({ guildId, evidenceId, onClose }: EvidenceHistor
       >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[var(--mono-white)]">Amendment History</h2>
+          <h2 className="text-lg font-semibold text-[var(--mono-white)]">{t('amendmentHistory')}</h2>
           <button
             onClick={onClose}
+            aria-label={t('close')}
             className="p-1 text-[var(--mod-text-dim)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] hover:text-[var(--mono-white)]"
           >
             <IconX size={18} />
@@ -39,7 +42,7 @@ export function EvidenceHistory({ guildId, evidenceId, onClose }: EvidenceHistor
         </div>
 
         {loading && (
-          <div className="py-8 text-center text-[var(--mod-text-dim)]">Loading history...</div>
+          <div className="py-8 text-center text-[var(--mod-text-dim)]">{t('loadingHistory')}</div>
         )}
 
         {!loading && <AmendmentTimeline amendments={amendments} />}

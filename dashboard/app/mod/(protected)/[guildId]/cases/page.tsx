@@ -12,37 +12,13 @@ import { useSwipe } from '@/hooks/use-swipe';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePaginationNav } from '@/hooks/use-pagination-nav';
-
-const ACTION_LABELS: Record<string, string> = {
-  BAN: 'Ban', UNBAN: 'Unban', KICK: 'Kick', TIMEOUT: 'Timeout',
-  WARN: 'Warning', SOFTBAN: 'Softban', TEMPBAN: 'Tempban',
-  MUTE_TEXT: 'Mute (Text)', MUTE_VOICE: 'Mute (Voice)', MUTE_BOTH: 'Mute',
-  UNMUTE_TEXT: 'Unmute (Text)', UNMUTE_VOICE: 'Unmute (Voice)', UNMUTE_BOTH: 'Unmute',
-};
-
-const ACTION_FILTERS = [
-  { value: '', label: 'All Actions' },
-  { value: 'BAN', label: 'Ban' },
-  { value: 'KICK', label: 'Kick' },
-  { value: 'TIMEOUT', label: 'Timeout' },
-  { value: 'WARN', label: 'Warning' },
-  { value: 'SOFTBAN', label: 'Softban' },
-  { value: 'TEMPBAN', label: 'Tempban' },
-  { value: 'UNBAN', label: 'Unban' },
-  { value: 'MUTE_BOTH', label: 'Mute' },
-  { value: 'UNMUTE_BOTH', label: 'Unmute' },
-];
-
-const SORT_OPTIONS = [
-  { value: 'createdAt:desc', label: 'Newest first' },
-  { value: 'createdAt:asc', label: 'Oldest first' },
-  { value: 'caseNumber:desc', label: 'Case # (high-low)' },
-  { value: 'caseNumber:asc', label: 'Case # (low-high)' },
-];
+import { useFormatter, useTranslations } from 'next-intl';
 
 const PAGE_SIZE = 25;
 
 export default function CasesPage() {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -53,6 +29,38 @@ export default function CasesPage() {
   const searchParam = searchParams.get('search') ?? '';
   const pageParam = parseInt(searchParams.get('page') ?? '1') || 1;
   const targetIdParam = searchParams.get('targetId') ?? '';
+
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'BAN': return t('actionBan');
+      case 'UNBAN': return t('actionUnban');
+      case 'KICK': return t('actionKick');
+      case 'TIMEOUT': return t('actionTimeout');
+      case 'WARN': return t('actionWarning');
+      case 'SOFTBAN': return t('actionSoftban');
+      case 'TEMPBAN': return t('actionTempban');
+      case 'MUTE_TEXT': return t('actionMuteText');
+      case 'MUTE_VOICE': return t('actionMuteVoice');
+      case 'MUTE_BOTH': return t('actionMute');
+      case 'UNMUTE_TEXT': return t('actionUnmuteText');
+      case 'UNMUTE_VOICE': return t('actionUnmuteVoice');
+      case 'UNMUTE_BOTH': return t('actionUnmute');
+      default: return action;
+    }
+  };
+
+  const actionFilters = [
+    { value: '', label: t('allActions') },
+    ...['BAN', 'KICK', 'TIMEOUT', 'WARN', 'SOFTBAN', 'TEMPBAN', 'UNBAN', 'MUTE_BOTH', 'UNMUTE_BOTH']
+      .map((value) => ({ value, label: actionLabel(value) })),
+  ];
+
+  const sortOptions = [
+    { value: 'createdAt:desc', label: t('sortNewest') },
+    { value: 'createdAt:asc', label: t('sortOldest') },
+    { value: 'caseNumber:desc', label: t('sortCaseDescending') },
+    { value: 'caseNumber:asc', label: t('sortCaseAscending') },
+  ];
 
   // Local state for immediate input feedback
   const [localSearch, setLocalSearch] = useState(searchParam);
@@ -119,18 +127,18 @@ export default function CasesPage() {
 
   return (
     <div {...paginationSwipe}>
-      <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">Cases</h1>
-      <p className="mb-6 text-sm text-[var(--mod-text-muted)]">{total} total cases</p>
+      <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">{t('cases')}</h1>
+      <p className="mb-6 text-sm text-[var(--mod-text-muted)]">{t('totalCasesCount', { count: total })}</p>
 
       {targetIdParam && (
         <div className="mb-4 flex items-center gap-2 border border-[var(--mod-border)] bg-[var(--mod-surface)] px-3 py-2 text-xs text-[var(--mod-text-muted)]">
-          <span>Filtering by user: <span className="font-mono text-[var(--mono-white)]">{targetIdParam}</span></span>
+          <span>{t('filteringByUser')} <span className="font-mono text-[var(--mono-white)]">{targetIdParam}</span></span>
           <button
             type="button"
             onClick={() => updateParams({ targetId: undefined })}
             className="ml-auto text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
           >
-            Clear filter
+            {t('clearFilter')}
           </button>
         </div>
       )}
@@ -143,10 +151,10 @@ export default function CasesPage() {
           onValueChange={(value) => updateParams({ action: value === '_all' ? undefined : value })}
         >
           <SelectTrigger variant="mod" className="w-[140px]">
-            <SelectValue placeholder="All Actions" />
+            <SelectValue placeholder={t('allActions')} />
           </SelectTrigger>
           <SelectContent variant="mod">
-            {ACTION_FILTERS.map((f) => (
+            {actionFilters.map((f) => (
               <SelectItem key={f.value} value={f.value || '_all'} variant="mod">
                 {f.label}
               </SelectItem>
@@ -163,7 +171,7 @@ export default function CasesPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent variant="mod">
-            {SORT_OPTIONS.map((o) => (
+            {sortOptions.map((o) => (
               <SelectItem key={o.value} value={o.value} variant="mod">
                 {o.label}
               </SelectItem>
@@ -176,16 +184,16 @@ export default function CasesPage() {
           type="text"
           value={localSearch}
           onChange={handleSearchChange}
-          placeholder="Search by user or ID..."
+          placeholder={t('searchCasesPlaceholder')}
           className="w-40 border border-[var(--mod-border)] bg-[var(--mono-950)] px-2.5 py-1.5 text-xs text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
         />
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-[var(--mod-text-dim)]">Loading cases...</div>
+        <div className="py-12 text-center text-[var(--mod-text-dim)]">{t('loadingCases')}</div>
       ) : cases.length === 0 ? (
         <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-8 text-center text-[var(--mod-text-muted)]">
-          {hasFilters ? 'No cases match the current filters.' : 'No cases found.'}
+          {hasFilters ? t('noCasesMatchFilters') : t('noCasesFound')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -205,7 +213,7 @@ export default function CasesPage() {
                   </span>
                   <div>
                     <span className="text-sm font-medium text-[var(--mono-white)]">
-                      {ACTION_LABELS[c.action] ?? c.action}
+                      {actionLabel(c.action)}
                     </span>
                     <span className="ml-2 text-sm text-[var(--mod-text-muted)]">
                       {c.targetTag}
@@ -214,12 +222,12 @@ export default function CasesPage() {
                 </div>
                 <div className="flex items-center gap-3 text-xs text-[var(--mod-text-dim)] md:justify-end">
                   {c.status === 'CLOSED' && (
-                    <IconLock size={14} className="text-[var(--mod-text-dim)]" title="Closed" />
+                    <IconLock size={14} className="text-[var(--mod-text-dim)]" title={t('statusClosed')} />
                   )}
                   {c.status === 'VOID' && (
-                    <span className="border border-red-800 px-2 py-0.5 text-red-400">VOID</span>
+                    <span className="border border-red-800 px-2 py-0.5 text-red-400">{t('statusVoid')}</span>
                   )}
-                  <span>{new Date(c.createdAt).toLocaleDateString()}</span>
+                  <span>{format.dateTime(new Date(c.createdAt), { dateStyle: 'short' })}</span>
                 </div>
               </Link>
             </SwipeableCaseRow>
@@ -235,10 +243,10 @@ export default function CasesPage() {
             className="border border-[var(--mod-border)] px-3 py-1 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface)] disabled:opacity-30"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            Previous
+            {t('previous')}
           </button>
           <span className="text-sm text-[var(--mod-text-dim)]" style={{ fontFamily: 'var(--font-mono)' }}>
-            Page {pageParam} of {totalPages}
+            {t('pageOf', { page: pageParam, totalPages })}
           </span>
           <button
             onClick={() => updateParams({ page: String(pageParam + 1) })}
@@ -246,7 +254,7 @@ export default function CasesPage() {
             className="border border-[var(--mod-border)] px-3 py-1 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface)] disabled:opacity-30"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            Next
+            {t('next')}
           </button>
         </div>
       )}

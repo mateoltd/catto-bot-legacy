@@ -14,7 +14,6 @@ import {
   type UserRewardClaim,
   type UserServerStatus,
 } from '@/lib/services/mod.service';
-import { EVIDENCE_TYPE_META } from '@/lib/mod-types';
 import {
   IconGavel,
   IconFolder,
@@ -30,6 +29,7 @@ import {
   IconTrophy,
   IconChartBar,
 } from '@/lib/mod-icons';
+import { useFormatter, useTranslations } from 'next-intl';
 
 // Border colors for recent cases (left quote-style border)
 const ACTION_BORDER_COLORS: Record<string, string> = {
@@ -59,7 +59,39 @@ const ACTION_SEVERITY: Record<string, 'major' | 'moderate' | 'minor'> = {
 };
 
 export default function UserProfilePage() {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const { guildId, userId } = useParams() as { guildId: string; userId: string };
+
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'BAN': return t('actionBan');
+      case 'UNBAN': return t('actionUnban');
+      case 'KICK': return t('actionKick');
+      case 'TIMEOUT': return t('actionTimeout');
+      case 'WARN': return t('actionWarning');
+      case 'SOFTBAN': return t('actionSoftban');
+      case 'TEMPBAN': return t('actionTempban');
+      case 'MUTE_TEXT': return t('actionMuteText');
+      case 'MUTE_VOICE': return t('actionMuteVoice');
+      case 'MUTE_BOTH': return t('actionMute');
+      case 'MUTES': return t('actionMutes');
+      default: return action;
+    }
+  };
+
+  const evidenceTypeLabel = (type: string) => {
+    switch (type) {
+      case 'IMAGE': return t('evidenceImage');
+      case 'VIDEO': return t('evidenceVideo');
+      case 'AUDIO': return t('evidenceAudio');
+      case 'DOCUMENT': return t('evidenceDocument');
+      case 'URL': return t('evidenceUrl');
+      case 'DISCORD_URL': return t('evidenceDiscordLink');
+      case 'MESSAGE_SNAPSHOT': return t('evidenceSnapshot');
+      default: return type;
+    }
+  };
 
   const { data: profile, isLoading: profileLoading } = useSWR(
     ['user-profile', guildId, userId],
@@ -90,7 +122,7 @@ export default function UserProfilePage() {
   if (profileLoading) {
     return (
       <div className="py-12 text-center text-[var(--mod-text-dim)]">
-        Loading user profile...
+        {t('loadingUserProfile')}
       </div>
     );
   }
@@ -98,7 +130,7 @@ export default function UserProfilePage() {
   if (!profile) {
     return (
       <div className="py-12 text-center text-red-400">
-        Failed to load user profile.
+        {t('failedToLoadUserProfile')}
       </div>
     );
   }
@@ -127,7 +159,7 @@ export default function UserProfilePage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-[var(--mono-white)]">
-                {serverStatus?.username || profile.username || profile.targetTag || 'User Profile'}
+                {serverStatus?.username || profile.username || profile.targetTag || t('userProfile')}
               </h1>
               <ServerStatusBadge status={serverStatus} />
             </div>
@@ -144,7 +176,7 @@ export default function UserProfilePage() {
                 ))}
                 {serverStatus.roles.length > 5 && (
                   <span className="text-[10px] text-[var(--mod-text-dim)]">
-                    +{serverStatus.roles.length - 5} more
+                    {t('moreCount', { count: serverStatus.roles.length - 5 })}
                   </span>
                 )}
               </div>
@@ -176,19 +208,19 @@ export default function UserProfilePage() {
         {profile.firstSeen && (
           <div className="flex items-center gap-1">
             <IconCalendar size={12} />
-            First seen: {new Date(profile.firstSeen).toLocaleDateString()}
+            {t('firstSeenDate', { date: format.dateTime(new Date(profile.firstSeen), { dateStyle: 'short' }) })}
           </div>
         )}
         {profile.lastAction && (
           <div className="flex items-center gap-1">
             <IconGavel size={12} />
-            Last action: {new Date(profile.lastAction).toLocaleDateString()}
+            {t('lastActionDate', { date: format.dateTime(new Date(profile.lastAction), { dateStyle: 'short' }) })}
           </div>
         )}
         {serverStatus?.memberSince && (
           <div className="flex items-center gap-1">
             <IconUser size={12} />
-            Member since: {new Date(serverStatus.memberSince).toLocaleDateString()}
+            {t('memberSinceDate', { date: format.dateTime(new Date(serverStatus.memberSince), { dateStyle: 'short' }) })}
           </div>
         )}
       </div>
@@ -202,13 +234,13 @@ export default function UserProfilePage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
                   <IconChartBar size={16} />
-                  Action Breakdown ({profile.cases.total} total)
+                  {t('actionBreakdownWithCount', { count: profile.cases.total })}
                 </h2>
                 <Link
                   href={`/mod/${guildId}/cases?targetId=${userId}`}
                   className="text-xs text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
                 >
-                  View all cases →
+                  {t('viewAllCases')} →
                 </Link>
               </div>
               <CaseBreakdownChart byAction={profile.cases.byAction} total={profile.cases.total} />
@@ -218,21 +250,21 @@ export default function UserProfilePage() {
             <div className="border-t border-[var(--mod-border)] pt-4 lg:w-2/5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
                 <IconFolder size={16} />
-                Evidence ({profile.evidence.total})
+                {t('evidenceWithCount', { count: profile.evidence.total })}
               </h3>
               {profile.evidence.total > 0 ? (
                 <div className="space-y-2">
                   {Object.entries(profile.evidence.byType).map(([type, count]) => (
                     <div key={type} className="flex items-center justify-between text-xs">
                       <span className="text-[var(--mod-text-muted)]">
-                        {EVIDENCE_TYPE_META[type as keyof typeof EVIDENCE_TYPE_META]?.label ?? type}
+                        {evidenceTypeLabel(type)}
                       </span>
                       <span className="text-[var(--mono-white)]">{count}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-[var(--mod-text-dim)]">No evidence</p>
+                <p className="text-xs text-[var(--mod-text-dim)]">{t('noEvidence')}</p>
               )}
             </div>
           </div>
@@ -243,13 +275,13 @@ export default function UserProfilePage() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
               <IconGavel size={16} />
-              Recent Cases
+              {t('recentCases')}
             </h2>
             <Link
               href={`/mod/${guildId}/cases?targetId=${userId}`}
               className="text-xs text-[var(--mod-text-dim)] hover:text-[var(--mono-white)]"
             >
-              View all →
+              {t('viewAll')} →
             </Link>
           </div>
           <div className="space-y-2">
@@ -263,10 +295,10 @@ export default function UserProfilePage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-[var(--mono-white)]">
-                      #{c.caseNumber} {c.action.replace(/_/g, ' ')}
+                      #{c.caseNumber} {actionLabel(c.action)}
                     </span>
                     <span className="text-[var(--mod-text-dim)]">
-                      {new Date(c.createdAt).toLocaleDateString()}
+                      {format.dateTime(new Date(c.createdAt), { dateStyle: 'short' })}
                     </span>
                   </div>
                   {c.reason && (
@@ -276,7 +308,7 @@ export default function UserProfilePage() {
               );
             })}
             {profile.cases.recent.length === 0 && (
-              <p className="text-xs text-[var(--mod-text-dim)]">No cases found.</p>
+              <p className="text-xs text-[var(--mod-text-dim)]">{t('noCasesFound')}</p>
             )}
           </div>
         </div>
@@ -285,7 +317,7 @@ export default function UserProfilePage() {
         <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
           <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
             <IconNote size={16} />
-            Mod Notes ({profile.notes.total})
+            {t('modNotesWithCount', { count: profile.notes.total })}
           </h2>
 
           {profile.notes.recent.length > 0 ? (
@@ -294,7 +326,7 @@ export default function UserProfilePage() {
                 <div key={note.id} className="border-l-2 border-[var(--mod-border)] pl-3">
                   <p className="text-xs text-[var(--mod-text-muted)]">{note.note}</p>
                   <div className="mt-1 flex gap-2 text-[10px] text-[var(--mod-text-dim)]">
-                    <span>{new Date(note.createdAt).toLocaleDateString()}</span>
+                    <span>{format.dateTime(new Date(note.createdAt), { dateStyle: 'short' })}</span>
                     {note.tags.length > 0 && (
                       <span className="text-[var(--mono-400)]">{note.tags.join(', ')}</span>
                     )}
@@ -303,7 +335,7 @@ export default function UserProfilePage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-[var(--mod-text-dim)]">No notes for this user.</p>
+            <p className="text-sm text-[var(--mod-text-dim)]">{t('noUserNotes')}</p>
           )}
         </div>
 
@@ -318,7 +350,7 @@ export default function UserProfilePage() {
           <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4 lg:col-span-2">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
               <IconFlag size={16} />
-              Flags ({profile.flags.length})
+              {t('flagsWithCount', { count: profile.flags.length })}
             </h2>
 
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -339,11 +371,11 @@ export default function UserProfilePage() {
                   </div>
                   <div className="text-right">
                     <span className={flag.active ? 'text-red-300/80' : 'text-green-300/80'}>
-                      {flag.active ? 'Active' : 'Inactive'}
+                      {flag.active ? t('active') : t('inactive')}
                     </span>
                     {flag.expiresAt && (
                       <p className="text-[10px] text-[var(--mod-text-dim)]">
-                        Expires: {new Date(flag.expiresAt).toLocaleDateString()}
+                        {t('expiresDate', { date: format.dateTime(new Date(flag.expiresAt), { dateStyle: 'short' }) })}
                       </p>
                     )}
                   </div>
@@ -377,12 +409,13 @@ function ModerationSummaryBadge({
   summary: { major: number; moderate: number; minor: number };
   totalCases: number;
 }) {
+  const t = useTranslations('Moderation');
   if (totalCases === 0) return null;
 
   const parts: string[] = [];
-  if (summary.major > 0) parts.push(`${summary.major} major`);
-  if (summary.moderate > 0) parts.push(`${summary.moderate} moderate`);
-  if (summary.minor > 0) parts.push(`${summary.minor} minor`);
+  if (summary.major > 0) parts.push(t('severityMajor', { count: summary.major }));
+  if (summary.moderate > 0) parts.push(t('severityModerate', { count: summary.moderate }));
+  if (summary.minor > 0) parts.push(t('severityMinor', { count: summary.minor }));
 
   return (
     <div className="flex items-center gap-1.5 border border-[var(--mono-600)] px-2 py-1 text-[var(--mod-text-dim)]">
@@ -393,6 +426,7 @@ function ModerationSummaryBadge({
 }
 
 function ServerStatusBadge({ status }: { status: UserServerStatus | null | undefined }) {
+  const t = useTranslations('Moderation');
   if (!status) return null;
 
   switch (status.status) {
@@ -400,14 +434,14 @@ function ServerStatusBadge({ status }: { status: UserServerStatus | null | undef
       return (
         <span className="flex items-center gap-1 border border-[var(--mono-600)] px-2 py-0.5 text-[10px] text-[var(--mod-text-dim)]">
           <IconLogout size={12} />
-          Left Server
+          {t('leftServer')}
         </span>
       );
     case 'in_server':
       return (
         <span className="flex items-center gap-1 border border-green-500/40 px-2 py-0.5 text-[10px] text-green-300/70">
           <IconCheck size={12} />
-          In Server
+          {t('inServer')}
         </span>
       );
     default:
@@ -424,19 +458,21 @@ function XPStatsCard({
   voiceXPStats: UserVoiceXPStats | null | undefined;
   isLoading?: boolean;
 }) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const hasData = xpStats || voiceXPStats;
 
   return (
     <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
         <IconHistory size={16} />
-        XP & Activity
+        {t('xpAndActivity')}
       </h2>
 
       {!hasData ? (
         <div className="py-4 text-center">
           <p className="text-xs text-[var(--mod-text-dim)]">
-            {isLoading ? 'Loading XP data...' : 'No XP data available for this user.'}
+            {isLoading ? t('loadingXpData') : t('noXpData')}
           </p>
           <p className="mt-1 text-[10px] text-[var(--mod-text-dim)] opacity-60">
             XP will appear here once the user participates in the server.
@@ -449,13 +485,13 @@ function XPStatsCard({
             <div>
               <div className="mb-2 flex items-center gap-1 text-xs text-[var(--mod-text-dim)]">
                 <IconMessage size={12} />
-                Text XP
+                {t('textXp')}
               </div>
               <div className="mb-1 text-lg font-bold text-[var(--mono-white)]">
-                Level {xpStats.level}
+                {t('levelNumber', { level: xpStats.level })}
               </div>
               <div className="mb-2 text-xs text-[var(--mod-text-dim)]">
-                {xpStats.xp.toLocaleString()} XP • Rank #{xpStats.rank ?? '—'}
+                {t('xpAndRank', { xp: format.number(xpStats.xp), rank: xpStats.rank ?? '—' })}
               </div>
               <div className="h-1.5 w-full rounded-sm bg-zinc-800">
                 <div
@@ -464,19 +500,19 @@ function XPStatsCard({
                 />
               </div>
               <div className="mt-1 text-[10px] text-[var(--mod-text-dim)]">
-                {xpStats.xpIntoLevel.toLocaleString()} / {xpStats.nextLevelXp.toLocaleString()} to next level
+                {t('xpToNextLevel', { current: format.number(xpStats.xpIntoLevel), required: format.number(xpStats.nextLevelXp) })}
               </div>
               <div className="mt-2 text-xs text-[var(--mod-text-muted)]">
-                {xpStats.messageCount.toLocaleString()} messages
+                {t('messageCount', { count: xpStats.messageCount })}
               </div>
             </div>
           ) : (
             <div className="opacity-40">
               <div className="mb-2 flex items-center gap-1 text-xs text-[var(--mod-text-dim)]">
                 <IconMessage size={12} />
-                Text XP
+                {t('textXp')}
               </div>
-              <p className="text-xs text-[var(--mod-text-dim)]">No data</p>
+              <p className="text-xs text-[var(--mod-text-dim)]">{t('noData')}</p>
             </div>
           )}
 
@@ -485,25 +521,25 @@ function XPStatsCard({
             <div>
               <div className="mb-2 flex items-center gap-1 text-xs text-[var(--mod-text-dim)]">
                 <IconMicrophone size={12} />
-                Voice XP
+                {t('voiceXp')}
               </div>
               <div className="mb-1 text-lg font-bold text-[var(--mono-white)]">
-                Level {voiceXPStats.level}
+                {t('levelNumber', { level: voiceXPStats.level })}
               </div>
               <div className="mb-2 text-xs text-[var(--mod-text-dim)]">
-                {voiceXPStats.xp.toLocaleString()} XP • Rank #{voiceXPStats.rank ?? '—'}
+                {t('xpAndRank', { xp: format.number(voiceXPStats.xp), rank: voiceXPStats.rank ?? '—' })}
               </div>
               <div className="mt-2 text-xs text-[var(--mod-text-muted)]">
-                {Math.round(voiceXPStats.totalMinutes / 60).toLocaleString()} hours in voice
+                {t('voiceHours', { hours: Math.round(voiceXPStats.totalMinutes / 60) })}
               </div>
             </div>
           ) : (
             <div className="opacity-40">
               <div className="mb-2 flex items-center gap-1 text-xs text-[var(--mod-text-dim)]">
                 <IconMicrophone size={12} />
-                Voice XP
+                {t('voiceXp')}
               </div>
-              <p className="text-xs text-[var(--mod-text-dim)]">No data</p>
+              <p className="text-xs text-[var(--mod-text-dim)]">{t('noData')}</p>
             </div>
           )}
         </div>
@@ -513,18 +549,19 @@ function XPStatsCard({
 }
 
 function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
+  const t = useTranslations('Moderation');
   return (
     <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--mono-white)]">
         <IconTrophy size={16} />
-        Rewards ({rewards.length})
+        {t('rewardsWithCount', { count: rewards.length })}
       </h2>
 
       {rewards.length === 0 ? (
         <div className="py-4 text-center">
-          <p className="text-xs text-[var(--mod-text-dim)]">No rewards claimed yet.</p>
+          <p className="text-xs text-[var(--mod-text-dim)]">{t('noRewardsClaimed')}</p>
           <p className="mt-1 text-[10px] text-[var(--mod-text-dim)] opacity-60">
-            Rewards will appear here as the user levels up.
+            {t('rewardsAppearAsUserLevels')}
           </p>
         </div>
       ) : (
@@ -537,7 +574,7 @@ function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
               <div>
                 <span className="text-[var(--mono-white)]">{claim.reward.name}</span>
                 <span className="ml-2 text-[var(--mod-text-dim)]">
-                  at Lvl {claim.levelAtClaim}
+                  {t('atLevel', { level: claim.levelAtClaim })}
                 </span>
               </div>
               <span
@@ -545,13 +582,13 @@ function RewardsCard({ rewards }: { rewards: UserRewardClaim[] }) {
                   claim.status === 'CLAIMED' ? 'text-green-300/70' : 'text-[var(--mod-text-dim)]'
                 }`}
               >
-                {claim.status}
+                {claim.status === 'CLAIMED' ? t('claimed') : claim.status}
               </span>
             </div>
           ))}
           {rewards.length > 5 && (
             <p className="text-xs text-[var(--mod-text-dim)]">
-              +{rewards.length - 5} more rewards
+              {t('moreRewards', { count: rewards.length - 5 })}
             </p>
           )}
         </div>
@@ -567,6 +604,21 @@ function CaseBreakdownChart({
   byAction: Partial<Record<string, number>>;
   total: number;
 }) {
+  const t = useTranslations('Moderation');
+
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'BAN': return t('actionBan');
+      case 'UNBAN': return t('actionUnban');
+      case 'KICK': return t('actionKick');
+      case 'TIMEOUT': return t('actionTimeout');
+      case 'WARN': return t('actionWarning');
+      case 'SOFTBAN': return t('actionSoftban');
+      case 'TEMPBAN': return t('actionTempban');
+      case 'MUTES': return t('actionMutes');
+      default: return action;
+    }
+  };
   // Group mutes together and prepare entries
   const grouped: Record<string, number> = {};
   let muteTotal = 0;
@@ -591,7 +643,7 @@ function CaseBreakdownChart({
   const entries = Object.entries(grouped).sort(([, a], [, b]) => b - a);
 
   if (entries.length === 0) {
-    return <p className="text-xs text-[var(--mod-text-dim)]">No cases recorded.</p>;
+    return <p className="text-xs text-[var(--mod-text-dim)]">{t('noCasesRecorded')}</p>;
   }
 
   const maxCount = Math.max(...entries.map(([, count]) => count));
@@ -604,7 +656,7 @@ function CaseBreakdownChart({
       {entries.map(([action, count], index) => (
         <div key={action} className="flex items-center gap-2">
           <span className="w-14 truncate text-[11px] text-[var(--mod-text-dim)]">
-            {action.replace(/_/g, ' ')}
+            {actionLabel(action)}
           </span>
           <div className="flex-1">
             <div className="h-2 rounded-sm bg-zinc-800">

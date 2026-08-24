@@ -16,30 +16,12 @@ import {
 } from "@/components/ui/select";
 import { usePaginationNav } from "@/hooks/use-pagination-nav";
 import { IconSearch } from "@/lib/mod-icons";
-
-const EVIDENCE_TYPES: { value: string; label: string }[] = [
-  { value: "", label: "All Types" },
-  { value: "IMAGE", label: "Image" },
-  { value: "VIDEO", label: "Video" },
-  { value: "AUDIO", label: "Audio" },
-  { value: "DOCUMENT", label: "Document" },
-  { value: "URL", label: "URL" },
-  { value: "DISCORD_URL", label: "Discord Link" },
-  { value: "MESSAGE_SNAPSHOT", label: "Snapshot" },
-];
-
-const EVIDENCE_STATUSES = [
-  { value: "", label: "Any status" },
-  { value: "VERIFIED", label: "Verified" },
-  { value: "FLAGGED", label: "Flagged" },
-  { value: "PENDING", label: "Pending" },
-  { value: "PROCESSING", label: "Processing" },
-  { value: "REJECTED", label: "Rejected" },
-];
+import { useTranslations } from "next-intl";
 
 const PAGE_SIZE = 25;
 
 export default function GuildEvidencePage() {
+  const t = useTranslations("Moderation");
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -51,6 +33,42 @@ export default function GuildEvidencePage() {
   const queryParam = searchParams.get("search") ?? "";
   const tagsParam = searchParams.get("tags") ?? "";
   const pageParam = parseInt(searchParams.get("page") ?? "1") || 1;
+
+  const evidenceTypeLabel = (type: string) => {
+    switch (type) {
+      case "IMAGE": return t("evidenceImage");
+      case "VIDEO": return t("evidenceVideo");
+      case "AUDIO": return t("evidenceAudio");
+      case "DOCUMENT": return t("evidenceDocument");
+      case "URL": return t("evidenceUrl");
+      case "DISCORD_URL": return t("evidenceDiscordLink");
+      case "MESSAGE_SNAPSHOT": return t("evidenceSnapshot");
+      default: return type;
+    }
+  };
+
+  const evidenceStatusLabel = (status: string) => {
+    switch (status) {
+      case "PENDING": return t("statusPending");
+      case "PROCESSING": return t("statusProcessing");
+      case "VERIFIED": return t("statusVerified");
+      case "FLAGGED": return t("statusFlagged");
+      case "REJECTED": return t("statusRejected");
+      default: return status;
+    }
+  };
+
+  const evidenceTypes = [
+    { value: "", label: t("allTypes") },
+    ...["IMAGE", "VIDEO", "AUDIO", "DOCUMENT", "URL", "DISCORD_URL", "MESSAGE_SNAPSHOT"]
+      .map((value) => ({ value, label: evidenceTypeLabel(value) })),
+  ];
+
+  const evidenceStatuses = [
+    { value: "", label: t("anyStatus") },
+    ...["VERIFIED", "FLAGGED", "PENDING", "PROCESSING", "REJECTED"]
+      .map((value) => ({ value, label: evidenceStatusLabel(value) })),
+  ];
 
   // Local state for immediate input feedback
   const [localCase, setLocalCase] = useState(caseParam);
@@ -174,20 +192,19 @@ export default function GuildEvidencePage() {
   });
 
   return (
-    <SectionGate section="evidence" label="the evidence browser">
+    <SectionGate section="evidence" label={t("evidenceBrowser")}>
       <div {...paginationSwipe}>
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">
-              Evidence review
+              {t("evidenceReview")}
             </h1>
             <p className="text-sm text-[var(--mod-text-muted)]">
-              Inspect source material, provenance and integrity without losing
-              case context.
+              {t("evidenceReviewDescription")}
             </p>
           </div>
           <span className="font-mono text-xs text-[var(--mod-text-dim)]">
-            {total} item{total !== 1 ? "s" : ""}
+            {t("itemCount", { count: total })}
           </span>
         </div>
 
@@ -202,7 +219,7 @@ export default function GuildEvidencePage() {
               type="search"
               value={localQuery}
               onChange={(event) => handleQueryChange(event.target.value)}
-              placeholder="Search filenames, descriptions, links or submitters…"
+              placeholder={t("searchEvidencePlaceholder")}
               className="h-12 w-full bg-[var(--mono-950)] pl-11 pr-4 text-sm text-[var(--mono-white)] outline-none placeholder:text-[var(--mod-text-dim)]"
             />
           </div>
@@ -218,16 +235,16 @@ export default function GuildEvidencePage() {
                 variant="mod"
                 className="h-10 w-[160px] border-0 border-r border-[var(--mod-border)]"
               >
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t("allTypes")} />
               </SelectTrigger>
               <SelectContent variant="mod">
-                {EVIDENCE_TYPES.map((t) => (
+                {evidenceTypes.map((type) => (
                   <SelectItem
-                    key={t.value || "_all"}
-                    value={t.value || "_all"}
+                    key={type.value || "_all"}
+                    value={type.value || "_all"}
                     variant="mod"
                   >
-                    {t.label}
+                    {type.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -243,10 +260,10 @@ export default function GuildEvidencePage() {
                 variant="mod"
                 className="h-10 w-[150px] border-0 border-r border-[var(--mod-border)]"
               >
-                <SelectValue placeholder="Any status" />
+                <SelectValue placeholder={t("anyStatus")} />
               </SelectTrigger>
               <SelectContent variant="mod">
-                {EVIDENCE_STATUSES.map((status) => (
+                {evidenceStatuses.map((status) => (
                   <SelectItem
                     key={status.value || "_all"}
                     value={status.value || "_all"}
@@ -261,7 +278,7 @@ export default function GuildEvidencePage() {
             {/* Case number input */}
             <div className="flex h-10 items-center border-r border-[var(--mod-border)]">
               <label className="pl-3 text-xs text-[var(--mod-text-dim)]">
-                Case #
+                {t("caseNumberShort")}
               </label>
               <input
                 type="text"
@@ -279,7 +296,7 @@ export default function GuildEvidencePage() {
               type="text"
               value={localTags}
               onChange={(event) => handleTagsChange(event.target.value)}
-              placeholder="Tags, comma separated"
+              placeholder={t("tagsCommaSeparated")}
               className="h-10 min-w-48 flex-1 border-r border-[var(--mod-border)] bg-transparent px-3 text-xs text-[var(--mono-white)] outline-none placeholder:text-[var(--mod-text-dim)]"
             />
             {hasFilters && (
@@ -299,7 +316,7 @@ export default function GuildEvidencePage() {
                 }}
                 className="h-10 px-3 text-xs text-[var(--mod-text-dim)] hover:bg-[var(--mod-surface-hover)] hover:text-[var(--mono-white)]"
               >
-                Clear filters
+                {t("clearFilters")}
               </button>
             )}
           </div>
@@ -307,13 +324,13 @@ export default function GuildEvidencePage() {
 
         {loading ? (
           <div className="py-12 text-center text-[var(--mod-text-dim)]">
-            Loading evidence...
+            {t("loadingEvidence")}
           </div>
         ) : evidence.length === 0 ? (
           <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-8 text-center text-[var(--mod-text-muted)]">
             {hasFilters
-              ? "No evidence matches the current filters."
-              : "No evidence found across any cases."}
+              ? t("noEvidenceMatchesFilters")
+              : t("noEvidenceAcrossCases")}
           </div>
         ) : (
           <>
@@ -333,17 +350,17 @@ export default function GuildEvidencePage() {
                   disabled={pageParam <= 1}
                   className="border border-[var(--mod-border)] px-3 py-1.5 text-xs text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
                 >
-                  Previous
+                  {t("previous")}
                 </button>
                 <span className="text-xs text-[var(--mod-text-dim)]">
-                  Page {pageParam} of {totalPages}
+                  {t("pageOf", { page: pageParam, totalPages })}
                 </span>
                 <button
                   onClick={() => updateParams({ page: String(pageParam + 1) })}
                   disabled={pageParam >= totalPages}
                   className="border border-[var(--mod-border)] px-3 py-1.5 text-xs text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
                 >
-                  Next
+                  {t("next")}
                 </button>
               </div>
             )}

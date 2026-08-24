@@ -9,11 +9,14 @@ import { getModeratedUsers, type ModeratedUser } from '@/lib/services/mod.servic
 import { IconSearch, IconUser, IconFlag, IconGavel, IconChevronRight, IconNote, IconX } from '@/lib/mod-icons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePaginationNav } from '@/hooks/use-pagination-nav';
+import { useFormatter, useTranslations } from 'next-intl';
 
 
 const PAGE_SIZE = 25;
 
 export default function UsersPage() {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -84,9 +87,9 @@ export default function UsersPage() {
 
   return (
     <div {...paginationSwipe}>
-      <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">Users</h1>
+      <h1 className="mb-1 text-2xl font-bold text-[var(--mono-white)]">{t('users')}</h1>
       <p className="mb-6 text-sm text-[var(--mod-text-muted)]">
-        Moderation history across all users
+        {t('usersDescription')}
       </p>
 
       {/* Stats */}
@@ -94,26 +97,26 @@ export default function UsersPage() {
         <div className="mb-6 grid grid-cols-3 gap-4">
           <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
             <div className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Unique Users
+              {t('uniqueUsers')}
             </div>
             <div className="mt-1 text-2xl font-bold text-[var(--mono-white)]">
-              {stats.uniqueUsers.toLocaleString()}
+              {format.number(stats.uniqueUsers)}
             </div>
           </div>
           <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
             <div className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Total Cases
+              {t('totalCases')}
             </div>
             <div className="mt-1 text-2xl font-bold text-[var(--mono-white)]">
-              {stats.totalCases.toLocaleString()}
+              {format.number(stats.totalCases)}
             </div>
           </div>
           <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-4">
             <div className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Active Flags
+              {t('activeFlags')}
             </div>
             <div className="mt-1 text-2xl font-bold text-[var(--mono-white)]">
-              {stats.activeFlags.toLocaleString()}
+              {format.number(stats.activeFlags)}
             </div>
           </div>
         </div>
@@ -130,8 +133,8 @@ export default function UsersPage() {
             type="text"
             value={localSearch}
             onChange={handleSearchChange}
-            placeholder="Search by username or ID..."
-            aria-label="Search users by username or ID"
+            placeholder={t('searchUsersPlaceholder')}
+            aria-label={t('searchUsersLabel')}
             className="w-full border border-[var(--mod-border)] bg-[var(--mod-surface)] py-2 pl-9 pr-4 text-sm text-[var(--mono-white)] placeholder-[var(--mod-text-dim)] outline-none"
           />
         </div>
@@ -143,21 +146,21 @@ export default function UsersPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent variant="mod">
-            <SelectItem value="totalCases" variant="mod">Most Cases</SelectItem>
-            <SelectItem value="lastCaseDate" variant="mod">Recent Activity</SelectItem>
+            <SelectItem value="totalCases" variant="mod">{t('mostCases')}</SelectItem>
+            <SelectItem value="lastCaseDate" variant="mod">{t('recentActivity')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {isLoading ? (
-        <div className="py-12 text-center text-[var(--mod-text-dim)]">Loading users...</div>
+        <div className="py-12 text-center text-[var(--mod-text-dim)]">{t('loadingUsers')}</div>
       ) : error ? (
         <div className="border border-red-500/30 bg-[var(--mod-surface)] p-8 text-center text-red-400">
-          Failed to load users. Please try again later.
+          {t('failedToLoadUsers')}
         </div>
       ) : users.length === 0 ? (
         <div className="border border-[var(--mod-border)] bg-[var(--mod-surface)] p-8 text-center text-[var(--mod-text-muted)]">
-          {searchParam ? 'No users match your search.' : 'No moderated users found.'}
+          {searchParam ? t('noUsersMatchSearch') : t('noModeratedUsers')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -175,17 +178,17 @@ export default function UsersPage() {
             disabled={pageParam <= 1}
             className="border border-[var(--mod-border)] px-3 py-1 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface)] disabled:opacity-30"
           >
-            Previous
+            {t('previous')}
           </button>
           <span className="text-sm text-[var(--mod-text-dim)]">
-            Page {pageParam} of {totalPages}
+            {t('pageOf', { page: pageParam, totalPages })}
           </span>
           <button
             onClick={() => updateParams({ page: String(pageParam + 1) })}
             disabled={pageParam >= totalPages}
             className="border border-[var(--mod-border)] px-3 py-1 text-sm text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface)] disabled:opacity-30"
           >
-            Next
+            {t('next')}
           </button>
         </div>
       )}
@@ -194,6 +197,8 @@ export default function UsersPage() {
 }
 
 function UserRow({ user, guildId }: { user: ModeratedUser; guildId: string }) {
+  const t = useTranslations('Moderation');
+  const format = useFormatter();
   // Server status from cache - only show badge if confirmed in server
   // 'unknown' means we haven't fetched yet (click profile to see full status)
   const showInServerBadge = user.serverStatus === 'in_server';
@@ -201,17 +206,23 @@ function UserRow({ user, guildId }: { user: ModeratedUser; guildId: string }) {
   // Sort actions by severity/count
   const sortedActions = Object.entries(user.caseBreakdown).sort(([, a], [, b]) => b - a);
 
-  // Calculate time since first/last case
-  const getTimeAgo = (dateStr: string | null) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 30) return `${diffDays}d ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-    return `${Math.floor(diffDays / 365)}y ago`;
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case 'BAN': return t('actionBan');
+      case 'UNBAN': return t('actionUnban');
+      case 'KICK': return t('actionKick');
+      case 'TIMEOUT': return t('actionTimeout');
+      case 'WARN': return t('actionWarning');
+      case 'SOFTBAN': return t('actionSoftban');
+      case 'TEMPBAN': return t('actionTempban');
+      case 'MUTE_TEXT': return t('actionMuteText');
+      case 'MUTE_VOICE': return t('actionMuteVoice');
+      case 'MUTE_BOTH': return t('actionMute');
+      case 'UNMUTE_TEXT': return t('actionUnmuteText');
+      case 'UNMUTE_VOICE': return t('actionUnmuteVoice');
+      case 'UNMUTE_BOTH': return t('actionUnmute');
+      default: return action;
+    }
   };
 
   return (
@@ -275,11 +286,11 @@ function UserRow({ user, guildId }: { user: ModeratedUser; guildId: string }) {
             {sortedActions.slice(0, 3).map(([action, count], idx) => (
               <span key={action}>
                 {idx > 0 && ' · '}
-                {count} {action.toLowerCase().replace(/_/g, ' ')}{count !== 1 ? 's' : ''}
+                {t('actionCaseCount', { count, action: actionLabel(action) })}
               </span>
             ))}
             {sortedActions.length > 3 && (
-              <span> · +{sortedActions.length - 3} more</span>
+              <span> · {t('moreCount', { count: sortedActions.length - 3 })}</span>
             )}
           </div>
 
@@ -287,13 +298,13 @@ function UserRow({ user, guildId }: { user: ModeratedUser; guildId: string }) {
           <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--mod-text-dim)]">
             <span className="flex items-center gap-1">
               <IconGavel size={12} />
-              {user.totalCases} case{user.totalCases !== 1 ? 's' : ''}
+              {t('caseCountShort', { count: user.totalCases })}
             </span>
             {user.firstCaseDate && (
-              <span>First: {getTimeAgo(user.firstCaseDate)}</span>
+              <span>{t('firstDate', { date: format.dateTime(new Date(user.firstCaseDate), { dateStyle: 'short' }) })}</span>
             )}
             {user.lastCaseDate && (
-              <span>Last: {getTimeAgo(user.lastCaseDate)}</span>
+              <span>{t('lastDate', { date: format.dateTime(new Date(user.lastCaseDate), { dateStyle: 'short' }) })}</span>
             )}
           </div>
         </div>

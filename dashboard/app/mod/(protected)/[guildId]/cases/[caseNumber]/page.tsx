@@ -13,27 +13,42 @@ import { EvidenceGallery } from "@/components/mod/evidence-gallery";
 import { EvidenceWizard } from "@/components/mod/evidence-wizard";
 import { CaseNotes } from "@/components/mod/case-notes";
 import { IconFileExport, IconLock } from "@/lib/mod-icons";
-
-const ACTION_LABELS: Record<string, string> = {
-  BAN: "Ban",
-  UNBAN: "Unban",
-  KICK: "Kick",
-  TIMEOUT: "Timeout",
-  WARN: "Warning",
-  SOFTBAN: "Softban",
-  TEMPBAN: "Tempban",
-  MUTE_TEXT: "Mute (Text)",
-  MUTE_VOICE: "Mute (Voice)",
-  MUTE_BOTH: "Mute",
-  UNMUTE_TEXT: "Unmute (Text)",
-  UNMUTE_VOICE: "Unmute (Voice)",
-  UNMUTE_BOTH: "Unmute",
-};
+import { useFormatter, useTranslations } from "next-intl";
 
 export default function CaseDetailPage() {
+  const t = useTranslations("Moderation");
+  const format = useFormatter();
   const params = useParams();
   const guildId = params.guildId as string;
   const caseNumber = parseInt(params.caseNumber as string);
+
+  const actionLabel = (action: string) => {
+    switch (action) {
+      case "BAN": return t("actionBan");
+      case "UNBAN": return t("actionUnban");
+      case "KICK": return t("actionKick");
+      case "TIMEOUT": return t("actionTimeout");
+      case "WARN": return t("actionWarning");
+      case "SOFTBAN": return t("actionSoftban");
+      case "TEMPBAN": return t("actionTempban");
+      case "MUTE_TEXT": return t("actionMuteText");
+      case "MUTE_VOICE": return t("actionMuteVoice");
+      case "MUTE_BOTH": return t("actionMute");
+      case "UNMUTE_TEXT": return t("actionUnmuteText");
+      case "UNMUTE_VOICE": return t("actionUnmuteVoice");
+      case "UNMUTE_BOTH": return t("actionUnmute");
+      default: return action;
+    }
+  };
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "OPEN": return t("statusOpen");
+      case "CLOSED": return t("statusClosed");
+      case "VOID": return t("statusVoid");
+      default: return status;
+    }
+  };
   const { data: modCase, isLoading: caseLoading } = useSWR(
     ["case-detail", guildId, caseNumber],
     () => getCaseDetail(guildId, caseNumber),
@@ -71,7 +86,7 @@ export default function CaseDetailPage() {
   if (loading) {
     return (
       <div className="py-12 text-center text-[var(--mod-text-dim)]">
-        Loading case...
+        {t("loadingCase")}
       </div>
     );
   }
@@ -80,13 +95,13 @@ export default function CaseDetailPage() {
     return (
       <div className="py-12 text-center">
         <p className="text-[var(--mod-text-muted)]">
-          Case #{caseNumber} not found.
+          {t("caseNotFound", { caseNumber })}
         </p>
         <Link
           href={`/mod/${guildId}/cases`}
           className="mt-4 inline-block text-sm text-[var(--mod-text-dim)] underline"
         >
-          Back to cases
+          {t("backToCases")}
         </Link>
       </div>
     );
@@ -101,13 +116,13 @@ export default function CaseDetailPage() {
             href={`/mod/${guildId}/cases`}
             className="mb-2 inline-block text-xs text-[var(--mod-text-dim)] hover:text-[var(--mod-text-muted)]"
           >
-            ← Back to cases
+            ← {t("backToCases")}
           </Link>
           <h1 className="text-2xl font-bold text-[var(--mono-white)]">
-            Case #{modCase.caseNumber}
+            {t("caseTitle", { caseNumber: modCase.caseNumber })}
           </h1>
           <p className="text-sm text-[var(--mod-text-muted)]">
-            {ACTION_LABELS[modCase.action] ?? modCase.action} —{" "}
+            {actionLabel(modCase.action)} —{" "}
             {modCase.targetTag}
           </p>
         </div>
@@ -118,7 +133,7 @@ export default function CaseDetailPage() {
             className="flex items-center gap-1 border border-[var(--mod-border)] px-3 py-1 text-xs text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mod-surface-hover)] disabled:opacity-30"
           >
             <IconFileExport size={14} />
-            {exporting ? "Exporting..." : "Export Case"}
+            {exporting ? t("exportingCase") : t("exportCase")}
           </button>
           <span
             className={`flex items-center gap-1.5 border px-3 py-1 text-xs ${
@@ -130,7 +145,7 @@ export default function CaseDetailPage() {
             }`}
           >
             {modCase.status === "CLOSED" && <IconLock size={12} />}
-            {modCase.status}
+            {statusLabel(modCase.status)}
           </span>
         </div>
       </div>
@@ -140,7 +155,7 @@ export default function CaseDetailPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Target
+              {t("target")}
             </label>
             <p className="text-sm text-[var(--mono-white)]">
               <Link
@@ -156,7 +171,7 @@ export default function CaseDetailPage() {
           </div>
           <div>
             <label className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Moderator
+              {t("moderator")}
             </label>
             <p className="text-sm text-[var(--mono-white)]">
               <Link
@@ -172,27 +187,27 @@ export default function CaseDetailPage() {
           </div>
           <div className="sm:col-span-2">
             <label className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Reason
+              {t("reason")}
             </label>
             <p className="text-sm text-[var(--mod-text)]">
-              {modCase.reason ?? "No reason provided"}
+              {modCase.reason ?? t("noReasonProvided")}
             </p>
           </div>
           <div>
             <label className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-              Created
+              {t("created")}
             </label>
             <p className="text-sm text-[var(--mod-text)]">
-              {new Date(modCase.createdAt).toLocaleString()}
+              {format.dateTime(new Date(modCase.createdAt), { dateStyle: "medium", timeStyle: "short" })}
             </p>
           </div>
           {modCase.duration && (
             <div>
               <label className="text-xs uppercase tracking-wider text-[var(--mod-text-dim)]">
-                Duration
+                {t("duration")}
               </label>
               <p className="text-sm text-[var(--mod-text)]">
-                {modCase.duration}s
+                {t("durationSeconds", { seconds: modCase.duration })}
               </p>
             </div>
           )}
@@ -202,22 +217,20 @@ export default function CaseDetailPage() {
       {/* Weak evidence warning */}
       {summary?.hasWeakEvidenceOnly && (
         <div className="mb-4  border border-yellow-800 bg-yellow-950/20 px-4 py-3 text-sm text-yellow-400">
-          This case only has Discord message links as evidence. These may become
-          unavailable if messages are deleted. Consider adding stronger
-          evidence.
+          {t("weakEvidenceWarning")}
         </div>
       )}
 
       {/* Evidence Section */}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--mono-white)]">
-          Evidence {summary ? `(${summary.total})` : ""}
+          {t("evidenceWithCount", { count: summary?.total ?? 0 })}
         </h2>
         <Link
           href={`/mod/${guildId}/cases/${caseNumber}/evidence`}
           className="text-xs text-[var(--mod-text-dim)] underline hover:text-[var(--mod-text-muted)]"
         >
-          Full evidence view →
+          {t("fullEvidenceView")} →
         </Link>
       </div>
 
@@ -232,7 +245,7 @@ export default function CaseDetailPage() {
       {/* Upload */}
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-[var(--mono-white)]">
-          Add Evidence
+          {t("addEvidence")}
         </h2>
         <EvidenceWizard
           guildId={guildId}

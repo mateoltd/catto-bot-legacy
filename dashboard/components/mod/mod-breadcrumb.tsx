@@ -3,18 +3,11 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useGuildInfo } from '@/hooks/use-guild-info';
-
-const SEGMENT_LABELS: Record<string, string> = {
-  cases: 'Cases',
-  evidence: 'Evidence',
-  audit: 'Audit Log',
-  reports: 'Reports',
-  automod: 'Auto-Mod Rules',
-  filters: 'Filters & Triggers',
-  settings: 'Settings',
-};
+import { useTranslations } from 'next-intl';
 
 export function ModBreadcrumb() {
+  const t = useTranslations('Moderation');
+  const navigationT = useTranslations('Navigation');
   const pathname = usePathname();
   const params = useParams();
   const guildId = params.guildId as string;
@@ -23,7 +16,7 @@ export function ModBreadcrumb() {
   // Build breadcrumb segments from pathname
   // /mod/123456/cases/5 -> ["SERVERS", "Guild Name", "Cases", "#5"]
   const segments: { label: string; href?: string }[] = [
-    { label: 'SERVERS', href: '/mod' },
+    { label: navigationT('servers'), href: '/mod' },
   ];
 
   if (guildInfo) {
@@ -38,6 +31,20 @@ export function ModBreadcrumb() {
   const parts = remainder.split('/').filter(Boolean);
 
   let currentPath = basePath;
+  const segmentLabel = (segment: string) => {
+    switch (segment) {
+      case 'cases': return navigationT('cases');
+      case 'evidence': return navigationT('evidence');
+      case 'users': return navigationT('users');
+      case 'analytics': return navigationT('analytics');
+      case 'audit': return t('auditLog');
+      case 'reports': return t('reports');
+      case 'automod': return t('automodRules');
+      case 'filters': return t('filtersAndTriggers');
+      case 'settings': return t('settings');
+      default: return segment.charAt(0).toUpperCase() + segment.slice(1);
+    }
+  };
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     currentPath += `/${part}`;
@@ -51,7 +58,7 @@ export function ModBreadcrumb() {
       });
     } else {
       segments.push({
-        label: SEGMENT_LABELS[part] || part.charAt(0).toUpperCase() + part.slice(1),
+        label: segmentLabel(part),
         href: isLast ? undefined : currentPath,
       });
     }
