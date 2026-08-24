@@ -1,16 +1,4 @@
-# Catto v2.x - Discord Bot
-
-## Features
-
-- **TypeScript** - Fully typed with strict mode enabled
-- **Sapphire Framework** - Modern Discord bot framework with powerful features
-- **Modular Architecture** - Well-organized command and event structure
-- **Preconditions** - Built-in permission checks (OwnerOnly, GuildOnly, DMOnly)
-- **Code Quality** - ESLint and Prettier configured for consistent code style
-- **Logging** - Integrated logging system via @sapphire/plugin-logger
-- **Fast Development** - Hot reload with tsx watch mode
-- **REST API** - Built-in HTTP API with OAuth2 support via @sapphire/plugin-api
-- **Database & Cache** - PostgreSQL (Prisma) and Redis (ioredis) integration
+> This is a legacy edition of Catto, the Discord bot. It is maintained temporarily as the full rewrite finishes, which is yet to decide if it'll be OSS.
 
 ## Getting Started
 
@@ -19,25 +7,6 @@
 - [Node.js](https://nodejs.org/) v20 or higher
 - [pnpm](https://pnpm.io/) v10+
 - [Docker](https://www.docker.com/) and Docker Compose (recommended for database)
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/catto.git
-   cd catto
-   ```
-
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-
-3. Configure environment variables:
-   Copy the example environment file and fill in your bot token.
-   ```bash
-   cp .env.example .env
-   ```
 
 ### Running the Bot
 
@@ -55,21 +24,6 @@ If you prefer a persistent database, you can still use Docker Compose:
 docker-compose up -d
 pnpm prisma:migrate
 pnpm dev
-```
-
-## Testing
-
-Run the test suite using Vitest:
-
-```bash
-# Run tests once
-pnpm test
-
-# Run tests in watch mode
-pnpm test:watch
-
-# Run tests with coverage report
-pnpm test:coverage
 ```
 
 ## Contributing
