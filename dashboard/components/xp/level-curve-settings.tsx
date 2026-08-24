@@ -203,11 +203,11 @@ function FormulaEditor({
             : "qualifying messages per level"}
         </p>
       </div>
-      <div ref={chartContainerRef} className="h-[320px] px-3 py-4 sm:px-5">
+      <div ref={chartContainerRef} className="h-[320px] overflow-hidden px-3 py-4 sm:px-5">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${chart.width} ${chart.height}`}
-          className="h-full w-full touch-none overflow-visible text-foreground"
+          className="h-full w-full touch-none overflow-hidden text-foreground"
           role="group"
           aria-label="Interactive XP requirement curve"
         >

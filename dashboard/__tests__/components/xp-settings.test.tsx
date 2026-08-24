@@ -104,9 +104,10 @@ describe("XP settings", () => {
 
     render(<Example />);
 
-    expect(
-      screen.getByLabelText("Interactive XP requirement curve"),
-    ).toBeInTheDocument();
+    const curve = screen.getByLabelText("Interactive XP requirement curve");
+    expect(curve).toBeInTheDocument();
+    expect(curve).toHaveClass("overflow-hidden");
+    expect(curve.parentElement).toHaveClass("overflow-hidden");
     expect(
       screen.getByRole("slider", { name: "Early progression handle" }),
     ).toBeInTheDocument();
