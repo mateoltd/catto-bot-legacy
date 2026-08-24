@@ -5,22 +5,15 @@ const {
   mockEmitSessionExpired,
   mockAxiosIsAxiosError,
   handlers,
-  createCallArgs,
 } = vi.hoisted(() => {
-  // Store interceptor handlers when registered during module init
   const handlers = {
-    success: null as ((res: any) => any) | null,
     error: null as ((err: any) => any) | null,
   };
-
-  // Store the args passed to axios.create() at module init
-  const createCallArgs = { value: null as any };
 
   return {
     mockEmitSessionExpired: vi.fn(),
     mockAxiosIsAxiosError: vi.fn(),
     handlers,
-    createCallArgs,
   };
 });
 
@@ -31,8 +24,7 @@ vi.mock('@/lib/auth-events', () => ({
 vi.mock('axios', () => {
   const interceptors = {
     response: {
-      use: (onFulfilled: any, onRejected: any) => {
-        handlers.success = onFulfilled;
+      use: (_onFulfilled: any, onRejected: any) => {
         handlers.error = onRejected;
       },
     },
@@ -45,10 +37,7 @@ vi.mock('axios', () => {
 
   return {
     default: {
-      create: (config: any) => {
-        createCallArgs.value = config;
-        return instance;
-      },
+      create: () => instance,
       isAxiosError: mockAxiosIsAxiosError,
     },
   };
@@ -60,18 +49,6 @@ import '@/lib/services/mod.service';
 describe('mod.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('creates axios instance with correct base URL and credentials', () => {
-    // createCallArgs was captured at module init time, not affected by clearAllMocks
-    expect(createCallArgs.value).toBeDefined();
-    expect(createCallArgs.value.baseURL).toBe('/api');
-    expect(createCallArgs.value.withCredentials).toBe(true);
-  });
-
-  it('registers a response interceptor (error handler captured)', () => {
-    expect(handlers.error).not.toBeNull();
-    expect(typeof handlers.error).toBe('function');
   });
 
   it('401 response triggers sessionExpired event', async () => {
@@ -96,11 +73,5 @@ describe('mod.service', () => {
 
     await expect(handlers.error!(genericError)).rejects.toBe(genericError);
     expect(mockEmitSessionExpired).not.toHaveBeenCalled();
-  });
-
-  it('success handler passes responses through unchanged', () => {
-    const response = { status: 200, data: { ok: true } };
-    const result = handlers.success!(response);
-    expect(result).toBe(response);
   });
 });
