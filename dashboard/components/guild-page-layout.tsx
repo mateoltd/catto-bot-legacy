@@ -3,12 +3,12 @@ import Image from 'next/image';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { BrandMark } from '@/components/dashboard/brand-mark';
 import { AccountMenu } from '@/components/dashboard/account-menu';
+import { GuildSidebar } from '@/components/dashboard/guild-sidebar';
 import {
-  GuildSidebar,
   getGuildNavigation,
   type GuildNavigationAccess,
   type GuildNavigationItem,
-} from '@/components/dashboard/guild-sidebar';
+} from '@/lib/guild-navigation';
 import { UserDropdown } from '@/components/user-dropdown';
 import type { Guild, User } from '@/lib/types';
 

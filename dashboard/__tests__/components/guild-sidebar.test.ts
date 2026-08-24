@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getGuildNavigation } from '@/components/dashboard/guild-sidebar';
+import { getGuildNavigation } from '@/lib/guild-navigation';
 
 function itemIds(canConfigure: boolean, canModerate: boolean) {
   return getGuildNavigation('guild-1', { canConfigure, canModerate }).flatMap((section) =>
