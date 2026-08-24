@@ -5,10 +5,16 @@ import RewardsConfigForm from '@/components/rewards-config-form';
 
 export default async function RewardsPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild, user } = await getGuildPageData(guildId);
+  const { guild, user, access } = await getGuildPageData(guildId);
 
   return (
-    <GuildPageLayout guild={guild} user={user} activeTab="rewards" pageTitle="Level Rewards">
+    <GuildPageLayout
+      guild={guild}
+      user={user}
+      access={access}
+      activeTab="rewards"
+      pageTitle="Level Rewards"
+    >
       <RewardsConfigForm guildId={guildId} />
     </GuildPageLayout>
   );

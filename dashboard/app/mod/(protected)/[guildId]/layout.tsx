@@ -1,138 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { getModDashboardAccess } from '@/lib/services/mod.service';
 import { AccountSwitcher } from '@/components/mod/account-switcher';
+import { GuildSidebar } from '@/components/dashboard/guild-sidebar';
 import { ModBreadcrumb } from '@/components/mod/mod-breadcrumb';
 import { CommandPalette } from '@/components/mod/command-palette';
 import { ShortcutHelp } from '@/components/mod/shortcut-help';
 import { FloatingActionButton } from '@/components/mod/fab';
 import { useGuildInfo } from '@/hooks/use-guild-info';
 import { useModEvents, type ModEvent } from '@/hooks/use-mod-events';
-import {
-  IconLayoutDashboard,
-  IconGavel,
-  IconFolder,
-  IconClipboardList,
-  IconShieldCheck,
-  IconFilter,
-  IconMessageReport,
-  IconMenu2,
-  IconX,
-  IconChartBar,
-  IconUsers,
-} from '@/lib/mod-icons';
-import type { Icon } from '@tabler/icons-react';
-
-interface NavItem {
-  id: string;
-  label: string;
-  href: string;
-  icon: Icon;
-  shortcut?: string;
-  disabled?: boolean;
-}
-
-const MODERATION_NAV: NavItem[] = [
-  { id: 'overview', label: 'Overview', href: '', icon: IconLayoutDashboard, shortcut: 'G O' },
-  { id: 'cases', label: 'Cases', href: '/cases', icon: IconGavel, shortcut: 'G C' },
-  { id: 'evidence', label: 'All Evidence', href: '/evidence', icon: IconFolder, shortcut: 'G E' },
-  { id: 'users', label: 'Users', href: '/users', icon: IconUsers, shortcut: 'G U' },
-  { id: 'analytics', label: 'Analytics', href: '/analytics', icon: IconChartBar, shortcut: 'G A' },
-  { id: 'audit', label: 'Audit Log', href: '/audit', icon: IconClipboardList, disabled: true },
-  { id: 'reports', label: 'Reports', href: '/reports', icon: IconMessageReport, disabled: true },
-];
-
-const CONFIG_NAV: NavItem[] = [
-  { id: 'automod', label: 'Auto-Mod Rules', href: '/automod', icon: IconShieldCheck, disabled: true },
-  { id: 'filters', label: 'Filters & Triggers', href: '/filters', icon: IconFilter, disabled: true },
-  { id: 'settings', label: 'Settings', href: '/settings', icon: IconLayoutDashboard, disabled: true },
-];
-
-function SoonBadge() {
-  return (
-    <span
-      className="ml-auto border px-1.5 py-0.5 text-[10px] uppercase tracking-wider"
-      style={{
-        fontFamily: 'var(--font-mono)',
-        background: 'var(--mod-soon-bg)',
-        color: 'var(--mod-soon-text)',
-        borderColor: 'var(--mod-soon-border)',
-      }}
-    >
-      SOON
-    </span>
-  );
-}
-
-function NavSection({ label, items, basePath, pathname, onNavClick }: {
-  label: string;
-  items: NavItem[];
-  basePath: string;
-  pathname: string;
-  onNavClick?: () => void;
-}) {
-  return (
-    <div className="mb-4">
-      <p
-        className="mb-1 px-3 text-[10px] uppercase tracking-[0.2em] text-[var(--mod-text-dim)]"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        {label}
-      </p>
-      <div className="space-y-0.5">
-        {items.map((item) => {
-          const href = `${basePath}${item.href}`;
-          const isActive =
-            item.href === ''
-              ? pathname === basePath
-              : pathname.startsWith(href);
-
-          if (item.disabled) {
-            return (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 px-3 py-2 text-sm opacity-30"
-              >
-                <item.icon size={16} className="text-[var(--mod-text-dim)]" />
-                <span className="text-[var(--mod-text-muted)]">{item.label}</span>
-                <SoonBadge />
-              </div>
-            );
-          }
-
-          return (
-            <Link
-              key={item.id}
-              href={href}
-              onClick={onNavClick}
-              className={`flex items-center gap-2 px-3 py-2 text-sm transition-[background-color] duration-75 ${
-                isActive
-                  ? 'bg-[var(--mono-800)] text-[var(--mono-white)]'
-                  : 'text-[var(--mod-text-muted)] hover:bg-[var(--mono-850)] hover:text-[var(--mod-text)]'
-              }`}
-            >
-              <item.icon size={16} className={isActive ? 'text-[var(--mono-white)]' : 'text-[var(--mod-text-dim)]'} />
-              <span>{item.label}</span>
-              {item.shortcut && (
-                <span
-                  className="ml-auto text-[10px] tracking-wider text-[var(--mod-text-dim)]"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                >
-                  {item.shortcut}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+import { IconMenu2, IconShieldCheck, IconX } from '@/lib/mod-icons';
 
 function isInputFocused(): boolean {
   const active = document.activeElement;
@@ -142,11 +23,9 @@ function isInputFocused(): boolean {
 }
 
 export default function GuildModLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
   const guildId = params.guildId as string;
-  const basePath = `/mod/${guildId}`;
   const guildInfo = useGuildInfo(guildId);
   const { data: access, isLoading: accessLoading } = useSWR(
     ['dashboard-access', guildId],
@@ -164,11 +43,9 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
     sidebarOpenRef.current = sidebarOpen;
   }, [sidebarOpen]);
 
-  // Real-time event handling via SSE
   const { mutate: globalMutate } = useSWRConfig();
   const handleModEvent = useCallback(
     (event: ModEvent) => {
-      // Revalidate relevant SWR keys based on event type
       if (event.type === 'evidence:created' || event.type === 'evidence:amended' || event.type === 'evidence:status-changed') {
         globalMutate((key: unknown) => {
           if (!Array.isArray(key)) return false;
@@ -191,17 +68,8 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
     onEvent: handleModEvent,
   });
 
-  // Close sidebar on route change (covers browser back/forward + keyboard nav)
-  useEffect(() => {
-    // The route is external state; navigation always dismisses the mobile drawer.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    closeSidebar();
-  }, [pathname, closeSidebar]);
-
-  // All keyboard shortcuts: Escape (sidebar), G-prefix nav, ? help
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Escape closes sidebar regardless of input focus
       if (e.key === 'Escape') {
         if (sidebarOpenRef.current) {
           closeSidebar();
@@ -212,18 +80,15 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
       if (isInputFocused()) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      // ? shows shortcut help
       if (e.key === '?') {
         e.preventDefault();
         setShowShortcuts((prev) => !prev);
         return;
       }
 
-      // G-prefix: first press sets flag, second press navigates
       if (e.key === 'g' || e.key === 'G') {
         if (!gPressedRef.current) {
           gPressedRef.current = true;
-          // Reset after 1s if no second key
           if (gTimerRef.current) clearTimeout(gTimerRef.current);
           gTimerRef.current = setTimeout(() => {
             gPressedRef.current = false;
@@ -265,7 +130,7 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
           case 's':
           case 'S':
             e.preventDefault();
-            router.push('/mod');
+            router.push('/guilds');
             break;
         }
       }
@@ -280,7 +145,6 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
 
   const handleShowShortcuts = useCallback(() => setShowShortcuts(true), []);
 
-  // ─── Access gate ───
   if (accessLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--mod-bg)]">
@@ -314,7 +178,7 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
             You don&apos;t have permission to view this server&apos;s moderation dashboard.
           </p>
           <Link
-            href="/mod"
+            href="/guilds"
             className="border border-[var(--mod-border)] bg-[var(--mod-surface)] px-4 py-2 text-xs uppercase tracking-widest text-[var(--mod-text-muted)] transition-[background-color] duration-75 hover:bg-[var(--mono-850)] hover:text-[var(--mono-white)]"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
@@ -325,69 +189,32 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
     );
   }
 
-  const guildIconUrl = guildInfo?.icon
-    ? `https://cdn.discordapp.com/icons/${guildId}/${guildInfo.icon}.png?size=64`
-    : null;
-
   const sidebarContent = (
-    <>
-      {/* Guild header */}
-      <div className="border-b border-[var(--mod-border)] p-4">
-        <Link
-          href="/mod"
-          className="mb-3 flex items-center gap-1 text-xs uppercase tracking-widest text-[var(--mod-text-dim)] transition-[background-color] duration-75 hover:text-[var(--mod-text-muted)]"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          &larr; ALL SERVERS
-        </Link>
-        <div className="flex items-center gap-2">
-          {guildIconUrl ? (
-            <Image
-              src={guildIconUrl}
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8 shrink-0"
-            />
-          ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-[var(--mono-700)] text-xs font-medium text-[var(--mono-white)]">
-              {guildInfo?.name?.charAt(0) ?? '?'}
-            </div>
-          )}
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--mono-white)]">
-            {guildInfo?.name ?? 'Loading...'}
-          </span>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-auto p-2">
-        <NavSection label="MODERATION" items={MODERATION_NAV} basePath={basePath} pathname={pathname} onNavClick={closeSidebar} />
-        <NavSection label="CONFIGURATION" items={CONFIG_NAV} basePath={basePath} pathname={pathname} onNavClick={closeSidebar} />
-      </nav>
-
-      <AccountSwitcher />
-    </>
+    <GuildSidebar
+      guild={{
+        id: guildId,
+        name: guildInfo?.name ?? 'Loading…',
+        icon: guildInfo?.icon ?? null,
+      }}
+      access={{ canConfigure: access.canConfigure, canModerate: true }}
+      account={<AccountSwitcher />}
+      onNavigate={closeSidebar}
+    />
   );
 
   return (
     <div className="flex min-h-screen">
-      {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen w-56 flex-col border-r border-[var(--mod-border)] bg-[var(--mod-surface)] md:flex">
         {sidebarContent}
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-40 bg-black/60 md:hidden"
             onClick={closeSidebar}
           />
-          {/* Drawer */}
           <aside className="fixed inset-y-0 left-0 z-50 flex w-56 flex-col border-r border-[var(--mod-border)] bg-[var(--mod-surface)] md:hidden">
-            {/* Close button */}
             <div className="flex justify-end p-2">
               <button
                 onClick={closeSidebar}
@@ -401,9 +228,7 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
         </>
       )}
 
-      {/* Main content */}
       <main className="flex-1 overflow-auto">
-        {/* Mobile top bar */}
         <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--mod-border)] bg-[var(--mod-surface)] px-4 py-3 md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -416,19 +241,14 @@ export default function GuildModLayout({ children }: { children: React.ReactNode
           </span>
         </div>
 
-        <div className="mx-auto max-w-6xl px-4 py-5 md:px-6 md:py-8">
+        <div className="w-full px-4 py-5 md:px-6 md:py-8">
           <ModBreadcrumb />
           {children}
         </div>
       </main>
 
-      {/* Command palette */}
       <CommandPalette onShowShortcuts={handleShowShortcuts} />
-
-      {/* Floating action button (mobile) */}
       <FloatingActionButton />
-
-      {/* Shortcut help modal */}
       {showShortcuts && <ShortcutHelp onClose={() => setShowShortcuts(false)} />}
     </div>
   );

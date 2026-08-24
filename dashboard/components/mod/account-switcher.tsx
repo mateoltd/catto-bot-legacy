@@ -23,7 +23,7 @@ export function AccountSwitcher({ variant = 'sidebar' }: { variant?: 'sidebar' |
     <AccountMenu
       user={{ ...user, displayName: user.global_name }}
       variant={variant}
-      logoutDestination="/mod/login"
+      logoutDestination="/"
       allowAccountSwitch
     />
   );

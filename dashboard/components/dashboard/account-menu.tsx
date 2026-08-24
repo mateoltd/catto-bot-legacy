@@ -1,13 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   IconArrowsExchange,
   IconChevronDown,
-  IconGavel,
   IconLogout,
 } from '@tabler/icons-react';
 
@@ -22,7 +20,6 @@ interface AccountMenuProps {
   user: AccountIdentity;
   variant?: 'header' | 'sidebar' | 'inline';
   logoutDestination?: string;
-  showModerationLink?: boolean;
   allowAccountSwitch?: boolean;
 }
 
@@ -30,7 +27,6 @@ export function AccountMenu({
   user,
   variant = 'header',
   logoutDestination = '/',
-  showModerationLink = false,
   allowAccountSwitch = false,
 }: AccountMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,8 +61,7 @@ export function AccountMenu({
   };
 
   const switchAccount = () => {
-    const redirectPath = window.location.pathname.startsWith('/mod') ? '/mod' : '/guilds';
-    document.cookie = `mod_auth_redirect=${redirectPath}; path=/; max-age=300; SameSite=Lax`;
+    document.cookie = 'mod_auth_redirect=/guilds; path=/; max-age=300; SameSite=Lax';
     window.open('/api/oauth/login?prompt=consent', '_self');
   };
 
@@ -115,17 +110,6 @@ export function AccountMenu({
             <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">{user.id}</p>
           </div>
           <div className="p-1">
-            {showModerationLink && (
-              <Link
-                href="/mod"
-                role="menuitem"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <IconGavel size={15} />
-                Moderation dashboard
-              </Link>
-            )}
             {allowAccountSwitch && (
               <button
                 type="button"

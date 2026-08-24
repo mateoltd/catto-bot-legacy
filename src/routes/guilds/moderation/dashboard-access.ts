@@ -1,22 +1,6 @@
 import { Route } from '@sapphire/plugin-api';
 import { ApiGate } from '#lib/validation/ApiGate.js';
-
-/** Mod dashboard permission keys to check */
-const DASHBOARD_PERMISSIONS = [
-  'mod.evidence.add',
-  'mod.evidence.list',
-  'mod.evidence.view',
-  'mod.evidence.capture',
-  'mod.case',
-  'mod.history',
-  'mod.warn',
-  'mod.kick',
-  'mod.ban',
-  'mod.timeout',
-  'mod.note.add',
-  'mod.note.list',
-  'mod.panel',
-] as const;
+import { MODERATION_DASHBOARD_PERMISSIONS } from '#lib/validation/moderationDashboardPermissions.js';
 
 export class DashboardAccessRoute extends Route {
   public constructor(context: Route.LoaderContext, options: Route.Options) {
@@ -36,10 +20,9 @@ export class DashboardAccessRoute extends Route {
       if (!gate)
         return response.status(401).json({ error: 'Unauthorized', code: 'NOT_AUTHENTICATED' });
 
-      // Check all dashboard-relevant permissions
       const permissions: Record<string, { allowed: boolean; reason?: string }> = {};
 
-      for (const key of DASHBOARD_PERMISSIONS) {
+      for (const key of MODERATION_DASHBOARD_PERMISSIONS) {
         const result = await gate.checkAuth(key);
         permissions[key] = {
           allowed: result.ok,
@@ -47,7 +30,6 @@ export class DashboardAccessRoute extends Route {
         };
       }
 
-      // Determine accessible sections
       const canViewCases = permissions['mod.case']?.allowed || permissions['mod.history']?.allowed;
       const canViewEvidence = permissions['mod.evidence.view']?.allowed;
       const canAddEvidence = permissions['mod.evidence.add']?.allowed;
@@ -59,6 +41,7 @@ export class DashboardAccessRoute extends Route {
         guildId,
         isAdmin: gate.isAdmin,
         isOwner: gate.isOwner,
+        canConfigure: gate.isOwner || gate.member.permissions.has('ManageGuild'),
         hasAccess: hasAnyAccess,
         sections: {
           cases: canViewCases,

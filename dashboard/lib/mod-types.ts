@@ -132,6 +132,7 @@ export interface DashboardPermissions {
   guildId: string;
   isAdmin: boolean;
   isOwner: boolean;
+  canConfigure: boolean;
   hasAccess: boolean;
   sections: {
     cases: boolean;

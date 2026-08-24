@@ -11,11 +11,14 @@ interface BotGuild {
 
 export interface DashboardGuild extends Guild {
   botInstalled: boolean;
+  canConfigure: boolean;
+  canModerate: boolean;
 }
 
 export interface DashboardSession extends Omit<UserSession, 'guilds'> {
   guilds: DashboardGuild[];
   isBotApiAvailable: boolean;
+  isModerationApiAvailable: boolean;
 }
 
 export interface GuildStats {
@@ -50,63 +53,68 @@ async function getBotGuildIds(authCookie: string): Promise<Set<string> | null> {
   return new Set((payload.guilds ?? []).map((guild) => guild.id));
 }
 
+async function getModerationGuildIds(
+  authCookie: string,
+  guildIds: string[],
+): Promise<Set<string> | null> {
+  if (guildIds.length === 0) return new Set();
+
+  try {
+    const response = await fetch(botApiUrl('/api/guilds/accessible'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `DASHBOARD_AUTH=${authCookie}`,
+      },
+      body: JSON.stringify({ guildIds }),
+      cache: 'no-store',
+    });
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as { guildIds?: string[] };
+    return new Set(payload.guildIds ?? []);
+  } catch {
+    return null;
+  }
+}
+
+async function canModerateGuild(authCookie: string, guildId: string): Promise<boolean> {
+  const response = await requestBotApi(
+    `/api/guilds/${guildId}/moderation/dashboard-access`,
+    authCookie,
+  );
+  if (!response?.ok) return false;
+
+  const payload = (await response.json()) as { hasAccess?: boolean };
+  return payload.hasAccess === true;
+}
+
 export async function getDashboardSession(): Promise<DashboardSession | null> {
   const [session, authCookie] = await Promise.all([getUserSession(), getAuthCookie()]);
   if (!session || !authCookie) return null;
 
-  const botGuildIds = await getBotGuildIds(authCookie);
-  if (!botGuildIds) {
-    return {
-      ...session,
-      guilds: session.guilds.map((guild) => ({ ...guild, botInstalled: false })),
-      isBotApiAvailable: false,
-    };
-  }
+  const guildIds = session.guilds.map((guild) => guild.id);
+  const [botGuildIds, moderationGuildIds] = await Promise.all([
+    getBotGuildIds(authCookie),
+    getModerationGuildIds(authCookie, guildIds),
+  ]);
 
   return {
     ...session,
-    guilds: session.guilds.map((guild) => ({
-      ...guild,
-      botInstalled: botGuildIds.has(guild.id),
-    })),
-    isBotApiAvailable: true,
+    guilds: session.guilds.map((guild) => {
+      const canModerate = moderationGuildIds?.has(guild.id) ?? false;
+      const botInstalled = (botGuildIds?.has(guild.id) ?? false) || canModerate;
+
+      return {
+        ...guild,
+        botInstalled,
+        canConfigure: botInstalled && canManageGuild(guild),
+        canModerate,
+      };
+    }),
+    isBotApiAvailable: botGuildIds !== null,
+    isModerationApiAvailable: moderationGuildIds !== null,
   };
-}
-
-export async function getModerationDashboardSession(): Promise<UserSession | null> {
-  const [session, authCookie] = await Promise.all([getUserSession(), getAuthCookie()]);
-  if (!session || !authCookie) return null;
-  if (session.guilds.length === 0) return session;
-
-  const accessResponse = await (async () => {
-    try {
-      return await fetch(botApiUrl('/api/guilds/accessible'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: `DASHBOARD_AUTH=${authCookie}`,
-        },
-        body: JSON.stringify({ guildIds: session.guilds.map((guild) => guild.id) }),
-        cache: 'no-store',
-      });
-    } catch {
-      return null;
-    }
-  })();
-
-  if (accessResponse?.ok) {
-    const payload = (await accessResponse.json()) as { guildIds?: string[] };
-    const accessibleGuildIds = new Set(payload.guildIds ?? []);
-    return {
-      ...session,
-      guilds: session.guilds.filter((guild) => accessibleGuildIds.has(guild.id)),
-    };
-  }
-
-  const botGuildIds = await getBotGuildIds(authCookie);
-  return botGuildIds
-    ? { ...session, guilds: session.guilds.filter((guild) => botGuildIds.has(guild.id)) }
-    : session;
 }
 
 export async function getGuildStats(guildId: string, authCookie: string): Promise<GuildStats | null> {
@@ -124,9 +132,42 @@ export async function requireGuildPageData(guildId: string) {
   const guild = session.guilds.find((entry) => entry.id === guildId);
   if (!guild || !canManageGuild(guild)) redirect('/guilds');
 
-  const response = await requestBotApi(`/api/guilds/${guildId}`, authCookie);
+  const [response, canModerate] = await Promise.all([
+    requestBotApi(`/api/guilds/${guildId}`, authCookie),
+    canModerateGuild(authCookie, guildId),
+  ]);
   if (response?.status === 401) redirect('/');
   if (!response?.ok) redirect('/guilds?notice=unavailable');
 
-  return { guild, user: session.user, authCookie };
+  return {
+    guild,
+    user: session.user,
+    authCookie,
+    access: { canConfigure: true, canModerate },
+  };
+}
+
+export async function requireGuildOverviewPageData(guildId: string) {
+  const [session, authCookie] = await Promise.all([getUserSession(), getAuthCookie()]);
+  if (!session || !authCookie) redirect('/');
+
+  const guild = session.guilds.find((entry) => entry.id === guildId);
+  if (!guild) redirect('/guilds');
+
+  const canConfigure = canManageGuild(guild);
+  const canModerate = await canModerateGuild(authCookie, guildId);
+  if (!canConfigure && !canModerate) redirect('/guilds?notice=forbidden');
+
+  if (canConfigure) {
+    const response = await requestBotApi(`/api/guilds/${guildId}`, authCookie);
+    if (response?.status === 401) redirect('/');
+    if (!response?.ok) redirect('/guilds?notice=unavailable');
+  }
+
+  return {
+    guild,
+    user: session.user,
+    authCookie,
+    access: { canConfigure, canModerate },
+  };
 }

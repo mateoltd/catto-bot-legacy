@@ -1,0 +1,15 @@
+export const MODERATION_DASHBOARD_PERMISSIONS = [
+  'mod.evidence.add',
+  'mod.evidence.list',
+  'mod.evidence.view',
+  'mod.evidence.capture',
+  'mod.case',
+  'mod.history',
+  'mod.warn',
+  'mod.kick',
+  'mod.ban',
+  'mod.timeout',
+  'mod.note.add',
+  'mod.note.list',
+  'mod.panel',
+] as const;

@@ -13,18 +13,19 @@ import {
   type Icon,
 } from '@tabler/icons-react';
 import GuildPageLayout from '@/components/guild-page-layout';
-import { getGuildStats, getGuildPageData } from '@/lib/server';
+import { getGuildStats, getGuildOverviewPageData } from '@/lib/server';
 
 interface ModuleLink {
   title: string;
   description: string;
   href: string;
   icon: Icon;
+  capability: 'configure' | 'moderate';
 }
 
 export default async function GuildPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild, user, authCookie } = await getGuildPageData(guildId);
+  const { guild, user, authCookie, access } = await getGuildOverviewPageData(guildId);
   const stats = await getGuildStats(guildId, authCookie);
   const modules: ModuleLink[] = [
     {
@@ -32,36 +33,42 @@ export default async function GuildPage({ params }: { params: Promise<{ guildId:
       description: 'Message rewards, cooldowns, filters, announcements, and level curves.',
       href: `/guilds/${guild.id}/xp`,
       icon: IconBolt,
+      capability: 'configure',
     },
     {
       title: 'Voice XP',
       description: 'Voice session rewards, anti-farm rules, and participation filters.',
       href: `/guilds/${guild.id}/voice-xp`,
       icon: IconWaveSine,
+      capability: 'configure',
     },
     {
       title: 'Rewards',
       description: 'Role rewards, permission grants, announcements, and claim history.',
       href: `/guilds/${guild.id}/rewards`,
       icon: IconGift,
+      capability: 'configure',
     },
     {
       title: 'Temporary voice',
       description: 'Join channels, naming rules, defaults, moderation, and active rooms.',
       href: `/guilds/${guild.id}/temp-voice`,
       icon: IconMicrophone,
+      capability: 'configure',
     },
     {
       title: 'Event logging',
       description: 'Log destinations, event categories, ignored channels, and delivery state.',
       href: `/guilds/${guild.id}/logs`,
       icon: IconListDetails,
+      capability: 'configure',
     },
     {
       title: 'Moderation',
       description: 'Cases, evidence, user history, analytics, and moderation operations.',
       href: `/mod/${guild.id}`,
       icon: IconGavel,
+      capability: 'moderate',
     },
   ];
   const metricCards = [
@@ -72,7 +79,13 @@ export default async function GuildPage({ params }: { params: Promise<{ guildId:
   ];
 
   return (
-    <GuildPageLayout guild={guild} user={user} activeTab="overview" pageTitle="Overview">
+    <GuildPageLayout
+      guild={guild}
+      user={user}
+      access={access}
+      activeTab="overview"
+      pageTitle="Overview"
+    >
       <div className="mb-8 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
@@ -80,7 +93,9 @@ export default async function GuildPage({ params }: { params: Promise<{ guildId:
           </p>
           <h1 className="text-2xl font-semibold text-foreground">{guild.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Configure modules and move into moderation without changing context.
+            {access.canConfigure
+              ? 'Configure server modules and open moderation from one workspace.'
+              : 'Open the moderation tools available to your account.'}
           </p>
         </div>
         <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -129,22 +144,28 @@ export default async function GuildPage({ params }: { params: Promise<{ guildId:
           <IconUsers size={16} className="text-muted-foreground" />
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
-          {modules.map((module) => (
-            <Link
-              key={module.href}
-              href={module.href}
-              className="group flex min-h-32 items-start gap-4 border border-border bg-card p-5 hover:border-muted-foreground/50 hover:bg-accent"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-border bg-background text-muted-foreground group-hover:text-foreground">
-                <module.icon size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-medium text-foreground">{module.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{module.description}</p>
-              </div>
-              <IconArrowRight size={16} className="mt-1 shrink-0 text-muted-foreground" />
-            </Link>
-          ))}
+          {modules
+            .filter((module) =>
+              module.capability === 'configure' ? access.canConfigure : access.canModerate,
+            )
+            .map((module) => (
+              <Link
+                key={module.href}
+                href={module.href}
+                className="group flex min-h-32 items-start gap-4 border border-border bg-card p-5 hover:border-muted-foreground/50 hover:bg-accent"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-border bg-background text-muted-foreground group-hover:text-foreground">
+                  <module.icon size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium text-foreground">{module.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {module.description}
+                  </p>
+                </div>
+                <IconArrowRight size={16} className="mt-1 shrink-0 text-muted-foreground" />
+              </Link>
+            ))}
         </div>
       </section>
 
@@ -155,13 +176,15 @@ export default async function GuildPage({ params }: { params: Promise<{ guildId:
           </p>
           <p className="mt-1 font-mono text-xs text-foreground">{guild.id}</p>
         </div>
-        <Link
-          href={`/mod/${guild.id}`}
-          className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
-        >
-          Open moderation
-          <IconArrowRight size={14} />
-        </Link>
+        {access.canModerate && (
+          <Link
+            href={`/mod/${guild.id}`}
+            className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Open moderation
+            <IconArrowRight size={14} />
+          </Link>
+        )}
       </div>
     </GuildPageLayout>
   );

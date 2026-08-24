@@ -5,10 +5,16 @@ import LoggingConfigForm from '@/components/logging-config-form';
 
 export default async function LogsPage({ params }: { params: Promise<{ guildId: string }> }) {
   const { guildId } = await params;
-  const { guild, user } = await getGuildPageData(guildId);
+  const { guild, user, access } = await getGuildPageData(guildId);
 
   return (
-    <GuildPageLayout guild={guild} user={user} activeTab="logs" pageTitle="Event Logging">
+    <GuildPageLayout
+      guild={guild}
+      user={user}
+      access={access}
+      activeTab="logs"
+      pageTitle="Event Logging"
+    >
       <LoggingConfigForm guildId={guildId} />
     </GuildPageLayout>
   );

@@ -19,7 +19,7 @@ export default function ModLoginPage() {
             Sign in with Discord. Access is granted from your server roles and Catto permission
             overrides.
           </p>
-          <LoginButton redirectPath="/mod" label="Authenticate with Discord" />
+          <LoginButton redirectPath="/guilds" label="Authenticate with Discord" />
         </div>
       </div>
     </main>

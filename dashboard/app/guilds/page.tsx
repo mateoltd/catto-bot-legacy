@@ -25,6 +25,7 @@ export default async function GuildsPage({ searchParams }: GuildsPageProps) {
       <ServerDirectory
         guilds={session.guilds}
         isBotApiAvailable={session.isBotApiAvailable}
+        isModerationApiAvailable={session.isModerationApiAvailable}
         notice={query.notice}
       />
     </main>

@@ -1,17 +1,14 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  IconArrowLeft,
-  IconBolt,
-  IconGift,
-  IconGavel,
-  IconHome,
-  IconListDetails,
-  IconMicrophone,
-  IconWaveSine,
-  type Icon,
-} from '@tabler/icons-react';
+import { IconArrowLeft } from '@tabler/icons-react';
 import { BrandMark } from '@/components/dashboard/brand-mark';
+import { AccountMenu } from '@/components/dashboard/account-menu';
+import {
+  GuildSidebar,
+  getGuildNavigation,
+  type GuildNavigationAccess,
+  type GuildNavigationItem,
+} from '@/components/dashboard/guild-sidebar';
 import { UserDropdown } from '@/components/user-dropdown';
 import type { Guild, User } from '@/lib/types';
 
@@ -20,43 +17,16 @@ type DashboardTab = 'overview' | 'text-xp' | 'voice-xp' | 'rewards' | 'temp-voic
 interface GuildPageLayoutProps {
   guild: Guild;
   user: User;
+  access: GuildNavigationAccess;
   activeTab: DashboardTab;
   pageTitle: string;
   children: React.ReactNode;
 }
 
-interface NavigationItem {
-  id: DashboardTab | 'moderation';
-  label: string;
-  href: string;
-  icon: Icon;
-}
-
-function getNavigation(guildId: string): NavigationItem[] {
-  return [
-    { id: 'overview', label: 'Overview', href: `/guilds/${guildId}`, icon: IconHome },
-    { id: 'text-xp', label: 'Text XP', href: `/guilds/${guildId}/xp`, icon: IconBolt },
-    {
-      id: 'voice-xp',
-      label: 'Voice XP',
-      href: `/guilds/${guildId}/voice-xp`,
-      icon: IconWaveSine,
-    },
-    { id: 'rewards', label: 'Rewards', href: `/guilds/${guildId}/rewards`, icon: IconGift },
-    {
-      id: 'temp-voice',
-      label: 'Temp voice',
-      href: `/guilds/${guildId}/temp-voice`,
-      icon: IconMicrophone,
-    },
-    { id: 'logs', label: 'Logging', href: `/guilds/${guildId}/logs`, icon: IconListDetails },
-    { id: 'moderation', label: 'Moderation', href: `/mod/${guildId}`, icon: IconGavel },
-  ];
-}
-
 export default function GuildPageLayout({
   guild,
   user,
+  access,
   activeTab,
   pageTitle,
   children,
@@ -64,7 +34,7 @@ export default function GuildPageLayout({
   const guildIconUrl = guild.icon
     ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=96`
     : null;
-  const navigation = getNavigation(guild.id);
+  const navigation = getGuildNavigation(guild.id, access).flatMap((section) => section.items);
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,7 +51,9 @@ export default function GuildPageLayout({
               Servers
             </Link>
           </div>
-          <UserDropdown user={user} />
+          <div className="md:hidden">
+            <UserDropdown user={user} />
+          </div>
         </div>
       </header>
 
@@ -97,20 +69,11 @@ export default function GuildPageLayout({
 
       <div className="grid w-full md:grid-cols-[224px_minmax(0,1fr)]">
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] border-r border-border bg-card md:flex md:flex-col">
-          <div className="border-b border-border p-4">
-            <ServerIdentity guild={guild} iconUrl={guildIconUrl} pageTitle={pageTitle} />
-          </div>
-          <nav className="flex-1 p-2">
-            <p className="mb-1 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Configuration
-            </p>
-            {navigation.map((item) => (
-              <NavigationLink key={item.id} item={item} isActive={item.id === activeTab} />
-            ))}
-          </nav>
-          <div className="border-t border-border px-4 py-3 font-mono text-[10px] text-muted-foreground">
-            ID {guild.id}
-          </div>
+          <GuildSidebar
+            guild={guild}
+            access={access}
+            account={<AccountMenu user={user} variant="sidebar" allowAccountSwitch />}
+          />
         </aside>
 
         <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{children}</main>
@@ -152,7 +115,7 @@ function NavigationLink({
   isActive,
   compact = false,
 }: {
-  item: NavigationItem;
+  item: GuildNavigationItem;
   isActive: boolean;
   compact?: boolean;
 }) {

@@ -1,10 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   IconAlertTriangle,
-  IconArrowRight,
   IconServer,
 } from '@tabler/icons-react';
 import { ServerCard } from '@/components/dashboard/server-card';
@@ -12,18 +10,19 @@ import {
   ServerToolbar,
   type ServerViewMode,
 } from '@/components/dashboard/server-toolbar';
-import { canManageGuild } from '@/lib/guild-access';
 import type { DashboardGuild } from '@/lib/server/dashboard-data';
 
 interface ServerDirectoryProps {
   guilds: DashboardGuild[];
   isBotApiAvailable: boolean;
+  isModerationApiAvailable: boolean;
   notice?: string;
 }
 
 export function ServerDirectory({
   guilds,
   isBotApiAvailable,
+  isModerationApiAvailable,
   notice,
 }: ServerDirectoryProps) {
   const [query, setQuery] = useState('');
@@ -35,46 +34,43 @@ export function ServerDirectory({
     return guilds
       .filter((guild) => guild.name.toLocaleLowerCase().includes(normalizedQuery))
       .sort((left, right) => {
-        const leftAvailable = Number(left.botInstalled && canManageGuild(left));
-        const rightAvailable = Number(right.botInstalled && canManageGuild(right));
+        const leftAvailable = Number(left.canConfigure || left.canModerate);
+        const rightAvailable = Number(right.canConfigure || right.canModerate);
         if (leftAvailable !== rightAvailable) return rightAvailable - leftAvailable;
         if (left.owner !== right.owner) return Number(right.owner) - Number(left.owner);
         return left.name.localeCompare(right.name);
       });
   }, [guilds, query]);
 
-  const manageableCount = guilds.filter(
-    (guild) => guild.botInstalled && canManageGuild(guild),
+  const availableCount = guilds.filter(
+    (guild) => guild.canConfigure || guild.canModerate,
   ).length;
 
   return (
     <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-8 border-b border-border pb-6">
         <div>
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
             Server configuration
           </p>
           <h1 className="text-2xl font-semibold text-foreground">Choose a server</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {manageableCount} of {guilds.length} servers ready to configure
+            {availableCount} of {guilds.length} servers available
           </p>
         </div>
-        <Link
-          href="/mod"
-          className="inline-flex items-center gap-2 border border-border bg-card px-4 py-2.5 font-mono text-xs uppercase tracking-wider text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground"
-        >
-          Moderation dashboard
-          <IconArrowRight size={15} />
-        </Link>
       </div>
 
-      {(!isBotApiAvailable || notice === 'unavailable') && (
+      {(!isBotApiAvailable || !isModerationApiAvailable || notice) && (
         <div className="mb-5 flex items-start gap-3 border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 text-sm text-yellow-200">
           <IconAlertTriangle className="mt-0.5 shrink-0" size={17} />
           <p>
-            {isBotApiAvailable
-              ? 'That server is not available to the bot or your access changed.'
-              : 'The bot API is unavailable. Server connections cannot be verified right now.'}
+            {notice === 'forbidden'
+              ? 'You no longer have dashboard access to that server.'
+              : notice === 'unavailable'
+                ? 'That server is not available to the bot or your access changed.'
+                : !isBotApiAvailable
+                  ? 'The bot API is unavailable. Server connections cannot be verified right now.'
+                  : 'Moderation access could not be verified. Configuration access is still available.'}
           </p>
         </div>
       )}
@@ -118,15 +114,20 @@ export function ServerDirectory({
 }
 
 function DashboardServerCard({ guild, compact }: { guild: DashboardGuild; compact: boolean }) {
-  const hasManagementAccess = canManageGuild(guild);
-  const isAvailable = guild.botInstalled && hasManagementAccess;
+  const isAvailable = guild.canConfigure || guild.canModerate;
   const status = !guild.botInstalled
     ? 'Bot not connected'
-    : !hasManagementAccess
-      ? 'Manage server required'
-      : guild.owner
-        ? 'Owner access'
-        : 'Manager access';
+    : guild.canConfigure && guild.canModerate
+      ? guild.owner
+        ? 'Owner + moderation access'
+        : 'Configuration + moderation access'
+      : guild.canConfigure
+        ? guild.owner
+          ? 'Owner access'
+          : 'Configuration access'
+        : guild.canModerate
+          ? 'Moderation access'
+          : 'No dashboard access';
 
   return (
     <ServerCard
