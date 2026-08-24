@@ -51,24 +51,31 @@ function FormulaEditor({
   earningRate: number;
 }) {
   type HandleKey = "formulaOffset" | "formulaBase" | "formulaExponent";
-  const chartContainerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ key: HandleKey; scaleMax: number } | null>(null);
   const [activeHandle, setActiveHandle] = useState<HandleKey | null>(null);
   const [dragScale, setDragScale] = useState<number | null>(null);
-  const [plotWidth, setPlotWidth] = useState(1000);
+  const [plotSize, setPlotSize] = useState({ width: 1000, height: 288 });
 
   useEffect(() => {
-    const element = chartContainerRef.current;
+    const element = svgRef.current;
     if (!element) return;
-    const updateWidth = () =>
-      setPlotWidth(Math.max(320, Math.round(element.clientWidth)));
-    updateWidth();
+    const updateSize = () => {
+      const width = Math.round(element.clientWidth);
+      const height = Math.round(element.clientHeight);
+      if (width <= 0 || height <= 0) return;
+      setPlotSize((current) =>
+        current.width === width && current.height === height
+          ? current
+          : { width, height },
+      );
+    };
+    updateSize();
     if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", updateWidth);
-      return () => window.removeEventListener("resize", updateWidth);
+      window.addEventListener("resize", updateSize);
+      return () => window.removeEventListener("resize", updateSize);
     }
-    const observer = new ResizeObserver(updateWidth);
+    const observer = new ResizeObserver(updateSize);
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -84,8 +91,8 @@ function FormulaEditor({
     right: 18,
     top: 22,
     bottom: 44,
-    width: plotWidth,
-    height: 320,
+    width: plotSize.width,
+    height: plotSize.height,
   };
   const chartWidth = chart.width - chart.left - chart.right;
   const chartHeight = chart.height - chart.top - chart.bottom;
@@ -203,7 +210,7 @@ function FormulaEditor({
             : "qualifying messages per level"}
         </p>
       </div>
-      <div ref={chartContainerRef} className="h-[320px] overflow-hidden px-3 py-4 sm:px-5">
+      <div className="h-[320px] overflow-hidden px-3 py-4 sm:px-5">
         <svg
           ref={svgRef}
           viewBox={`0 0 ${chart.width} ${chart.height}`}

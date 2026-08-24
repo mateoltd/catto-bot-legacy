@@ -81,6 +81,11 @@ describe("XP settings", () => {
   });
 
   it("shows an interactive curve translated into member activity", () => {
+    Object.defineProperties(SVGSVGElement.prototype, {
+      clientWidth: { configurable: true, get: () => 1440 },
+      clientHeight: { configurable: true, get: () => 288 },
+    });
+
     function Example() {
       const [value, setValue] = useState<LevelCurveValue>({
         levelCurveType: "FORMULA",
@@ -106,6 +111,7 @@ describe("XP settings", () => {
 
     const curve = screen.getByLabelText("Interactive XP requirement curve");
     expect(curve).toBeInTheDocument();
+    expect(curve).toHaveAttribute("viewBox", "0 0 1440 288");
     expect(curve).toHaveClass("overflow-hidden");
     expect(curve.parentElement).toHaveClass("overflow-hidden");
     expect(
@@ -129,5 +135,8 @@ describe("XP settings", () => {
     expect(screen.getByText("Level 25")).toBeInTheDocument();
     expect(screen.getByText("Level 100")).toBeInTheDocument();
     expect(screen.getAllByText(/voice hr/)).not.toHaveLength(0);
+
+    delete (SVGSVGElement.prototype as Partial<SVGSVGElement>).clientWidth;
+    delete (SVGSVGElement.prototype as Partial<SVGSVGElement>).clientHeight;
   });
 });
