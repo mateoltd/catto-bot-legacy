@@ -1,15 +1,21 @@
-'use client';
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { TempVoiceChannel } from '@/lib/services/temp-voice.service';
-import { useFormatter, useTranslations } from 'next-intl';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import type { TempVoiceChannel } from "@/lib/services/temp-voice.service";
+import { useFormatter, useTranslations } from "next-intl";
 
 interface ActiveChannelsProps {
   channels: TempVoiceChannel[];
 }
 
 export default function ActiveChannels({ channels }: ActiveChannelsProps) {
-  const t = useTranslations('TempVoice');
+  const t = useTranslations("TempVoice");
   const format = useFormatter();
   if (channels.length === 0) {
     return null;
@@ -18,14 +24,16 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle>{t('activeChannelsCount', { count: channels.length })}</CardTitle>
-        <CardDescription>{t('activeChannelsDescription')}</CardDescription>
+        <CardTitle>
+          {t("activeChannelsCount", { count: channels.length })}
+        </CardTitle>
+        <CardDescription>{t("activeChannelsDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {channels.map((channel) => (
             <div
-              key={channel.channelId}
+              key={channel.aggregateId}
               className="p-4 bg-muted/20 border border-border/30"
             >
               {/* Channel Header */}
@@ -45,37 +53,77 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
                     />
                   </svg>
                   <span className="text-sm font-medium text-foreground">
-                    {channel.channelName || channel.channelId}
+                    {channel.channelName ||
+                      channel.channelId ||
+                      t("creatingChannel")}
                   </span>
+                  {channel.ownershipStatus === "OWNER_GRACE" && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-warning/10 text-warning">
+                      {t("ownerGrace")}
+                    </span>
+                  )}
+                  {channel.ownershipStatus === "CLAIMABLE" && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                      {t("claimable")}
+                    </span>
+                  )}
+                  {channel.lifecycle === "DELETE_FAILED" && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-destructive/10 text-destructive">
+                      {t("cleanupFailed")}
+                    </span>
+                  )}
                   {channel.permissions?.isLocked && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-warning/10 text-warning">
-                      {t('locked')}
+                      {t("locked")}
                     </span>
                   )}
                   {channel.permissions?.isHidden && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                      {t('hidden')}
+                      {t("hidden")}
                     </span>
                   )}
                 </div>
                 <span className="text-sm text-muted-foreground">
                   {channel.memberCount || 0}
-                  {channel.userLimit ? `/${channel.userLimit}` : ''} {t('users')}
+                  {channel.userLimit ? `/${channel.userLimit}` : ""}{" "}
+                  {t("users")}
                 </span>
               </div>
 
               {/* Channel Info */}
               <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
-                <span>{t('owner', { owner: channel.ownerUsername || channel.ownerId })}</span>
-                {channel.categoryName && <span>{t('category', { category: channel.categoryName })}</span>}
-                {channel.bitrate && <span>{Math.round(channel.bitrate / 1000)}kbps</span>}
-                <span>{t('created', { date: format.dateTime(new Date(channel.createdAt), { dateStyle: 'short', timeStyle: 'short' }) })}</span>
+                <span>
+                  {t("owner", {
+                    owner:
+                      channel.ownerUsername ||
+                      channel.ownerId ||
+                      t("unclaimed"),
+                  })}
+                </span>
+                {channel.categoryName && (
+                  <span>
+                    {t("category", { category: channel.categoryName })}
+                  </span>
+                )}
+                {channel.bitrate && (
+                  <span>{Math.round(channel.bitrate / 1000)}kbps</span>
+                )}
+                <span>
+                  {t("created", {
+                    date: format.dateTime(new Date(channel.createdAt), {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }),
+                  })}
+                </span>
               </div>
 
               {/* Members List */}
               {channel.members && channel.members.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">{t('members')}</p>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {t("members")}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {channel.members.map((member) => (
                       <div
@@ -94,9 +142,12 @@ export default function ActiveChannels({ channels }: ActiveChannelsProps) {
                         <span className="text-foreground">
                           {member.displayName || member.username}
                         </span>
-                        {member.id === channel.ownerId && (
-                          <span className="text-primary text-[10px]">{t('ownerBadge')}</span>
-                        )}
+                        {channel.ownerId !== null &&
+                          member.id === channel.ownerId && (
+                            <span className="text-primary text-[10px]">
+                              {t("ownerBadge")}
+                            </span>
+                          )}
                       </div>
                     ))}
                   </div>

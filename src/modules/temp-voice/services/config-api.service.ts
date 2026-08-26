@@ -3,16 +3,26 @@
  * Provides static methods for API route usage
  */
 
-import { container } from '@sapphire/framework';
-import { TempVoiceConfigService } from './config.service.js';
+import { container } from "@sapphire/framework";
+import { TempVoiceConfigService } from "./config.service.js";
 import {
   mapApiInputToCreateData,
   mapApiInputToUpdateData,
   mapConfigToApiResponse,
   type TempVoiceConfigApiInput,
-} from './config-api.mapper.js';
+} from "./config-api.mapper.js";
 
-const configService = new TempVoiceConfigService(container.prisma, container.client);
+const configService = new TempVoiceConfigService(
+  container.prisma,
+  container.client,
+);
+
+export class TempVoiceConfigurationDrainingError extends Error {
+  public constructor(public readonly guildId: string) {
+    super(`Temporary voice cleanup is still running for guild ${guildId}`);
+    this.name = "TempVoiceConfigurationDrainingError";
+  }
+}
 
 /**
  * Static wrapper for temp voice configuration operations
@@ -24,7 +34,7 @@ export class TempVoiceConfigServiceStatic {
   static async getConfig(guildId: string) {
     const config = await configService.getOrNull(guildId);
 
-    if (!config) {
+    if (!config || config.drainingAt) {
       return null;
     }
 
@@ -35,6 +45,13 @@ export class TempVoiceConfigServiceStatic {
    * Create configuration for a guild
    */
   static async createConfig(guildId: string, data: TempVoiceConfigApiInput) {
+    const existing = await container.prisma.tempVoiceConfig.findUnique({
+      where: { guildId },
+      select: { drainingAt: true },
+    });
+    if (existing?.drainingAt) {
+      throw new TempVoiceConfigurationDrainingError(guildId);
+    }
     // Map API input to service input
     const serviceData = mapApiInputToCreateData(data);
 
@@ -46,7 +63,10 @@ export class TempVoiceConfigServiceStatic {
   /**
    * Update configuration for a guild
    */
-  static async updateConfig(guildId: string, data: Partial<TempVoiceConfigApiInput>) {
+  static async updateConfig(
+    guildId: string,
+    data: Partial<TempVoiceConfigApiInput>,
+  ) {
     // Map API input to service input
     const serviceData = mapApiInputToUpdateData(data);
 
@@ -79,7 +99,10 @@ export class TempVoiceConfigServiceStatic {
    * Remove a join-to-create channel
    */
   static async removeJoinChannel(guildId: string, channelId: string) {
-    const joinChannels = await configService.removeJoinChannel(guildId, channelId);
+    const joinChannels = await configService.removeJoinChannel(
+      guildId,
+      channelId,
+    );
     const config = await configService.getOrNull(guildId);
 
     return {

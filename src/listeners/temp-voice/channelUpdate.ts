@@ -3,21 +3,28 @@
  * Monitors temp voice channels for name changes and applies moderation
  */
 
-import { Listener } from '@sapphire/framework';
-import type { VoiceChannel, DMChannel, NonThreadGuildBasedChannel } from 'discord.js';
-import { Events, ChannelType, AuditLogEvent } from 'discord.js';
-import { container } from '@sapphire/framework';
-import { TempChannelService } from '../../modules/temp-voice/services/temp-channel.service.js';
-import { TempVoiceConfigService } from '../../modules/temp-voice/services/config.service.js';
-import { PermissionsService } from '../../modules/temp-voice/services/permissions.service.js';
-import { NameModerationService } from '../../modules/temp-voice/services/moderation/name-moderation.service.js';
+import { Listener } from "@sapphire/framework";
+import type {
+  VoiceChannel,
+  DMChannel,
+  NonThreadGuildBasedChannel,
+} from "discord.js";
+import { Events, ChannelType, AuditLogEvent } from "discord.js";
+import { container } from "@sapphire/framework";
+import { TempChannelService } from "../../modules/temp-voice/services/temp-channel.service.js";
+import { TempVoiceConfigService } from "../../modules/temp-voice/services/config.service.js";
+import { NameModerationService } from "../../modules/temp-voice/services/moderation/name-moderation.service.js";
+import { getTempVoiceTransport } from "../../modules/temp-voice/application/temp-voice-runtime.js";
 
 export class ChannelUpdateListener extends Listener {
   private configService!: TempVoiceConfigService;
   private channelService!: TempChannelService;
   private moderationService!: NameModerationService;
 
-  public constructor(context: Listener.LoaderContext, options: Listener.Options) {
+  public constructor(
+    context: Listener.LoaderContext,
+    options: Listener.Options,
+  ) {
     super(context, {
       ...options,
       event: Events.ChannelUpdate,
@@ -26,13 +33,19 @@ export class ChannelUpdateListener extends Listener {
 
   public async run(
     oldChannel: DMChannel | NonThreadGuildBasedChannel,
-    newChannel: DMChannel | NonThreadGuildBasedChannel
+    newChannel: DMChannel | NonThreadGuildBasedChannel,
   ): Promise<void> {
     // Initialize services (lazy initialization)
     if (!this.configService) {
-      this.configService = new TempVoiceConfigService(container.prisma, container.client);
-      this.channelService = new TempChannelService(container.prisma, new PermissionsService());
-      this.moderationService = new NameModerationService(container.prisma, container.logger);
+      this.configService = new TempVoiceConfigService(
+        container.prisma,
+        container.client,
+      );
+      this.channelService = new TempChannelService(container.prisma);
+      this.moderationService = new NameModerationService(
+        container.prisma,
+        container.logger,
+      );
     }
 
     try {
@@ -49,41 +62,50 @@ export class ChannelUpdateListener extends Listener {
       const voiceChannel = newChannel as VoiceChannel;
       const oldVoiceChannel = oldChannel as VoiceChannel;
 
+      // Resolve management before filtering by update type. Permission and setting changes also
+      // need to pass through the central projection path.
+      const tempChannel = await this.channelService.getByChannelId(
+        voiceChannel.id,
+      );
+      if (!tempChannel) return;
+
       // Check if name changed
       if (oldVoiceChannel.name === voiceChannel.name) {
+        await getTempVoiceTransport().publish({
+          kind: "CHANNEL_UPDATED",
+          guildId: voiceChannel.guild.id,
+          channelId: voiceChannel.id,
+          observedAt: Date.now(),
+        });
         return;
       }
 
       this.container.logger.debug(
-        `[Name Moderation] Channel name changed: ${oldVoiceChannel.name} -> ${voiceChannel.name} (Channel ID: ${voiceChannel.id})`
+        `[Name Moderation] Channel name changed: ${oldVoiceChannel.name} -> ${voiceChannel.name} (Channel ID: ${voiceChannel.id})`,
       );
 
-      // Check if this is a temp voice channel
-      const tempChannel = await this.channelService.getByChannelId(voiceChannel.id);
-      if (!tempChannel) {
-        return;
-      }
-
       this.container.logger.debug(
-        `[Name Moderation] Channel ${voiceChannel.id} is a temp voice channel owned by ${tempChannel.ownerId}`
+        `[Name Moderation] Channel ${voiceChannel.id} is a temp voice channel owned by ${tempChannel.ownerId}`,
       );
 
       // Get guild configuration
       const config = await this.configService.getOrNull(voiceChannel.guild.id);
       if (!config) {
+        await this.publishObservedName(voiceChannel, voiceChannel.name);
         return;
       }
 
       // Check if moderation is enabled
       if (!config.moderationEnabled) {
         this.container.logger.debug(
-          `[Name Moderation] Moderation disabled for guild ${voiceChannel.guild.id}`
+          `[Name Moderation] Moderation disabled for guild ${voiceChannel.guild.id}`,
         );
+        await this.publishObservedName(voiceChannel, voiceChannel.name);
         return;
       }
 
       this.container.logger.debug(
-        `[Name Moderation] Moderation enabled for guild ${voiceChannel.guild.id}, action: ${config.moderationAction}`
+        `[Name Moderation] Moderation enabled for guild ${voiceChannel.guild.id}, action: ${config.moderationAction}`,
       );
 
       // Get the user who made the change from audit logs
@@ -110,7 +132,7 @@ export class ChannelUpdateListener extends Listener {
       } catch (error) {
         // Audit log fetch failed (likely missing permissions) - use owner fallback
         this.container.logger.debug(
-          `[Name Moderation] Could not fetch audit logs for guild ${voiceChannel.guild.id}, using owner as fallback ${error}`
+          `[Name Moderation] Could not fetch audit logs for guild ${voiceChannel.guild.id}, using owner as fallback ${error}`,
         );
       }
 
@@ -120,7 +142,7 @@ export class ChannelUpdateListener extends Listener {
         oldVoiceChannel.name,
         voiceChannel.name,
         config,
-        userId
+        userId,
       );
 
       if (result && !result.validation.isAllowed) {
@@ -131,14 +153,31 @@ export class ChannelUpdateListener extends Listener {
             channelId: voiceChannel.id,
             action: result.actionTaken,
             reasonCodes: result.validation.reasonCodes,
-          }
+          },
         );
       }
+      await this.publishObservedName(
+        voiceChannel,
+        result?.finalName ?? voiceChannel.name,
+      );
     } catch (error) {
       this.container.logger.error(
         `[Name Moderation] Error handling channel update for ${newChannel.id}:`,
-        error
+        error,
       );
     }
+  }
+
+  private publishObservedName(
+    channel: VoiceChannel,
+    observedName: string,
+  ): Promise<void> {
+    return getTempVoiceTransport().publish({
+      kind: "CHANNEL_UPDATED",
+      guildId: channel.guild.id,
+      channelId: channel.id,
+      observedName,
+      observedAt: Date.now(),
+    });
   }
 }

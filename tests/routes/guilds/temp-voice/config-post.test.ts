@@ -13,6 +13,7 @@ vi.mock('#lib/validation/ApiGate.js', () => ({
 
 // Mock the service - using the correct import path and service name
 vi.mock('#modules/temp-voice/services/config-api.service.js', () => ({
+    TempVoiceConfigurationDrainingError: class TempVoiceConfigurationDrainingError extends Error {},
     TempVoiceConfigServiceStatic: {
         getConfig: vi.fn(),
         createConfig: vi.fn(),

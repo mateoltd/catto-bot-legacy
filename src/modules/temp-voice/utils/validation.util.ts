@@ -2,8 +2,8 @@
  * Validation schemas and utilities using Zod
  */
 
-import { z } from 'zod';
-import { TEMP_VOICE_LIMITS, OwnerLeaveStrategy, VOICE_REGIONS } from '../constants.js';
+import { z } from "zod";
+import { TEMP_VOICE_LIMITS, VOICE_REGIONS } from "../constants.js";
 
 /**
  * Zod schema for validating temp voice configuration
@@ -12,27 +12,27 @@ export const tempVoiceConfigSchema = z.object({
   enabled: z.boolean().optional(),
 
   joinToCreateChannels: z
-    .array(z.string().regex(/^\d{17,19}$/, 'Invalid Discord channel ID'))
+    .array(z.string().regex(/^\d{17,19}$/, "Invalid Discord channel ID"))
     .optional(),
 
   categoryId: z
     .string()
-    .regex(/^\d{17,19}$/, 'Invalid Discord channel ID')
+    .regex(/^\d{17,19}$/, "Invalid Discord channel ID")
     .nullable()
     .optional(),
 
   fallbackCategoryId: z
     .string()
-    .regex(/^\d{17,19}$/, 'Invalid Discord channel ID')
+    .regex(/^\d{17,19}$/, "Invalid Discord channel ID")
     .nullable()
     .optional(),
 
   defaultNameTemplate: z
     .string()
-    .min(1, 'Template cannot be empty')
+    .min(1, "Template cannot be empty")
     .max(
       TEMP_VOICE_LIMITS.MAX_TEMPLATE_LENGTH,
-      `Template must be ${TEMP_VOICE_LIMITS.MAX_TEMPLATE_LENGTH} characters or less`
+      `Template must be ${TEMP_VOICE_LIMITS.MAX_TEMPLATE_LENGTH} characters or less`,
     )
     .optional(),
 
@@ -41,11 +41,11 @@ export const tempVoiceConfigSchema = z.object({
     .int()
     .min(
       TEMP_VOICE_LIMITS.MIN_USER_LIMIT,
-      `User limit must be at least ${TEMP_VOICE_LIMITS.MIN_USER_LIMIT}`
+      `User limit must be at least ${TEMP_VOICE_LIMITS.MIN_USER_LIMIT}`,
     )
     .max(
       TEMP_VOICE_LIMITS.MAX_USER_LIMIT,
-      `User limit cannot exceed ${TEMP_VOICE_LIMITS.MAX_USER_LIMIT}`
+      `User limit cannot exceed ${TEMP_VOICE_LIMITS.MAX_USER_LIMIT}`,
     )
     .optional(),
 
@@ -54,11 +54,11 @@ export const tempVoiceConfigSchema = z.object({
     .int()
     .min(
       TEMP_VOICE_LIMITS.MIN_BITRATE,
-      `Bitrate must be at least ${TEMP_VOICE_LIMITS.MIN_BITRATE} kbps`
+      `Bitrate must be at least ${TEMP_VOICE_LIMITS.MIN_BITRATE} kbps`,
     )
     .max(
       TEMP_VOICE_LIMITS.MAX_BITRATE,
-      `Bitrate cannot exceed ${TEMP_VOICE_LIMITS.MAX_BITRATE} kbps`
+      `Bitrate cannot exceed ${TEMP_VOICE_LIMITS.MAX_BITRATE} kbps`,
     )
     .nullable()
     .optional(),
@@ -77,16 +77,12 @@ export const tempVoiceConfigSchema = z.object({
     .int()
     .min(
       TEMP_VOICE_LIMITS.MIN_DELETE_DELAY,
-      `Delete delay must be at least ${TEMP_VOICE_LIMITS.MIN_DELETE_DELAY} seconds`
+      `Delete delay must be at least ${TEMP_VOICE_LIMITS.MIN_DELETE_DELAY} seconds`,
     )
     .max(
       TEMP_VOICE_LIMITS.MAX_DELETE_DELAY,
-      `Delete delay cannot exceed ${TEMP_VOICE_LIMITS.MAX_DELETE_DELAY} seconds`
+      `Delete delay cannot exceed ${TEMP_VOICE_LIMITS.MAX_DELETE_DELAY} seconds`,
     )
-    .optional(),
-
-  ownerLeaveStrategy: z
-    .enum([OwnerLeaveStrategy.TRANSFER, OwnerLeaveStrategy.KEEP, OwnerLeaveStrategy.DELETE])
     .optional(),
 
   cooldownSeconds: z
@@ -94,11 +90,11 @@ export const tempVoiceConfigSchema = z.object({
     .int()
     .min(
       TEMP_VOICE_LIMITS.MIN_COOLDOWN,
-      `Cooldown must be at least ${TEMP_VOICE_LIMITS.MIN_COOLDOWN} seconds`
+      `Cooldown must be at least ${TEMP_VOICE_LIMITS.MIN_COOLDOWN} seconds`,
     )
     .max(
       TEMP_VOICE_LIMITS.MAX_COOLDOWN,
-      `Cooldown cannot exceed ${TEMP_VOICE_LIMITS.MAX_COOLDOWN} seconds`
+      `Cooldown cannot exceed ${TEMP_VOICE_LIMITS.MAX_COOLDOWN} seconds`,
     )
     .optional(),
 
@@ -107,25 +103,25 @@ export const tempVoiceConfigSchema = z.object({
     .int()
     .min(
       TEMP_VOICE_LIMITS.MIN_CHANNELS_PER_USER,
-      `Max channels per user must be at least ${TEMP_VOICE_LIMITS.MIN_CHANNELS_PER_USER}`
+      `Max channels per user must be at least ${TEMP_VOICE_LIMITS.MIN_CHANNELS_PER_USER}`,
     )
     .max(
       TEMP_VOICE_LIMITS.MAX_CHANNELS_PER_USER,
-      `Max channels per user cannot exceed ${TEMP_VOICE_LIMITS.MAX_CHANNELS_PER_USER}`
+      `Max channels per user cannot exceed ${TEMP_VOICE_LIMITS.MAX_CHANNELS_PER_USER}`,
     )
     .optional(),
 
   controlPanelEnabled: z.boolean().optional(),
 
-  controlPanelOnCreate: z.boolean().optional(),
-
   logChannelId: z
     .string()
-    .regex(/^\d{17,19}$/, 'Invalid Discord channel ID')
+    .regex(/^\d{17,19}$/, "Invalid Discord channel ID")
     .nullable()
     .optional(),
 
-  adminRoleIds: z.array(z.string().regex(/^\d{17,19}$/, 'Invalid Discord role ID')).optional(),
+  adminRoleIds: z
+    .array(z.string().regex(/^\d{17,19}$/, "Invalid Discord role ID"))
+    .optional(),
 });
 
 /**
@@ -137,7 +133,7 @@ export type TempVoiceConfigValidation = z.infer<typeof tempVoiceConfigSchema>;
  * Schema for validating channel ID additions
  */
 export const addJoinChannelSchema = z.object({
-  channelId: z.string().regex(/^\d{17,19}$/, 'Invalid Discord channel ID'),
+  channelId: z.string().regex(/^\d{17,19}$/, "Invalid Discord channel ID"),
 });
 
 /**
@@ -146,22 +142,22 @@ export const addJoinChannelSchema = z.object({
 export const updateTempChannelSchema = z.object({
   customName: z
     .string()
-    .min(1, 'Channel name cannot be empty')
-    .max(100, 'Channel name must be 100 characters or less')
+    .min(1, "Channel name cannot be empty")
+    .max(100, "Channel name must be 100 characters or less")
     .optional(),
 
   customUserLimit: z
     .number()
     .int()
-    .min(0, 'User limit must be at least 0')
-    .max(99, 'User limit cannot exceed 99')
+    .min(0, "User limit must be at least 0")
+    .max(99, "User limit cannot exceed 99")
     .optional(),
 
   customBitrate: z
     .number()
     .int()
-    .min(8, 'Bitrate must be at least 8 kbps')
-    .max(384, 'Bitrate cannot exceed 384 kbps')
+    .min(8, "Bitrate must be at least 8 kbps")
+    .max(384, "Bitrate cannot exceed 384 kbps")
     .optional(),
 
   customRegion: z.enum([...VOICE_REGIONS] as [string, ...string[]]).optional(),
@@ -189,7 +185,7 @@ export const paginationSchema = z.object({
 
   ownerId: z
     .string()
-    .regex(/^\d{17,19}$/, 'Invalid Discord user ID')
+    .regex(/^\d{17,19}$/, "Invalid Discord user ID")
     .optional(),
 });
 
@@ -233,7 +229,7 @@ export function validatePagination(query: Record<string, unknown>) {
  */
 export function zodErrorToApiDetails(error: z.ZodError) {
   return error.issues.map((err) => ({
-    field: err.path.join('.'),
+    field: err.path.join("."),
     message: err.message,
     value: err.code,
   }));
@@ -253,13 +249,16 @@ export function validateTemplateVariables(template: string): {
   valid: boolean;
   invalidVariables?: string[];
 } {
-  const validVariables = ['{username}', '{discriminator}', '{tag}', '{n}'];
+  const validVariables = ["{username}", "{discriminator}", "{tag}", "{n}"];
   const foundVariables = template.match(/\{[^}]+\}/g) || [];
 
-  const invalidVariables = foundVariables.filter((v) => !validVariables.includes(v));
+  const invalidVariables = foundVariables.filter(
+    (v) => !validVariables.includes(v),
+  );
 
   return {
     valid: invalidVariables.length === 0,
-    invalidVariables: invalidVariables.length > 0 ? invalidVariables : undefined,
+    invalidVariables:
+      invalidVariables.length > 0 ? invalidVariables : undefined,
   };
 }

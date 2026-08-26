@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useMemo, type Dispatch, type SetStateAction } from 'react';
-import useSWR from 'swr';
+import { useState, useMemo, type Dispatch, type SetStateAction } from "react";
+import useSWR from "swr";
 import {
   tempVoiceService,
   type TempVoiceConfig,
@@ -9,36 +9,37 @@ import {
   type TempVoiceChannel,
   type TempVoiceStats,
   type TempVoiceSetupRequest,
-  type OwnerLeaveStrategy,
-} from '@/lib/services/temp-voice.service';
+} from "@/lib/services/temp-voice.service";
 
 /** Local editable fields tracked for dirty detection */
 export interface LocalTempVoiceConfig {
-  namingScheme: 'username' | 'displayname' | 'sequential' | 'custom';
+  namingScheme: "username" | "displayname" | "sequential" | "custom";
   customNamingPattern: string;
   userLimit: number | null;
   bitrate: number | null;
   maxChannelsPerUser: number;
   defaultLocked: boolean;
   defaultHidden: boolean;
-  ownerLeaveStrategy: OwnerLeaveStrategy;
   deleteEmptyAfterMs: number;
+  controlPanelEnabled: boolean;
   allowOwnerManagement: boolean;
   enableNameModeration: boolean;
   blockedKeywords: string[];
 }
 
-function buildLocalConfig(config: TempVoiceConfig | null): LocalTempVoiceConfig {
+function buildLocalConfig(
+  config: TempVoiceConfig | null,
+): LocalTempVoiceConfig {
   return {
-    namingScheme: config?.namingScheme || 'username',
+    namingScheme: config?.namingScheme || "username",
     customNamingPattern: config?.customNamingPattern || "{username}'s Channel",
     userLimit: config?.userLimit || null,
-    bitrate: config?.bitrate || null,
-    maxChannelsPerUser: config?.maxChannelsPerUser || 1,
+    bitrate: config ? config.bitrate : 64_000,
+    maxChannelsPerUser: config?.maxChannelsPerUser || 3,
     defaultLocked: config?.defaultLocked ?? false,
     defaultHidden: config?.defaultHidden ?? false,
-    ownerLeaveStrategy: config?.ownerLeaveStrategy || 'TRANSFER',
-    deleteEmptyAfterMs: config?.deleteEmptyAfterMs || 60000,
+    deleteEmptyAfterMs: config?.deleteEmptyAfterMs ?? 5_000,
+    controlPanelEnabled: config?.controlPanelEnabled ?? true,
     allowOwnerManagement: config?.allowOwnerManagement ?? true,
     enableNameModeration: config?.enableNameModeration ?? false,
     blockedKeywords: config?.blockedKeywords ?? [],
@@ -54,8 +55,13 @@ interface TempVoiceDashboardData {
 export function useTempVoiceConfig(guildId: string) {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { data, error: queryError, isLoading, mutate } = useSWR<TempVoiceDashboardData>(
-    ['temp-voice-dashboard', guildId],
+  const {
+    data,
+    error: queryError,
+    isLoading,
+    mutate,
+  } = useSWR<TempVoiceDashboardData>(
+    ["temp-voice-dashboard", guildId],
     async () => {
       const config = await tempVoiceService.getConfig(guildId);
       if (!config) return { config: null, channels: [], stats: null };
@@ -85,13 +91,16 @@ export function useTempVoiceConfig(guildId: string) {
     );
 
   // Local editable config state
-  const [localConfigDraft, setLocalConfigDraft] = useState<LocalTempVoiceConfig | null>(null);
+  const [localConfigDraft, setLocalConfigDraft] =
+    useState<LocalTempVoiceConfig | null>(null);
   const serverLocalConfig = useMemo(() => buildLocalConfig(config), [config]);
   const localConfig = localConfigDraft ?? serverLocalConfig;
-  const setLocalConfig: Dispatch<SetStateAction<LocalTempVoiceConfig>> = (value) => {
+  const setLocalConfig: Dispatch<SetStateAction<LocalTempVoiceConfig>> = (
+    value,
+  ) => {
     setLocalConfigDraft((current) => {
       const previous = current ?? serverLocalConfig;
-      return typeof value === 'function' ? value(previous) : value;
+      return typeof value === "function" ? value(previous) : value;
     });
   };
 
@@ -107,11 +116,12 @@ export function useTempVoiceConfig(guildId: string) {
       server.maxChannelsPerUser !== localConfig.maxChannelsPerUser ||
       server.defaultLocked !== localConfig.defaultLocked ||
       server.defaultHidden !== localConfig.defaultHidden ||
-      server.ownerLeaveStrategy !== localConfig.ownerLeaveStrategy ||
       server.deleteEmptyAfterMs !== localConfig.deleteEmptyAfterMs ||
+      server.controlPanelEnabled !== localConfig.controlPanelEnabled ||
       server.allowOwnerManagement !== localConfig.allowOwnerManagement ||
       server.enableNameModeration !== localConfig.enableNameModeration ||
-      JSON.stringify(server.blockedKeywords) !== JSON.stringify(localConfig.blockedKeywords)
+      JSON.stringify(server.blockedKeywords) !==
+        JSON.stringify(localConfig.blockedKeywords)
     );
   }, [config, localConfig]);
 
@@ -177,10 +187,11 @@ export function useTempVoiceConfig(guildId: string) {
       return { success: true, data: result };
     } catch (err) {
       // Check if this is a 409 Conflict (config already exists)
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
       const errorMessage = getErrorMessage(err);
       const isAlreadyExists =
-        status === 409 || errorMessage.toLowerCase().includes('already exists');
+        status === 409 || errorMessage.toLowerCase().includes("already exists");
 
       if (isAlreadyExists) {
         // Config already exists - refetch it instead of showing error
@@ -199,7 +210,11 @@ export function useTempVoiceConfig(guildId: string) {
               tempVoiceService.getStats(guildId).catch(() => null),
             ]);
             await mutate(
-              { config: existingConfig, channels: channelsData.channels, stats: statsData },
+              {
+                config: existingConfig,
+                channels: channelsData.channels,
+                stats: statsData,
+              },
               { revalidate: false },
             );
 
@@ -239,7 +254,10 @@ export function useTempVoiceConfig(guildId: string) {
     try {
       setSaving(true);
       setMutationError(null);
-      const result = await tempVoiceService.removeJoinChannel(guildId, channelId);
+      const result = await tempVoiceService.removeJoinChannel(
+        guildId,
+        channelId,
+      );
       if (config) {
         setConfig({ ...config, joinChannelIds: result.joinChannelIds });
       }
@@ -259,9 +277,7 @@ export function useTempVoiceConfig(guildId: string) {
     stats,
     loading: isLoading,
     saving,
-    error:
-      mutationError ??
-      (queryError ? getErrorMessage(queryError) : null),
+    error: mutationError ?? (queryError ? getErrorMessage(queryError) : null),
     isDirty,
     localConfig,
     setLocalConfig,
@@ -281,12 +297,14 @@ function getErrorMessage(err: unknown): string {
   // Axios error with response
   if (
     err &&
-    typeof err === 'object' &&
-    'response' in err &&
+    typeof err === "object" &&
+    "response" in err &&
     err.response &&
-    typeof err.response === 'object'
+    typeof err.response === "object"
   ) {
-    const response = err.response as { data?: { error?: { message?: string }; message?: string } };
+    const response = err.response as {
+      data?: { error?: { message?: string }; message?: string };
+    };
     if (response.data?.error?.message) {
       return response.data.error.message;
     }
@@ -298,5 +316,5 @@ function getErrorMessage(err: unknown): string {
   if (err instanceof Error) {
     return err.message;
   }
-  return 'An unexpected error occurred';
+  return "An unexpected error occurred";
 }

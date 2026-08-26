@@ -1,36 +1,30 @@
-/**
- * Listener for bot ready event to run temp voice recovery
- */
+import { Listener } from "@sapphire/framework";
+import { Events } from "discord.js";
 
-import { Listener } from '@sapphire/framework';
-import { Events } from 'discord.js';
-import { container } from '@sapphire/framework';
-import { RecoveryService } from '../../modules/temp-voice/services/recovery.service.js';
+import { getTempVoiceTransport } from "#modules/temp-voice/application/temp-voice-runtime.js";
 
 export class TempVoiceReadyListener extends Listener {
-  public constructor(context: Listener.LoaderContext, options: Listener.Options) {
+  public constructor(
+    context: Listener.LoaderContext,
+    options: Listener.Options,
+  ) {
     super(context, {
       ...options,
-      name: 'tempVoiceReady',
+      name: "tempVoiceReady",
       once: true,
       event: Events.ClientReady,
     });
   }
 
   public async run(): Promise<void> {
-    try {
-      const recoveryService = new RecoveryService(container.prisma, this.container.client);
-
-      // Run recovery
-      await recoveryService.reconcileChannels();
-
-      // Get stats
-      const stats = await recoveryService.getRecoveryStats();
-      this.container.logger.info(
-        `[TempVoice] Recovery stats - Active: ${stats.totalRecovered}, Scheduled for deletion: ${stats.scheduledForDeletion}`
-      );
-    } catch (error) {
-      this.container.logger.error('[TempVoice] Error during startup recovery:', error);
+    const transport = getTempVoiceTransport();
+    for (const guildId of this.container.client.guilds.cache.keys()) {
+      await transport.publish({
+        kind: "RECONCILE_GUILD",
+        guildId,
+        observedAt: Date.now(),
+      });
     }
+    this.container.logger.info("[TempVoice] Startup reconciliation queued.");
   }
 }

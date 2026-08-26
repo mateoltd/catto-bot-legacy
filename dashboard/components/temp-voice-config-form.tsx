@@ -1,29 +1,37 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
-import { useTempVoiceConfig } from '@/hooks/use-temp-voice-config';
-import { useGuildData } from '@/hooks/use-guild-data';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { UnsavedChangesBar } from '@/components/ui/unsaved-changes-bar';
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useTempVoiceConfig } from "@/hooks/use-temp-voice-config";
+import { useGuildData } from "@/hooks/use-guild-data";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { UnsavedChangesBar } from "@/components/ui/unsaved-changes-bar";
 
-import SetupWizard from '@/components/temp-voice/setup-wizard';
-import GeneralSettings from '@/components/temp-voice/general-settings';
-import JoinChannelsSection from '@/components/temp-voice/join-channels-section';
-import NamingSection from '@/components/temp-voice/naming-section';
-import DefaultsSection from '@/components/temp-voice/defaults-section';
-import DeletionSection from '@/components/temp-voice/deletion-section';
-import PermissionsSection from '@/components/temp-voice/permissions-section';
-import ModerationSection from '@/components/temp-voice/moderation-section';
-import ActiveChannels from '@/components/temp-voice/active-channels';
+import SetupWizard from "@/components/temp-voice/setup-wizard";
+import GeneralSettings from "@/components/temp-voice/general-settings";
+import JoinChannelsSection from "@/components/temp-voice/join-channels-section";
+import NamingSection from "@/components/temp-voice/naming-section";
+import DefaultsSection from "@/components/temp-voice/defaults-section";
+import DeletionSection from "@/components/temp-voice/deletion-section";
+import PermissionsSection from "@/components/temp-voice/permissions-section";
+import ModerationSection from "@/components/temp-voice/moderation-section";
+import ActiveChannels from "@/components/temp-voice/active-channels";
 
 interface TempVoiceConfigFormProps {
   guildId: string;
 }
 
-export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProps) {
-  const t = useTranslations('TempVoice');
+export default function TempVoiceConfigForm({
+  guildId,
+}: TempVoiceConfigFormProps) {
+  const t = useTranslations("TempVoice");
   const {
     config,
     channels,
@@ -69,8 +77,8 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       maxChannelsPerUser: localConfig.maxChannelsPerUser,
       defaultLocked: localConfig.defaultLocked,
       defaultHidden: localConfig.defaultHidden,
-      ownerLeaveStrategy: localConfig.ownerLeaveStrategy,
       deleteEmptyAfterMs: localConfig.deleteEmptyAfterMs,
+      controlPanelEnabled: localConfig.controlPanelEnabled,
       allowOwnerManagement: localConfig.allowOwnerManagement,
       enableNameModeration: localConfig.enableNameModeration,
       blockedKeywords: localConfig.blockedKeywords,
@@ -109,7 +117,7 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
           <CardContent className="py-12">
             <div className="flex items-center justify-center gap-3">
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-muted-foreground">{t('loading')}</span>
+              <span className="text-muted-foreground">{t("loading")}</span>
             </div>
           </CardContent>
         </Card>
@@ -143,10 +151,8 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       {/* Page Header */}
       <div>
         <div>
-          <h2 className="text-2xl font-bold text-foreground">{t('title')}</h2>
-          <p className="text-muted-foreground mt-1">
-            {t('description')}
-          </p>
+          <h2 className="text-2xl font-bold text-foreground">{t("title")}</h2>
+          <p className="text-muted-foreground mt-1">{t("description")}</p>
         </div>
       </div>
 
@@ -167,7 +173,9 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
             />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-destructive">{t('errorTitle')}</h3>
+            <h3 className="text-sm font-medium text-destructive">
+              {t("errorTitle")}
+            </h3>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
           </div>
         </div>
@@ -181,11 +189,18 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
           </svg>
           <div>
-            <h3 className="text-sm font-medium text-success">{t('successTitle')}</h3>
-            <p className="text-sm text-success/80 mt-1">{t('saved')}</p>
+            <h3 className="text-sm font-medium text-success">
+              {t("successTitle")}
+            </h3>
+            <p className="text-sm text-success/80 mt-1">{t("saved")}</p>
           </div>
         </div>
       )}
@@ -195,8 +210,12 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card variant="glass">
             <CardContent className="py-4">
-              <div className="text-2xl font-bold text-primary">{stats.stats.activeChannels}</div>
-              <div className="text-sm text-muted-foreground">{t('activeChannels')}</div>
+              <div className="text-2xl font-bold text-primary">
+                {stats.stats.activeChannels}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {t("activeChannels")}
+              </div>
             </CardContent>
           </Card>
           <Card variant="glass">
@@ -204,13 +223,19 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
               <div className="text-2xl font-bold text-primary">
                 {stats.stats.totalChannelsCreated}
               </div>
-              <div className="text-sm text-muted-foreground">{t('totalCreated')}</div>
+              <div className="text-sm text-muted-foreground">
+                {t("totalCreated")}
+              </div>
             </CardContent>
           </Card>
           <Card variant="glass">
             <CardContent className="py-4">
-              <div className="text-2xl font-bold text-primary">{stats.stats.totalMembers}</div>
-              <div className="text-sm text-muted-foreground">{t('totalMembers')}</div>
+              <div className="text-2xl font-bold text-primary">
+                {stats.stats.totalMembers}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {t("totalMembers")}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -249,24 +274,33 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
         maxChannelsPerUser={localConfig.maxChannelsPerUser}
         defaultLocked={localConfig.defaultLocked}
         defaultHidden={localConfig.defaultHidden}
-        ownerLeaveStrategy={localConfig.ownerLeaveStrategy}
-        onUpdate={(updates) => setLocalConfig((prev) => ({ ...prev, ...updates }))}
+        ownershipGraceSeconds={config.ownershipGraceSeconds}
+        onUpdate={(updates) =>
+          setLocalConfig((prev) => ({ ...prev, ...updates }))
+        }
       />
 
       <DeletionSection
         deleteEmptyAfterMs={localConfig.deleteEmptyAfterMs}
-        onUpdate={(updates) => setLocalConfig((prev) => ({ ...prev, ...updates }))}
+        onUpdate={(updates) =>
+          setLocalConfig((prev) => ({ ...prev, ...updates }))
+        }
       />
 
       <PermissionsSection
+        controlPanelEnabled={localConfig.controlPanelEnabled}
         allowOwnerManagement={localConfig.allowOwnerManagement}
-        onUpdate={(updates) => setLocalConfig((prev) => ({ ...prev, ...updates }))}
+        onUpdate={(updates) =>
+          setLocalConfig((prev) => ({ ...prev, ...updates }))
+        }
       />
 
       <ModerationSection
         enableNameModeration={localConfig.enableNameModeration}
         blockedKeywords={localConfig.blockedKeywords}
-        onUpdate={(updates) => setLocalConfig((prev) => ({ ...prev, ...updates }))}
+        onUpdate={(updates) =>
+          setLocalConfig((prev) => ({ ...prev, ...updates }))
+        }
       />
 
       <ActiveChannels channels={channels} />
@@ -280,15 +314,17 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
       {/* Danger Zone */}
       <Card variant="glass" className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-destructive">{t('dangerZone')}</CardTitle>
-          <CardDescription>{t('irreversibleActions')}</CardDescription>
+          <CardTitle className="text-destructive">{t("dangerZone")}</CardTitle>
+          <CardDescription>{t("irreversibleActions")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-destructive/5 border border-destructive/20">
             <div>
-              <p className="text-sm font-medium text-foreground">{t('deleteConfiguration')}</p>
+              <p className="text-sm font-medium text-foreground">
+                {t("deleteConfiguration")}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {t('deleteConfigurationDescription')}
+                {t("deleteConfigurationDescription")}
               </p>
             </div>
             {confirmDelete ? (
@@ -299,21 +335,27 @@ export default function TempVoiceConfigForm({ guildId }: TempVoiceConfigFormProp
                   onClick={() => setConfirmDelete(false)}
                   disabled={saving}
                 >
-                  {t('cancel')}
+                  {t("cancel")}
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={saving}>
-                  {saving ? t('deleting') : t('confirmDelete')}
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={saving}
+                >
+                  {saving ? t("deleting") : t("confirmDelete")}
                 </Button>
               </div>
             ) : (
-              <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-                {t('delete')}
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmDelete(true)}
+              >
+                {t("delete")}
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t('deleteNote')}
-          </p>
+          <p className="text-xs text-muted-foreground">{t("deleteNote")}</p>
         </CardContent>
       </Card>
     </div>

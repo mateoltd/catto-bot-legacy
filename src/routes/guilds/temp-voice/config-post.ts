@@ -3,19 +3,22 @@
  * Create new Temp Voice configuration for a guild
  */
 
-import { Route } from '@sapphire/plugin-api';
-import { TempVoiceConfigServiceStatic as TempVoiceConfigService } from '#modules/temp-voice/services/config-api.service.js';
-import { RouteRequestWithBody } from '#root/lib/route-types.js';
-import { validateDto } from '#lib/validation/validate-dto.js';
-import { CreateTempVoiceConfigDto } from '#lib/dtos/temp-voice/temp-voice-config.dto.js';
-import { ApiGate } from '#lib/validation/ApiGate.js';
+import { Route } from "@sapphire/plugin-api";
+import {
+  TempVoiceConfigurationDrainingError,
+  TempVoiceConfigServiceStatic as TempVoiceConfigService,
+} from "#modules/temp-voice/services/config-api.service.js";
+import { RouteRequestWithBody } from "#root/lib/route-types.js";
+import { validateDto } from "#lib/validation/validate-dto.js";
+import { CreateTempVoiceConfigDto } from "#lib/dtos/temp-voice/temp-voice-config.dto.js";
+import { ApiGate } from "#lib/validation/ApiGate.js";
 
 export class TempVoiceConfigPostRoute extends Route {
   public constructor(context: Route.LoaderContext, options: Route.Options) {
     super(context, {
       ...options,
-      route: 'guilds/[guildId]/temp-voice/config',
-      methods: ['POST'],
+      route: "guilds/[guildId]/temp-voice/config",
+      methods: ["POST"],
     });
   }
 
@@ -23,7 +26,10 @@ export class TempVoiceConfigPostRoute extends Route {
     return this.handlePost(request as RouteRequestWithBody, response);
   }
 
-  private async handlePost(request: RouteRequestWithBody, response: Route.Response) {
+  private async handlePost(
+    request: RouteRequestWithBody,
+    response: Route.Response,
+  ) {
     try {
       const guildId = request.params.guildId;
 
@@ -31,24 +37,28 @@ export class TempVoiceConfigPostRoute extends Route {
         return response.status(400).json({
           success: false,
           error: {
-            code: 'MISSING_GUILD_ID',
-            message: 'Guild ID is required',
+            code: "MISSING_GUILD_ID",
+            message: "Guild ID is required",
           },
         });
       }
 
       const gate = await ApiGate.fromRequest(request, guildId);
       if (!gate) {
-        return response.status(401).json({ error: 'Unauthorized', code: 'NOT_AUTHENTICATED' });
+        return response
+          .status(401)
+          .json({ error: "Unauthorized", code: "NOT_AUTHENTICATED" });
       }
-      const auth = await gate.checkAuth('tempvoice.config');
+      const auth = await gate.checkAuth("tempvoice.config");
       if (!auth.ok) {
-        return response.status(403).json({ error: 'Forbidden', code: auth.code });
+        return response
+          .status(403)
+          .json({ error: "Forbidden", code: auth.code });
       }
 
       // Parse body if it's a string
       let body: unknown = request.body;
-      if (typeof body === 'string') {
+      if (typeof body === "string") {
         try {
           body = JSON.parse(body);
         } catch {
@@ -67,29 +77,32 @@ export class TempVoiceConfigPostRoute extends Route {
         return response.status(409).json({
           success: false,
           error: {
-            code: 'CONFIG_ALREADY_EXISTS',
-            message: 'Temp Voice configuration already exists for this guild',
+            code: "CONFIG_ALREADY_EXISTS",
+            message: "Temp Voice configuration already exists for this guild",
           },
           data: {
             guildId,
             suggestion:
-              'Use PATCH /api/guilds/[guildId]/temp-voice/config to update existing configuration',
+              "Use PATCH /api/guilds/[guildId]/temp-voice/config to update existing configuration",
           },
         });
       }
 
       // Validate request body
-      const validationResult = await validateDto(CreateTempVoiceConfigDto, body);
+      const validationResult = await validateDto(
+        CreateTempVoiceConfigDto,
+        body,
+      );
 
       if (!validationResult.success) {
         return response.status(400).json({
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid configuration data',
+            code: "VALIDATION_ERROR",
+            message: "Invalid configuration data",
             details: validationResult.errors?.map((err) => ({
               field: err.field,
-              message: err.constraints.join(', '),
+              message: err.constraints.join(", "),
             })),
           },
         });
@@ -103,8 +116,8 @@ export class TempVoiceConfigPostRoute extends Route {
         return response.status(404).json({
           success: false,
           error: {
-            code: 'GUILD_NOT_FOUND',
-            message: 'Guild not found',
+            code: "GUILD_NOT_FOUND",
+            message: "Guild not found",
           },
         });
       }
@@ -115,7 +128,7 @@ export class TempVoiceConfigPostRoute extends Route {
           return response.status(400).json({
             success: false,
             error: {
-              code: 'CHANNEL_NOT_FOUND',
+              code: "CHANNEL_NOT_FOUND",
               message: `Join-to-create channel ${channelId} not found in guild`,
             },
           });
@@ -125,7 +138,7 @@ export class TempVoiceConfigPostRoute extends Route {
           return response.status(400).json({
             success: false,
             error: {
-              code: 'INVALID_CHANNEL_TYPE',
+              code: "INVALID_CHANNEL_TYPE",
               message: `Channel ${channelId} is not a voice channel`,
             },
           });
@@ -139,7 +152,7 @@ export class TempVoiceConfigPostRoute extends Route {
           return response.status(400).json({
             success: false,
             error: {
-              code: 'CATEGORY_NOT_FOUND',
+              code: "CATEGORY_NOT_FOUND",
               message: `Default category ${configData.defaultCategoryId} not found in guild`,
             },
           });
@@ -150,7 +163,7 @@ export class TempVoiceConfigPostRoute extends Route {
           return response.status(400).json({
             success: false,
             error: {
-              code: 'INVALID_CATEGORY',
+              code: "INVALID_CATEGORY",
               message: `Channel ${configData.defaultCategoryId} is not a category`,
             },
           });
@@ -164,7 +177,7 @@ export class TempVoiceConfigPostRoute extends Route {
           return response.status(400).json({
             success: false,
             error: {
-              code: 'LOG_CHANNEL_NOT_FOUND',
+              code: "LOG_CHANNEL_NOT_FOUND",
               message: `Log channel ${configData.logChannelId} not found in guild`,
             },
           });
@@ -174,7 +187,7 @@ export class TempVoiceConfigPostRoute extends Route {
           return response.status(400).json({
             success: false,
             error: {
-              code: 'INVALID_LOG_CHANNEL',
+              code: "INVALID_LOG_CHANNEL",
               message: `Channel ${configData.logChannelId} is not a text channel`,
             },
           });
@@ -182,13 +195,18 @@ export class TempVoiceConfigPostRoute extends Route {
       }
 
       // Create configuration
-      const config = await TempVoiceConfigService.createConfig(guildId, configData);
+      const config = await TempVoiceConfigService.createConfig(
+        guildId,
+        configData,
+      );
 
-      this.container.logger.info(`[TempVoice API] Created config for guild ${guildId}`);
+      this.container.logger.info(
+        `[TempVoice API] Created config for guild ${guildId}`,
+      );
 
       return response.status(201).json({
         success: true,
-        message: 'Temp Voice configuration created successfully',
+        message: "Temp Voice configuration created successfully",
         data: {
           guildId: config.guildId,
           enabled: config.enabled,
@@ -202,8 +220,9 @@ export class TempVoiceConfigPostRoute extends Route {
           defaultHidden: config.defaultHidden,
           autoDeleteEmpty: config.autoDeleteEmpty,
           deleteEmptyAfterMs: config.deleteEmptyAfterMs,
-          ownerLeaveStrategy: config.ownerLeaveStrategy,
+          ownershipGraceSeconds: config.ownershipGraceSeconds,
           allowOwnerTransfer: config.allowOwnerTransfer,
+          controlPanelEnabled: config.controlPanelEnabled,
           allowOwnerManagement: config.allowOwnerManagement,
           maxChannelsPerUser: config.maxChannelsPerUser,
           logChannelId: config.logChannelId,
@@ -214,13 +233,26 @@ export class TempVoiceConfigPostRoute extends Route {
         },
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice API] Error creating config:', error);
+      if (error instanceof TempVoiceConfigurationDrainingError) {
+        return response.status(409).json({
+          success: false,
+          error: {
+            code: "CONFIG_CLEANUP_IN_PROGRESS",
+            message:
+              "Temporary voice cleanup is still in progress for this guild",
+          },
+        });
+      }
+      this.container.logger.error(
+        "[TempVoice API] Error creating config:",
+        error,
+      );
 
       return response.status(500).json({
         success: false,
         error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'An error occurred while creating the configuration',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An error occurred while creating the configuration",
         },
       });
     }

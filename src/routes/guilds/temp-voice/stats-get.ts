@@ -3,18 +3,19 @@
  * Get statistics about temporary voice channels in a guild
  */
 
-import { Route } from '@sapphire/plugin-api';
-import { TempChannelService } from '#modules/temp-voice/services/temp-channel.service.js';
-import { TempVoiceConfigServiceStatic as TempVoiceConfigService } from '#modules/temp-voice/services/config-api.service.js';
-import { ChannelType } from 'discord.js';
-import { ApiGate } from '#lib/validation/ApiGate.js';
+import { Route } from "@sapphire/plugin-api";
+import { TempChannelService } from "#modules/temp-voice/services/temp-channel.service.js";
+import { TempVoiceConfigServiceStatic as TempVoiceConfigService } from "#modules/temp-voice/services/config-api.service.js";
+import { ChannelType } from "discord.js";
+import { TempVoiceOwnershipStatus } from "@prisma/client";
+import { ApiGate } from "#lib/validation/ApiGate.js";
 
 export class TempVoiceStatsRoute extends Route {
   public constructor(context: Route.LoaderContext, options: Route.Options) {
     super(context, {
       ...options,
-      route: 'guilds/[guildId]/temp-voice/stats',
-      methods: ['GET'],
+      route: "guilds/[guildId]/temp-voice/stats",
+      methods: ["GET"],
     });
   }
 
@@ -30,19 +31,23 @@ export class TempVoiceStatsRoute extends Route {
         return response.status(400).json({
           success: false,
           error: {
-            code: 'MISSING_GUILD_ID',
-            message: 'Guild ID is required',
+            code: "MISSING_GUILD_ID",
+            message: "Guild ID is required",
           },
         });
       }
 
       const gate = await ApiGate.fromRequest(request, guildId);
       if (!gate) {
-        return response.status(401).json({ error: 'Unauthorized', code: 'NOT_AUTHENTICATED' });
+        return response
+          .status(401)
+          .json({ error: "Unauthorized", code: "NOT_AUTHENTICATED" });
       }
-      const auth = await gate.checkAuth('tempvoice.view');
+      const auth = await gate.checkAuth("tempvoice.view");
       if (!auth.ok) {
-        return response.status(403).json({ error: 'Forbidden', code: auth.code });
+        return response
+          .status(403)
+          .json({ error: "Forbidden", code: auth.code });
       }
 
       // Get config
@@ -52,14 +57,19 @@ export class TempVoiceStatsRoute extends Route {
         return response.status(404).json({
           success: false,
           error: {
-            code: 'CONFIG_NOT_FOUND',
-            message: 'Temp Voice configuration not found for this guild',
+            code: "CONFIG_NOT_FOUND",
+            message: "Temp Voice configuration not found for this guild",
           },
         });
       }
 
       // Get all temp channels
-      const tempChannels = await TempChannelService.getGuildTempChannels(guildId);
+      const tempChannels =
+        await TempChannelService.getGuildTempChannels(guildId);
+      const totalChannelsCreated =
+        await this.container.prisma.tempVoiceChannel.count({
+          where: { guildId },
+        });
 
       // Get guild
       const guild = this.container.client.guilds.cache.get(guildId);
@@ -67,8 +77,8 @@ export class TempVoiceStatsRoute extends Route {
         return response.status(404).json({
           success: false,
           error: {
-            code: 'GUILD_NOT_FOUND',
-            message: 'Guild not found',
+            code: "GUILD_NOT_FOUND",
+            message: "Guild not found",
           },
         });
       }
@@ -80,6 +90,8 @@ export class TempVoiceStatsRoute extends Route {
       const ownerCounts = new Map<string, number>();
 
       for (const tc of tempChannels) {
+        if (!tc.channelId) continue;
+
         const channel = guild.channels.cache.get(tc.channelId);
 
         if (channel && channel.type === ChannelType.GuildVoice) {
@@ -91,8 +103,10 @@ export class TempVoiceStatsRoute extends Route {
           }
 
           // Count channels per owner
-          const currentCount = ownerCounts.get(tc.ownerId) || 0;
-          ownerCounts.set(tc.ownerId, currentCount + 1);
+          if (tc.ownershipStatus !== TempVoiceOwnershipStatus.CLAIMABLE) {
+            const currentCount = ownerCounts.get(tc.ownerId) || 0;
+            ownerCounts.set(tc.ownerId, currentCount + 1);
+          }
         }
       }
 
@@ -107,14 +121,15 @@ export class TempVoiceStatsRoute extends Route {
       }
 
       // Calculate average members per channel
-      const avgMembersPerChannel = activeCount > 0 ? totalMembers / activeCount : 0;
+      const avgMembersPerChannel =
+        activeCount > 0 ? totalMembers / activeCount : 0;
 
       // Get join channel details
       const joinChannels = config.joinChannelIds.map((id) => {
         const channel = guild.channels.cache.get(id);
         return {
           id,
-          name: channel?.name || 'Unknown',
+          name: channel?.name || "Unknown",
           exists: !!channel,
         };
       });
@@ -130,16 +145,18 @@ export class TempVoiceStatsRoute extends Route {
             maxChannelsPerUser: config.maxChannelsPerUser,
           },
           stats: {
-            totalChannelsCreated: tempChannels.length,
+            totalChannelsCreated,
             activeChannels: activeCount,
             emptyChannels: emptyCount,
             totalMembers,
-            averageMembersPerChannel: Math.round(avgMembersPerChannel * 100) / 100,
+            averageMembersPerChannel:
+              Math.round(avgMembersPerChannel * 100) / 100,
             uniqueOwners: ownerCounts.size,
             mostActiveOwner: mostActiveOwner
               ? {
                   userId: mostActiveOwner,
-                  username: guild.members.cache.get(mostActiveOwner)?.user.username,
+                  username:
+                    guild.members.cache.get(mostActiveOwner)?.user.username,
                   channelCount: maxChannels,
                 }
               : null,
@@ -148,13 +165,16 @@ export class TempVoiceStatsRoute extends Route {
         },
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice API] Error fetching stats:', error);
+      this.container.logger.error(
+        "[TempVoice API] Error fetching stats:",
+        error,
+      );
 
       return response.status(500).json({
         success: false,
         error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'An error occurred while fetching statistics',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An error occurred while fetching statistics",
         },
       });
     }

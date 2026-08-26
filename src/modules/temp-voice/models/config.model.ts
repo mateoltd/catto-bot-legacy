@@ -2,8 +2,10 @@
  * TypeScript interfaces for Temp Voice configuration
  */
 
-import type { OwnerLeaveStrategy } from '../constants.js';
-import type { TempVoiceNamingScheme, TempVoiceModerationAction } from '@prisma/client';
+import type {
+  TempVoiceNamingScheme,
+  TempVoiceModerationAction,
+} from "@prisma/client";
 
 /**
  * Guild-level configuration for temp voice module
@@ -12,6 +14,7 @@ export interface TempVoiceConfig {
   id: string;
   guildId: string;
   enabled: boolean;
+  drainingAt: Date | null;
 
   // Join to Create channels
   joinToCreateChannels: string[];
@@ -31,7 +34,6 @@ export interface TempVoiceConfig {
 
   // Cleanup settings
   deleteDelaySeconds: number;
-  ownerLeaveStrategy: OwnerLeaveStrategy;
 
   // Anti-abuse
   cooldownSeconds: number;
@@ -39,7 +41,6 @@ export interface TempVoiceConfig {
 
   // Control panel
   controlPanelEnabled: boolean;
-  controlPanelOnCreate: boolean;
   allowCustomization: boolean;
 
   // Logging
@@ -71,7 +72,10 @@ export interface TempVoiceConfig {
  * Partial config for updates (all fields optional except guildId)
  */
 export type TempVoiceConfigUpdate = Partial<
-  Omit<TempVoiceConfig, 'id' | 'createdAt' | 'updatedAt' | 'guildId'>
+  Omit<
+    TempVoiceConfig,
+    "id" | "createdAt" | "updatedAt" | "guildId" | "drainingAt"
+  >
 >;
 
 /**
@@ -79,5 +83,5 @@ export type TempVoiceConfigUpdate = Partial<
  */
 export type TempVoiceConfigInput = Omit<
   TempVoiceConfig,
-  'id' | 'createdAt' | 'updatedAt' | 'guildId'
+  "id" | "createdAt" | "updatedAt" | "guildId" | "drainingAt"
 >;

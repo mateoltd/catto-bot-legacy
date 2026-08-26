@@ -3,17 +3,18 @@
  * List all active temporary voice channels in a guild
  */
 
-import { Route } from '@sapphire/plugin-api';
-import { TempChannelService } from '#modules/temp-voice/services/temp-channel.service.js';
-import { ChannelType } from 'discord.js';
-import { ApiGate } from '#lib/validation/ApiGate.js';
+import { Route } from "@sapphire/plugin-api";
+import { TempChannelService } from "#modules/temp-voice/services/temp-channel.service.js";
+import { ChannelType } from "discord.js";
+import { TempVoiceOwnershipStatus } from "@prisma/client";
+import { ApiGate } from "#lib/validation/ApiGate.js";
 
 export class TempVoiceChannelsRoute extends Route {
   public constructor(context: Route.LoaderContext, options: Route.Options) {
     super(context, {
       ...options,
-      route: 'guilds/[guildId]/temp-voice/channels',
-      methods: ['GET'],
+      route: "guilds/[guildId]/temp-voice/channels",
+      methods: ["GET"],
     });
   }
 
@@ -29,23 +30,28 @@ export class TempVoiceChannelsRoute extends Route {
         return response.status(400).json({
           success: false,
           error: {
-            code: 'MISSING_GUILD_ID',
-            message: 'Guild ID is required',
+            code: "MISSING_GUILD_ID",
+            message: "Guild ID is required",
           },
         });
       }
 
       const gate = await ApiGate.fromRequest(request, guildId);
       if (!gate) {
-        return response.status(401).json({ error: 'Unauthorized', code: 'NOT_AUTHENTICATED' });
+        return response
+          .status(401)
+          .json({ error: "Unauthorized", code: "NOT_AUTHENTICATED" });
       }
-      const auth = await gate.checkAuth('tempvoice.view');
+      const auth = await gate.checkAuth("tempvoice.view");
       if (!auth.ok) {
-        return response.status(403).json({ error: 'Forbidden', code: auth.code });
+        return response
+          .status(403)
+          .json({ error: "Forbidden", code: auth.code });
       }
 
       // Get all active temp channels for this guild
-      const tempChannels = await TempChannelService.getGuildTempChannels(guildId);
+      const tempChannels =
+        await TempChannelService.getGuildTempChannels(guildId);
 
       // Get guild to fetch channel details
       const guild = this.container.client.guilds.cache.get(guildId);
@@ -53,8 +59,8 @@ export class TempVoiceChannelsRoute extends Route {
         return response.status(404).json({
           success: false,
           error: {
-            code: 'GUILD_NOT_FOUND',
-            message: 'Guild not found',
+            code: "GUILD_NOT_FOUND",
+            message: "Guild not found",
           },
         });
       }
@@ -62,14 +68,26 @@ export class TempVoiceChannelsRoute extends Route {
       // Fetch detailed information for each channel
       const channelsWithDetails = await Promise.all(
         tempChannels.map(async (tc) => {
-          const channel = guild.channels.cache.get(tc.channelId);
+          const ownerId =
+            tc.ownershipStatus === TempVoiceOwnershipStatus.CLAIMABLE
+              ? null
+              : tc.ownerId;
+          const channel = tc.channelId
+            ? guild.channels.cache.get(tc.channelId)
+            : null;
 
           if (!channel || channel.type !== ChannelType.GuildVoice) {
             return {
+              aggregateId: tc.id,
               channelId: tc.channelId,
-              ownerId: tc.ownerId,
+              ownerId,
               createdAt: tc.createdAt,
-              status: 'deleted',
+              lifecycle: tc.lifecycle,
+              ownershipStatus: tc.ownershipStatus,
+              claimableAt: tc.claimableAt,
+              deleteAfter: tc.deleteAfter,
+              lastError: tc.lastErrorMessage,
+              status: tc.lifecycle === "CREATING" ? "creating" : "unavailable",
             };
           }
 
@@ -82,18 +100,21 @@ export class TempVoiceChannelsRoute extends Route {
           }));
 
           const permissions = {
-            locked: tc.isLocked,
-            hidden: tc.isHidden,
+            isLocked: tc.isLocked,
+            isHidden: tc.isHidden,
             allowedUserIds: tc.allowedUserIds,
             deniedUserIds: tc.deniedUserIds,
             trustedUserIds: tc.trustedUserIds,
           };
 
           return {
+            aggregateId: tc.id,
             channelId: tc.channelId,
             channelName: channel.name,
-            ownerId: tc.ownerId,
-            ownerUsername: guild.members.cache.get(tc.ownerId)?.user.username,
+            ownerId,
+            ownerUsername: ownerId
+              ? guild.members.cache.get(ownerId)?.user.username
+              : undefined,
             categoryId: channel.parentId,
             categoryName: channel.parent?.name,
             userLimit: channel.userLimit,
@@ -102,33 +123,35 @@ export class TempVoiceChannelsRoute extends Route {
             members,
             permissions,
             createdAt: tc.createdAt,
-            status: 'active',
+            lifecycle: tc.lifecycle,
+            ownershipStatus: tc.ownershipStatus,
+            claimableAt: tc.claimableAt,
+            deleteAfter: tc.deleteAfter,
+            lastError: tc.lastErrorMessage,
+            status: "active",
           };
-        })
+        }),
       );
-
-      // Filter out deleted channels if requested
-      const includeDeleted = request.query.includeDeleted === 'true';
-      const filteredChannels = includeDeleted
-        ? channelsWithDetails
-        : channelsWithDetails.filter((c) => c.status === 'active');
 
       return response.json({
         success: true,
         data: {
           guildId,
-          totalChannels: filteredChannels.length,
-          channels: filteredChannels,
+          totalChannels: channelsWithDetails.length,
+          channels: channelsWithDetails,
         },
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice API] Error listing channels:', error);
+      this.container.logger.error(
+        "[TempVoice API] Error listing channels:",
+        error,
+      );
 
       return response.status(500).json({
         success: false,
         error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'An error occurred while listing temporary channels',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "An error occurred while listing temporary channels",
         },
       });
     }

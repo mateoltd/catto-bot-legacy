@@ -1,15 +1,21 @@
-import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { ModalSubmitInteraction, GuildMember } from 'discord.js';
-import { MessageFlags, type VoiceChannel } from 'discord.js';
-import { EMOJI } from '#lib/discord/design/index.js';
-import { decodeCustomId } from '#lib/discord/core/index.js';
-import { getTempVoiceServices } from '../../modules/temp-voice/services/service-container.js';
-import { NameModerationService } from '#modules/temp-voice/services/moderation/name-moderation.service.js';
+import {
+  InteractionHandler,
+  InteractionHandlerTypes,
+} from "@sapphire/framework";
+import type { ModalSubmitInteraction, GuildMember } from "discord.js";
+import { MessageFlags, type VoiceChannel } from "discord.js";
+import { EMOJI } from "#lib/discord/design/index.js";
+import { decodeCustomId } from "#lib/discord/core/index.js";
+import { getTempVoiceServices } from "../../modules/temp-voice/services/service-container.js";
+import { NameModerationService } from "#modules/temp-voice/services/moderation/name-moderation.service.js";
 
 export class TempVoiceModalHandler extends InteractionHandler {
   private moderationService!: NameModerationService;
 
-  public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
+  public constructor(
+    ctx: InteractionHandler.LoaderContext,
+    options: InteractionHandler.Options,
+  ) {
     super(ctx, {
       ...options,
       interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
@@ -18,9 +24,9 @@ export class TempVoiceModalHandler extends InteractionHandler {
 
   public override parse(interaction: ModalSubmitInteraction) {
     // New format: tv:action_modal:channelId
-    if (interaction.customId.startsWith('tv:')) return this.some();
+    if (interaction.customId.startsWith("tv:")) return this.some();
     // Legacy format: tempvoice_action_modal_channelId
-    if (interaction.customId.startsWith('tempvoice_')) return this.some();
+    if (interaction.customId.startsWith("tempvoice_")) return this.some();
 
     return this.none();
   }
@@ -45,7 +51,11 @@ export class TempVoiceModalHandler extends InteractionHandler {
       const { operations } = getTempVoiceServices();
 
       // Build operation context
-      const ctx = await operations.buildContext(interaction.guild, channelId);
+      const ctx = await operations.buildContext(
+        interaction.guild,
+        channelId,
+        interaction.user.id,
+      );
       if (!ctx) {
         return interaction.reply({
           content: `${EMOJI.STATUS.ERROR} This temporary voice channel no longer exists.`,
@@ -55,7 +65,11 @@ export class TempVoiceModalHandler extends InteractionHandler {
 
       // Permission check
       const member = interaction.member as GuildMember;
-      const accessError = operations.checkAccess(member, ctx.tempChannel, ctx.config);
+      const accessError = operations.checkAccess(
+        member,
+        ctx.tempChannel,
+        ctx.config,
+      );
       if (accessError) {
         return interaction.reply({
           content: `${EMOJI.STATUS.ERROR} ${accessError}`,
@@ -65,14 +79,14 @@ export class TempVoiceModalHandler extends InteractionHandler {
 
       // Route to appropriate handler
       switch (action) {
-        case 'rename':
-        case 'rename_modal':
+        case "rename":
+        case "rename_modal":
           return this.handleRenameSubmit(interaction, ctx);
-        case 'limit':
-        case 'limit_modal':
+        case "limit":
+        case "limit_modal":
           return this.handleLimitSubmit(interaction, ctx);
-        case 'settings':
-        case 'settings_modal':
+        case "settings":
+        case "settings_modal":
           return this.handleSettingsSubmit(interaction, ctx);
         default:
           return interaction.reply({
@@ -83,7 +97,7 @@ export class TempVoiceModalHandler extends InteractionHandler {
     } catch (error) {
       this.container.logger.error(
         `[TempVoice Modal] Unhandled error processing modal ${interaction.customId}:`,
-        error
+        error,
       );
       // Reply only if not already replied/deferred
       if (!interaction.replied && !interaction.deferred) {
@@ -98,34 +112,37 @@ export class TempVoiceModalHandler extends InteractionHandler {
 
   // ───── Custom ID Parsing ─────
 
-  private parseCustomId(customId: string): { action: string; channelId: string } {
+  private parseCustomId(customId: string): {
+    action: string;
+    channelId: string;
+  } {
     // New format: tv:rename_modal:channelId
-    if (customId.startsWith('tv:')) {
+    if (customId.startsWith("tv:")) {
       const parsed = decodeCustomId(customId);
-      return { action: parsed.action, channelId: parsed.params[0] || '' };
+      return { action: parsed.action, channelId: parsed.params[0] || "" };
     }
 
     // Legacy format: tempvoice_rename_modal_channelId
-    const parts = customId.split('_');
+    const parts = customId.split("_");
     // parts: ['tempvoice', action, 'modal', channelId]
-    return { action: parts[1] || '', channelId: parts[3] || '' };
+    return { action: parts[1] || "", channelId: parts[3] || "" };
   }
 
   // ───── Rename ─────
 
   private async handleRenameSubmit(
     interaction: ModalSubmitInteraction,
-    ctx: import('../../modules/temp-voice/services/operations.service.js').OperationContext
+    ctx: import("../../modules/temp-voice/services/operations.service.js").OperationContext,
   ) {
     // Initialize moderation service lazily
     if (!this.moderationService) {
       this.moderationService = new NameModerationService(
         this.container.prisma,
-        this.container.logger
+        this.container.logger,
       );
     }
 
-    const newName = interaction.fields.getTextInputValue('channel_name').trim();
+    const newName = interaction.fields.getTextInputValue("channel_name").trim();
 
     if (newName.length < 1 || newName.length > 100) {
       return interaction.reply({
@@ -155,24 +172,25 @@ export class TempVoiceModalHandler extends InteractionHandler {
       // Apply moderation if enabled
       if (ctx.config.moderationEnabled) {
         const oldName = voiceChannel.name;
-        const moderationResult = await this.moderationService.moderateChannelName(
-          voiceChannel,
-          oldName,
-          newName,
-          ctx.config,
-          interaction.user.id
-        );
+        const moderationResult =
+          await this.moderationService.moderateChannelName(
+            voiceChannel,
+            oldName,
+            newName,
+            ctx.config,
+            interaction.user.id,
+          );
 
         if (moderationResult && !moderationResult.validation.isAllowed) {
           finalName = moderationResult.finalName;
 
-          if (ctx.config.moderationAction === 'AUTO_RENAME') {
+          if (ctx.config.moderationAction === "AUTO_RENAME") {
             // Moderation service already renamed the channel; delegate remaining DB/prefs/panel updates
             await operations.rename(ctx, finalName);
             return interaction.editReply({
               content: `${EMOJI.STATUS.WARNING} Your channel name was automatically changed to **${finalName}** because "${newName}" contains inappropriate content.`,
             });
-          } else if (ctx.config.moderationAction === 'BLOCK') {
+          } else if (ctx.config.moderationAction === "BLOCK") {
             return interaction.editReply({
               content: `${EMOJI.STATUS.ERROR} That channel name is not allowed. Please choose a different name.`,
             });
@@ -195,7 +213,7 @@ export class TempVoiceModalHandler extends InteractionHandler {
       const errMsg = error instanceof Error ? error.message : String(error);
       this.container.logger.error(
         `[TempVoice Modal] Failed to rename channel ${ctx.channelId}:`,
-        error
+        error,
       );
       return interaction.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to rename channel: ${errMsg}`,
@@ -207,9 +225,9 @@ export class TempVoiceModalHandler extends InteractionHandler {
 
   private async handleLimitSubmit(
     interaction: ModalSubmitInteraction,
-    ctx: import('../../modules/temp-voice/services/operations.service.js').OperationContext
+    ctx: import("../../modules/temp-voice/services/operations.service.js").OperationContext,
   ) {
-    const limitStr = interaction.fields.getTextInputValue('user_limit').trim();
+    const limitStr = interaction.fields.getTextInputValue("user_limit").trim();
     const limit = parseInt(limitStr, 10);
 
     if (isNaN(limit) || limit < 0 || limit > 99) {
@@ -232,7 +250,7 @@ export class TempVoiceModalHandler extends InteractionHandler {
       const errMsg = error instanceof Error ? error.message : String(error);
       this.container.logger.error(
         `[TempVoice Modal] Failed to set user limit for channel ${ctx.channelId}:`,
-        error
+        error,
       );
       return interaction.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to set user limit: ${errMsg}`,
@@ -244,10 +262,11 @@ export class TempVoiceModalHandler extends InteractionHandler {
 
   private async handleSettingsSubmit(
     interaction: ModalSubmitInteraction,
-    ctx: import('../../modules/temp-voice/services/operations.service.js').OperationContext
+    ctx: import("../../modules/temp-voice/services/operations.service.js").OperationContext,
   ) {
-    const bitrateStr = interaction.fields.getTextInputValue('bitrate').trim();
-    const region = interaction.fields.getTextInputValue('region').trim() || 'auto';
+    const bitrateStr = interaction.fields.getTextInputValue("bitrate").trim();
+    const region =
+      interaction.fields.getTextInputValue("region").trim() || "auto";
 
     const bitrate = parseInt(bitrateStr, 10);
     if (isNaN(bitrate) || bitrate < 8 || bitrate > 384) {
@@ -284,7 +303,7 @@ export class TempVoiceModalHandler extends InteractionHandler {
       const errMsg = error instanceof Error ? error.message : String(error);
       this.container.logger.error(
         `[TempVoice Modal] Failed to update settings for channel ${ctx.channelId}:`,
-        error
+        error,
       );
       return interaction.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to update settings: ${errMsg}`,

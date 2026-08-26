@@ -1,17 +1,17 @@
-import { Command } from '@sapphire/framework';
-import { ApplyOptions } from '@sapphire/decorators';
-import { ChannelType, type GuildMember } from 'discord.js';
-import { EMOJI } from '#lib/discord/design/index.js';
-import { getTempVoiceServices } from '../../modules/temp-voice/services/service-container.js';
-import { NameModerationService } from '#modules/temp-voice/services/moderation/name-moderation.service.js';
-import type { OperationContext } from '../../modules/temp-voice/services/operations.service.js';
-import { handleVoiceSetup } from './_setup.js';
+import { Command } from "@sapphire/framework";
+import { ApplyOptions } from "@sapphire/decorators";
+import { ChannelType, type GuildMember } from "discord.js";
+import { EMOJI } from "#lib/discord/design/index.js";
+import { getTempVoiceServices } from "../../modules/temp-voice/services/service-container.js";
+import { NameModerationService } from "#modules/temp-voice/services/moderation/name-moderation.service.js";
+import type { OperationContext } from "../../modules/temp-voice/services/operations.service.js";
+import { handleVoiceSetup } from "./_setup.js";
 
 @ApplyOptions<Command.Options>({
-  name: 'voice',
-  description: 'Manage your temporary voice channel',
+  name: "voice",
+  description: "Manage your temporary voice channel",
   requiredUserPermissions: [],
-  preconditions: ['GuildOnly'],
+  preconditions: ["GuildOnly"],
 })
 export class TempVoiceCommand extends Command {
   private moderationService!: NameModerationService;
@@ -24,152 +24,186 @@ export class TempVoiceCommand extends Command {
         .setDMPermission(false)
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('rename')
-            .setDescription('Rename your temporary voice channel')
+            .setName("rename")
+            .setDescription("Rename your temporary voice channel")
             .addStringOption((option) =>
               option
-                .setName('name')
-                .setDescription('New channel name')
+                .setName("name")
+                .setDescription("New channel name")
                 .setRequired(true)
                 .setMinLength(1)
-                .setMaxLength(100)
-            )
+                .setMaxLength(100),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('limit')
-            .setDescription('Set the user limit for your channel')
+            .setName("limit")
+            .setDescription("Set the user limit for your channel")
             .addIntegerOption((option) =>
               option
-                .setName('limit')
-                .setDescription('User limit (0 for unlimited, max 99)')
+                .setName("limit")
+                .setDescription("User limit (0 for unlimited, max 99)")
                 .setRequired(true)
                 .setMinValue(0)
-                .setMaxValue(99)
-            )
+                .setMaxValue(99),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('lock')
-            .setDescription('Lock your channel (only allowed users can join)')
+            .setName("lock")
+            .setDescription("Lock your channel (only allowed users can join)"),
         )
         .addSubcommand((subcommand) =>
-          subcommand.setName('unlock').setDescription('Unlock your channel')
-        )
-        .addSubcommand((subcommand) =>
-          subcommand.setName('hide').setDescription('Hide your channel from @everyone')
-        )
-        .addSubcommand((subcommand) =>
-          subcommand.setName('show').setDescription('Make your channel visible to @everyone')
+          subcommand.setName("unlock").setDescription("Unlock your channel"),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('permit')
-            .setDescription('Allow a user to join your locked/hidden channel')
+            .setName("hide")
+            .setDescription("Hide your channel from @everyone"),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("show")
+            .setDescription("Make your channel visible to @everyone"),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("permit")
+            .setDescription("Allow a user to join your locked/hidden channel")
             .addUserOption((option) =>
-              option.setName('user').setDescription('User to permit').setRequired(true)
-            )
+              option
+                .setName("user")
+                .setDescription("User to permit")
+                .setRequired(true),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('deny')
-            .setDescription('Deny a user from joining your channel')
+            .setName("deny")
+            .setDescription("Deny a user from joining your channel")
             .addUserOption((option) =>
-              option.setName('user').setDescription('User to deny').setRequired(true)
-            )
+              option
+                .setName("user")
+                .setDescription("User to deny")
+                .setRequired(true),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('trust')
-            .setDescription('Trust a user to help manage your channel')
+            .setName("trust")
+            .setDescription("Trust a user to help manage your channel")
             .addUserOption((option) =>
-              option.setName('user').setDescription('User to trust').setRequired(true)
-            )
+              option
+                .setName("user")
+                .setDescription("User to trust")
+                .setRequired(true),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('untrust')
-            .setDescription('Remove trust from a user')
+            .setName("untrust")
+            .setDescription("Remove trust from a user")
             .addUserOption((option) =>
-              option.setName('user').setDescription('User to untrust').setRequired(true)
-            )
+              option
+                .setName("user")
+                .setDescription("User to untrust")
+                .setRequired(true),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('kick')
-            .setDescription('Kick a user from your channel')
+            .setName("kick")
+            .setDescription("Kick a user from your channel")
             .addUserOption((option) =>
-              option.setName('user').setDescription('User to kick').setRequired(true)
-            )
+              option
+                .setName("user")
+                .setDescription("User to kick")
+                .setRequired(true),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('transfer')
-            .setDescription('Transfer ownership of your channel to another user')
+            .setName("transfer")
+            .setDescription(
+              "Transfer ownership of your channel to another user",
+            )
             .addUserOption((option) =>
-              option.setName('user').setDescription('New owner').setRequired(true)
-            )
+              option
+                .setName("user")
+                .setDescription("New owner")
+                .setRequired(true),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('bitrate')
-            .setDescription('Set the bitrate for your channel')
+            .setName("bitrate")
+            .setDescription("Set the bitrate for your channel")
             .addIntegerOption((option) =>
               option
-                .setName('bitrate')
-                .setDescription('Bitrate in kbps (8-384)')
+                .setName("bitrate")
+                .setDescription("Bitrate in kbps (8-384)")
                 .setRequired(true)
                 .setMinValue(8)
-                .setMaxValue(384)
-            )
+                .setMaxValue(384),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('region')
-            .setDescription('Set the region for your channel')
+            .setName("region")
+            .setDescription("Set the region for your channel")
             .addStringOption((option) =>
               option
-                .setName('region')
-                .setDescription('Voice region')
+                .setName("region")
+                .setDescription("Voice region")
                 .setRequired(true)
                 .addChoices(
-                  { name: 'Automatic', value: 'auto' },
-                  { name: 'Brazil', value: 'brazil' },
-                  { name: 'Hong Kong', value: 'hongkong' },
-                  { name: 'India', value: 'india' },
-                  { name: 'Japan', value: 'japan' },
-                  { name: 'Rotterdam', value: 'rotterdam' },
-                  { name: 'Russia', value: 'russia' },
-                  { name: 'Singapore', value: 'singapore' },
-                  { name: 'South Africa', value: 'southafrica' },
-                  { name: 'Sydney', value: 'sydney' },
-                  { name: 'US Central', value: 'us-central' },
-                  { name: 'US East', value: 'us-east' },
-                  { name: 'US South', value: 'us-south' },
-                  { name: 'US West', value: 'us-west' }
-                )
-            )
-        )
-        .addSubcommand((subcommand) =>
-          subcommand.setName('reset').setDescription('Reset your channel to default settings')
+                  { name: "Automatic", value: "auto" },
+                  { name: "Brazil", value: "brazil" },
+                  { name: "Hong Kong", value: "hongkong" },
+                  { name: "India", value: "india" },
+                  { name: "Japan", value: "japan" },
+                  { name: "Rotterdam", value: "rotterdam" },
+                  { name: "Russia", value: "russia" },
+                  { name: "Singapore", value: "singapore" },
+                  { name: "South Africa", value: "southafrica" },
+                  { name: "Sydney", value: "sydney" },
+                  { name: "US Central", value: "us-central" },
+                  { name: "US East", value: "us-east" },
+                  { name: "US South", value: "us-south" },
+                  { name: "US West", value: "us-west" },
+                ),
+            ),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('claim')
-            .setDescription('Claim ownership of an abandoned temporary channel')
-        )
-        .addSubcommand((subcommand) =>
-          subcommand.setName('panel').setDescription('Show the control panel for your channel')
+            .setName("reset")
+            .setDescription("Reset your channel to default settings"),
         )
         .addSubcommand((subcommand) =>
           subcommand
-            .setName('setup')
-            .setDescription('Interactive setup wizard for temp voice (Manage Server)')
+            .setName("claim")
+            .setDescription(
+              "Claim ownership of an abandoned temporary channel",
+            ),
         )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("panel")
+            .setDescription("Show the control panel for your channel"),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("setup")
+            .setDescription(
+              "Interactive setup wizard for temp voice (Manage Server)",
+            ),
+        ),
     );
   }
 
-  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+  public override async chatInputRun(
+    interaction: Command.ChatInputCommandInteraction,
+  ) {
     if (!interaction.guild || !interaction.member) {
       return interaction.reply({
         content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
@@ -181,7 +215,7 @@ export class TempVoiceCommand extends Command {
     const subcommand = interaction.options.getSubcommand();
 
     // Setup doesn't require being in a voice channel
-    if (subcommand === 'setup') {
+    if (subcommand === "setup") {
       return handleVoiceSetup(interaction);
     }
 
@@ -197,7 +231,11 @@ export class TempVoiceCommand extends Command {
     const { operations } = getTempVoiceServices();
 
     // Build context (fetches temp channel + config)
-    const ctx = await operations.buildContext(interaction.guild, voiceChannel.id);
+    const ctx = await operations.buildContext(
+      interaction.guild,
+      voiceChannel.id,
+      member.id,
+    );
     if (!ctx) {
       return interaction.reply({
         content: `${EMOJI.STATUS.ERROR} This is not a temporary voice channel.`,
@@ -206,8 +244,11 @@ export class TempVoiceCommand extends Command {
     }
 
     // Permission check (except for claim which checks owner presence instead)
-    if (subcommand !== 'claim') {
-      const accessError = operations.checkAccess(member, ctx.tempChannel, ctx.config);
+    if (subcommand !== "claim") {
+      const accessError =
+        subcommand === "transfer"
+          ? operations.checkTransferAccess(member, ctx.tempChannel, ctx.config)
+          : operations.checkAccess(member, ctx.tempChannel, ctx.config);
       if (accessError) {
         return interaction.reply({
           content: `${EMOJI.STATUS.ERROR} ${accessError}`,
@@ -216,7 +257,10 @@ export class TempVoiceCommand extends Command {
       }
 
       // Check if customization is allowed (except panel/claim/transfer)
-      if (!ctx.config.allowCustomization && !['panel', 'transfer'].includes(subcommand)) {
+      if (
+        !ctx.config.allowCustomization &&
+        !["panel", "transfer"].includes(subcommand)
+      ) {
         return interaction.reply({
           content: `${EMOJI.STATUS.ERROR} Channel customization is disabled in this server.`,
           ephemeral: true,
@@ -226,60 +270,78 @@ export class TempVoiceCommand extends Command {
 
     // Route to operations service
     switch (subcommand) {
-      case 'lock':
+      case "lock":
         return this.handleToggleLock(interaction, ctx, true);
-      case 'unlock':
+      case "unlock":
         return this.handleToggleLock(interaction, ctx, false);
-      case 'hide':
+      case "hide":
         return this.handleToggleHide(interaction, ctx, true);
-      case 'show':
+      case "show":
         return this.handleToggleHide(interaction, ctx, false);
-      case 'rename':
+      case "rename":
         return this.handleRename(interaction, ctx);
-      case 'limit':
+      case "limit":
         return this.handleSimpleOp(interaction, () =>
-          operations.setLimit(ctx, interaction.options.getInteger('limit', true))
+          operations.setLimit(
+            ctx,
+            interaction.options.getInteger("limit", true),
+          ),
         );
-      case 'permit':
+      case "permit":
         return this.handleSimpleOp(interaction, () =>
-          operations.permit(ctx, [interaction.options.getUser('user', true).id])
+          operations.permit(ctx, [
+            interaction.options.getUser("user", true).id,
+          ]),
         );
-      case 'deny':
+      case "deny":
         return this.handleSimpleOp(interaction, () =>
-          operations.deny(ctx, [interaction.options.getUser('user', true).id])
+          operations.deny(ctx, [interaction.options.getUser("user", true).id]),
         );
-      case 'trust':
+      case "trust":
         return this.handleSimpleOp(interaction, () =>
-          operations.toggleTrust(ctx, [interaction.options.getUser('user', true).id])
+          operations.toggleTrust(ctx, [
+            interaction.options.getUser("user", true).id,
+          ]),
         );
-      case 'untrust':
+      case "untrust":
         return this.handleSimpleOp(interaction, () =>
-          operations.toggleTrust(ctx, [interaction.options.getUser('user', true).id])
+          operations.toggleTrust(ctx, [
+            interaction.options.getUser("user", true).id,
+          ]),
         );
-      case 'kick':
+      case "kick":
         return this.handleSimpleOp(interaction, () =>
-          operations.kick(ctx, [interaction.options.getUser('user', true).id])
+          operations.kick(ctx, [interaction.options.getUser("user", true).id]),
         );
-      case 'transfer':
+      case "transfer":
         return this.handleSimpleOp(interaction, () =>
-          operations.transfer(ctx, interaction.options.getUser('user', true).id)
+          operations.transfer(
+            ctx,
+            interaction.options.getUser("user", true).id,
+          ),
         );
-      case 'bitrate':
+      case "bitrate":
         return this.handleSimpleOp(interaction, () =>
-          operations.setBitrate(ctx, interaction.options.getInteger('bitrate', true))
+          operations.setBitrate(
+            ctx,
+            interaction.options.getInteger("bitrate", true),
+          ),
         );
-      case 'region':
+      case "region":
         return this.handleSimpleOp(interaction, () =>
-          operations.setRegion(ctx, interaction.options.getString('region', true))
+          operations.setRegion(
+            ctx,
+            interaction.options.getString("region", true),
+          ),
         );
-      case 'reset':
+      case "reset":
         return this.handleSimpleOp(interaction, () => operations.reset(ctx));
-      case 'claim':
+      case "claim":
         return this.handleSimpleOp(interaction, () =>
-          operations.claim(ctx, member.id, member.voice.channelId)
+          operations.claim(ctx, member.id, member.voice.channelId),
         );
-      case 'panel':
-        return this.handlePanel(interaction, ctx, member);
+      case "panel":
+        return this.handlePanel(interaction, ctx);
       default:
         return interaction.reply({
           content: `${EMOJI.STATUS.ERROR} Unknown subcommand.`,
@@ -292,7 +354,7 @@ export class TempVoiceCommand extends Command {
 
   private async handleSimpleOp(
     interaction: Command.ChatInputCommandInteraction,
-    operationFn: () => Promise<{ ok: boolean; message: string }>
+    operationFn: () => Promise<{ ok: boolean; message: string }>,
   ) {
     try {
       const result = await operationFn();
@@ -302,7 +364,10 @@ export class TempVoiceCommand extends Command {
         ephemeral: true,
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice] Command operation failed:', error);
+      this.container.logger.error(
+        "[TempVoice] Command operation failed:",
+        error,
+      );
       return interaction.reply({
         content: `${EMOJI.STATUS.ERROR} An unexpected error occurred. Please try again.`,
         ephemeral: true,
@@ -315,7 +380,7 @@ export class TempVoiceCommand extends Command {
   private async handleToggleLock(
     interaction: Command.ChatInputCommandInteraction,
     ctx: OperationContext,
-    wantLocked: boolean
+    wantLocked: boolean,
   ) {
     // If already in desired state, just confirm
     if (ctx.tempChannel.isLocked === wantLocked) {
@@ -329,7 +394,7 @@ export class TempVoiceCommand extends Command {
 
     // toggleLock will flip to the desired state since current != desired
     return this.handleSimpleOp(interaction, () =>
-      getTempVoiceServices().operations.toggleLock(ctx)
+      getTempVoiceServices().operations.toggleLock(ctx),
     );
   }
 
@@ -338,7 +403,7 @@ export class TempVoiceCommand extends Command {
   private async handleToggleHide(
     interaction: Command.ChatInputCommandInteraction,
     ctx: OperationContext,
-    wantHidden: boolean
+    wantHidden: boolean,
   ) {
     if (ctx.tempChannel.isHidden === wantHidden) {
       return interaction.reply({
@@ -350,7 +415,7 @@ export class TempVoiceCommand extends Command {
     }
 
     return this.handleSimpleOp(interaction, () =>
-      getTempVoiceServices().operations.toggleHide(ctx)
+      getTempVoiceServices().operations.toggleHide(ctx),
     );
   }
 
@@ -358,16 +423,16 @@ export class TempVoiceCommand extends Command {
 
   private async handleRename(
     interaction: Command.ChatInputCommandInteraction,
-    ctx: OperationContext
+    ctx: OperationContext,
   ) {
     if (!this.moderationService) {
       this.moderationService = new NameModerationService(
         this.container.prisma,
-        this.container.logger
+        this.container.logger,
       );
     }
 
-    const newName = interaction.options.getString('name', true);
+    const newName = interaction.options.getString("name", true);
     const { operations } = getTempVoiceServices();
 
     try {
@@ -375,7 +440,9 @@ export class TempVoiceCommand extends Command {
 
       // Apply moderation if enabled
       if (ctx.config.moderationEnabled) {
-        const voiceChannel = await ctx.guild.channels.fetch(ctx.channelId, { force: true });
+        const voiceChannel = await ctx.guild.channels.fetch(ctx.channelId, {
+          force: true,
+        });
         if (!voiceChannel || !voiceChannel.isVoiceBased()) {
           return interaction.reply({
             content: `${EMOJI.STATUS.ERROR} Voice channel not found.`,
@@ -384,24 +451,25 @@ export class TempVoiceCommand extends Command {
         }
 
         const oldName = voiceChannel.name;
-        const moderationResult = await this.moderationService.moderateChannelName(
-          voiceChannel as import('discord.js').VoiceChannel,
-          oldName,
-          newName,
-          ctx.config,
-          interaction.user.id
-        );
+        const moderationResult =
+          await this.moderationService.moderateChannelName(
+            voiceChannel as import("discord.js").VoiceChannel,
+            oldName,
+            newName,
+            ctx.config,
+            interaction.user.id,
+          );
 
         if (moderationResult && !moderationResult.validation.isAllowed) {
           finalName = moderationResult.finalName;
 
-          if (ctx.config.moderationAction === 'AUTO_RENAME') {
+          if (ctx.config.moderationAction === "AUTO_RENAME") {
             await operations.rename(ctx, finalName);
             return interaction.reply({
               content: `${EMOJI.STATUS.WARNING} Your channel name was automatically changed to **${finalName}** because "${newName}" contains inappropriate content.`,
               ephemeral: true,
             });
-          } else if (ctx.config.moderationAction === 'BLOCK') {
+          } else if (ctx.config.moderationAction === "BLOCK") {
             return interaction.reply({
               content: `${EMOJI.STATUS.ERROR} That channel name is not allowed. Please choose a different name.`,
               ephemeral: true,
@@ -420,7 +488,10 @@ export class TempVoiceCommand extends Command {
         ephemeral: true,
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice] Failed to rename channel:', error);
+      this.container.logger.error(
+        "[TempVoice] Failed to rename channel:",
+        error,
+      );
       return interaction.reply({
         content: `${EMOJI.STATUS.ERROR} Failed to rename channel. Please try again.`,
         ephemeral: true,
@@ -433,25 +504,19 @@ export class TempVoiceCommand extends Command {
   private async handlePanel(
     interaction: Command.ChatInputCommandInteraction,
     ctx: OperationContext,
-    member: GuildMember
   ) {
     try {
-      const { controlPanel } = getTempVoiceServices();
-      const message = await controlPanel.send(ctx.channelId, member);
-
-      if (!message) {
-        return interaction.reply({
-          content: `${EMOJI.STATUS.ERROR} Could not send control panel. Make sure the bot has permission to send messages in the voice channel.`,
-          ephemeral: true,
-        });
-      }
+      const result = await getTempVoiceServices().operations.reconcile(ctx);
 
       return interaction.reply({
-        content: `${EMOJI.STATUS.SUCCESS} Control panel sent to your channel.`,
+        content: `${result.ok ? EMOJI.STATUS.SUCCESS : EMOJI.STATUS.ERROR} ${result.message}`,
         ephemeral: true,
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice] Failed to send control panel:', error);
+      this.container.logger.error(
+        "[TempVoice] Failed to send control panel:",
+        error,
+      );
       return interaction.reply({
         content: `${EMOJI.STATUS.ERROR} Failed to send control panel. Please try again.`,
         ephemeral: true,

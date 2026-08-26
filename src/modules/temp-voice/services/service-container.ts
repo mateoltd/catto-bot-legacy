@@ -3,20 +3,14 @@
  * Eliminates re-instantiation on every job/interaction.
  */
 
-import { container } from '@sapphire/framework';
-import { TempVoiceConfigService } from './config.service.js';
-import { TempChannelService } from './temp-channel.service.js';
-import { PermissionsService } from './permissions.service.js';
-import { ControlPanelService } from './control-panel.service.js';
-import { UserPreferencesService } from './user-preferences.service.js';
-import { ChannelOperationsService } from './operations.service.js';
+import { container } from "@sapphire/framework";
+import { TempVoiceConfigService } from "./config.service.js";
+import { TempChannelService } from "./temp-channel.service.js";
+import { ChannelOperationsService } from "./operations.service.js";
 
 export interface TempVoiceServices {
   config: TempVoiceConfigService;
   channels: TempChannelService;
-  permissions: PermissionsService;
-  userPrefs: UserPreferencesService;
-  controlPanel: ControlPanelService;
   operations: ChannelOperationsService;
 }
 
@@ -28,20 +22,14 @@ let _instance: TempVoiceServices | null = null;
  */
 export function getTempVoiceServices(): TempVoiceServices {
   if (!_instance) {
-    const config = new TempVoiceConfigService(container.prisma, container.client);
-    const permissions = new PermissionsService();
-    const channels = new TempChannelService(container.prisma, permissions);
-    const userPrefs = new UserPreferencesService(container.prisma);
-    const controlPanel = new ControlPanelService(container.client, channels);
-    const operations = new ChannelOperationsService(
-      channels,
-      config,
-      permissions,
-      userPrefs,
-      controlPanel
+    const config = new TempVoiceConfigService(
+      container.prisma,
+      container.client,
     );
+    const channels = new TempChannelService(container.prisma);
+    const operations = new ChannelOperationsService(channels, config);
 
-    _instance = { config, channels, permissions, userPrefs, controlPanel, operations };
+    _instance = { config, channels, operations };
   }
 
   return _instance;

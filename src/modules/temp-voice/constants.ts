@@ -3,21 +3,6 @@
  */
 
 /**
- * Owner leave strategies when the owner leaves but others remain
- */
-export enum OwnerLeaveStrategy {
-  /** Transfer ownership to oldest member in channel */
-  TRANSFER = 'TRANSFER',
-  /** Keep original owner with a buffer period; notify remaining members to claim after delay */
-  KEEP = 'KEEP',
-  /** Delete channel after delay when owner leaves */
-  DELETE = 'DELETE',
-}
-
-/** How long to wait before notifying remaining members the channel is claimable (ms) */
-export const OWNER_LEAVE_BUFFER_MS = 600_000; // 10 minutes
-
-/**
  * Default configuration values for temp voice module
  */
 export const DEFAULT_TEMP_VOICE_CONFIG = {
@@ -27,28 +12,29 @@ export const DEFAULT_TEMP_VOICE_CONFIG = {
   fallbackCategoryId: null,
   defaultNameTemplate: "{username}'s Channel",
   defaultUserLimit: 0, // 0 = unlimited
-  defaultBitrate: null, // null = Discord default
+  defaultBitrate: 64, // Stored in kbps; API and Discord use bits per second
   defaultRegion: null, // null = auto
   defaultLocked: false,
   defaultHidden: false,
-  deleteDelaySeconds: 5,
-  ownerLeaveStrategy: OwnerLeaveStrategy.KEEP,
+  deleteDelaySeconds: 300,
   cooldownSeconds: 10,
   maxChannelsPerUser: 3,
   controlPanelEnabled: true,
-  controlPanelOnCreate: true,
   logChannelId: null,
   adminRoleIds: [] as string[],
   allowCustomization: true,
 
   // Name Moderation (optional, disabled by default)
   moderationEnabled: false,
-  moderationAction: 'AUTO_RENAME' as const,
+  moderationAction: "AUTO_RENAME" as const,
   strictMode: false,
   allowListEnabled: false,
   customPatterns: [] as string[],
   allowedKeywords: [] as string[],
 } as const;
+
+/** Stable delivery slot for ownership notices; component freshness is fenced separately. */
+export const TEMP_VOICE_OWNERSHIP_DELIVERY_EPOCH = 0;
 
 /**
  * Validation limits for configuration values
@@ -107,21 +93,21 @@ export const BITRATE_OPTIONS = {
  * Available voice regions
  */
 export const VOICE_REGIONS = [
-  'auto',
-  'brazil',
-  'europe',
-  'hongkong',
-  'india',
-  'japan',
-  'rotterdam',
-  'russia',
-  'singapore',
-  'southafrica',
-  'sydney',
-  'us-central',
-  'us-east',
-  'us-south',
-  'us-west',
+  "auto",
+  "brazil",
+  "europe",
+  "hongkong",
+  "india",
+  "japan",
+  "rotterdam",
+  "russia",
+  "singapore",
+  "southafrica",
+  "sydney",
+  "us-central",
+  "us-east",
+  "us-south",
+  "us-west",
 ] as const;
 
 /**
@@ -129,60 +115,60 @@ export const VOICE_REGIONS = [
  */
 export const TEMPLATE_VARIABLES = {
   /** User's username */
-  USERNAME: '{username}',
+  USERNAME: "{username}",
   /** User's server display name */
-  DISPLAYNAME: '{displayname}',
+  DISPLAYNAME: "{displayname}",
   /** User's discriminator (if any) */
-  DISCRIMINATOR: '{discriminator}',
+  DISCRIMINATOR: "{discriminator}",
   /** Full user tag (username#discriminator or just username) */
-  TAG: '{tag}',
+  TAG: "{tag}",
   /** Sequential number */
-  NUMBER: '{n}',
+  NUMBER: "{n}",
   /** Sequential number (alias for {n}) */
-  COUNT: '{count}',
+  COUNT: "{count}",
 } as const;
 
 /**
  * Event types for temp voice logging
  */
 export enum TempVoiceEventType {
-  CREATED = 'CREATED',
-  DELETED = 'DELETED',
-  RENAMED = 'RENAMED',
-  LOCKED = 'LOCKED',
-  UNLOCKED = 'UNLOCKED',
-  HIDDEN = 'HIDDEN',
-  SHOWN = 'SHOWN',
-  LIMIT_CHANGED = 'LIMIT_CHANGED',
-  BITRATE_CHANGED = 'BITRATE_CHANGED',
-  REGION_CHANGED = 'REGION_CHANGED',
-  OWNERSHIP_TRANSFERRED = 'OWNERSHIP_TRANSFERRED',
-  USER_PERMITTED = 'USER_PERMITTED',
-  USER_DENIED = 'USER_DENIED',
-  USER_KICKED = 'USER_KICKED',
-  SETTINGS_RESET = 'SETTINGS_RESET',
-  ERROR = 'ERROR',
+  CREATED = "CREATED",
+  DELETED = "DELETED",
+  RENAMED = "RENAMED",
+  LOCKED = "LOCKED",
+  UNLOCKED = "UNLOCKED",
+  HIDDEN = "HIDDEN",
+  SHOWN = "SHOWN",
+  LIMIT_CHANGED = "LIMIT_CHANGED",
+  BITRATE_CHANGED = "BITRATE_CHANGED",
+  REGION_CHANGED = "REGION_CHANGED",
+  OWNERSHIP_TRANSFERRED = "OWNERSHIP_TRANSFERRED",
+  USER_PERMITTED = "USER_PERMITTED",
+  USER_DENIED = "USER_DENIED",
+  USER_KICKED = "USER_KICKED",
+  SETTINGS_RESET = "SETTINGS_RESET",
+  ERROR = "ERROR",
 }
 
 /**
  * API error codes
  */
 export enum TempVoiceApiError {
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  CONFIG_NOT_FOUND = 'CONFIG_NOT_FOUND',
-  CHANNEL_NOT_FOUND = 'CHANNEL_NOT_FOUND',
-  INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
-  INVALID_CHANNEL = 'INVALID_CHANNEL',
-  CHANNEL_ALREADY_ADDED = 'CHANNEL_ALREADY_ADDED',
-  RATE_LIMITED = 'RATE_LIMITED',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-  NOT_TEMP_CHANNEL = 'NOT_TEMP_CHANNEL',
-  NOT_OWNER = 'NOT_OWNER',
-  USER_NOT_IN_CHANNEL = 'USER_NOT_IN_CHANNEL',
-  COOLDOWN_ACTIVE = 'COOLDOWN_ACTIVE',
-  USER_LIMIT_REACHED = 'USER_LIMIT_REACHED',
-  CATEGORY_FULL = 'CATEGORY_FULL',
-  MISSING_PERMISSIONS = 'MISSING_PERMISSIONS',
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND",
+  CHANNEL_NOT_FOUND = "CHANNEL_NOT_FOUND",
+  INSUFFICIENT_PERMISSIONS = "INSUFFICIENT_PERMISSIONS",
+  INVALID_CHANNEL = "INVALID_CHANNEL",
+  CHANNEL_ALREADY_ADDED = "CHANNEL_ALREADY_ADDED",
+  RATE_LIMITED = "RATE_LIMITED",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  NOT_TEMP_CHANNEL = "NOT_TEMP_CHANNEL",
+  NOT_OWNER = "NOT_OWNER",
+  USER_NOT_IN_CHANNEL = "USER_NOT_IN_CHANNEL",
+  COOLDOWN_ACTIVE = "COOLDOWN_ACTIVE",
+  USER_LIMIT_REACHED = "USER_LIMIT_REACHED",
+  CATEGORY_FULL = "CATEGORY_FULL",
+  MISSING_PERMISSIONS = "MISSING_PERMISSIONS",
 }
 
 /**
@@ -203,14 +189,14 @@ export const API_RATE_LIMITS = {
  * Redis key prefixes for temp voice module
  */
 export const REDIS_KEYS = {
-  /** Lock for channel creation: tempvoice:lock:create:{userId}:{guildId} */
-  CREATE_LOCK: 'tempvoice:lock:create',
   /** User cooldown: tempvoice:cooldown:{userId}:{guildId} */
-  COOLDOWN: 'tempvoice:cooldown',
-  /** Rate limit: tempvoice:ratelimit:{apiKey}:{endpoint} */
-  RATE_LIMIT: 'tempvoice:ratelimit',
+  COOLDOWN: "tempvoice:cooldown",
   /** Config cache: tempvoice:config:{guildId} */
-  CONFIG_CACHE: 'tempvoice:config',
+  CONFIG_CACHE: "tempvoice:config",
+  /** Join-to-create notice deduplication: tempvoice:join-notice:{guildId}:{userId}:{code} */
+  JOIN_NOTICE: "tempvoice:join-notice",
+  /** Presence generation used to coalesce aggregate reconciliation */
+  PRESENCE_DIRTY: "tempvoice:presence-dirty",
 } as const;
 
 /**
@@ -219,8 +205,4 @@ export const REDIS_KEYS = {
 export const CACHE_TTL = {
   /** Config cache duration (5 minutes) */
   CONFIG: 300,
-  /** Permission check cache (1 minute) */
-  PERMISSIONS: 60,
-  /** Rate limit window (1 minute) */
-  RATE_LIMIT: 60,
 } as const;

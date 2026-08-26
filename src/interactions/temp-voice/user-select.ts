@@ -1,27 +1,37 @@
-import { InteractionHandler, InteractionHandlerTypes } from '@sapphire/framework';
-import type { UserSelectMenuInteraction, GuildMember } from 'discord.js';
-import { MessageFlags } from 'discord.js';
-import { EMOJI } from '#lib/discord/design/index.js';
-import { decodeCustomId } from '#lib/discord/core/index.js';
-import { getTempVoiceServices } from '../../modules/temp-voice/services/service-container.js';
+import {
+  InteractionHandler,
+  InteractionHandlerTypes,
+} from "@sapphire/framework";
+import type { AnySelectMenuInteraction, GuildMember } from "discord.js";
+import { MessageFlags } from "discord.js";
+import { EMOJI } from "#lib/discord/design/index.js";
+import { decodeCustomId } from "#lib/discord/core/index.js";
+import { getTempVoiceServices } from "../../modules/temp-voice/services/service-container.js";
+import { getTempVoiceTransport } from "../../modules/temp-voice/application/temp-voice-runtime.js";
 
 export class TempVoiceUserSelectHandler extends InteractionHandler {
-  public constructor(ctx: InteractionHandler.LoaderContext, options: InteractionHandler.Options) {
+  public constructor(
+    ctx: InteractionHandler.LoaderContext,
+    options: InteractionHandler.Options,
+  ) {
     super(ctx, {
       ...options,
       interactionHandlerType: InteractionHandlerTypes.SelectMenu,
     });
   }
 
-  public override parse(interaction: UserSelectMenuInteraction) {
+  public override parse(interaction: AnySelectMenuInteraction) {
     // New format: tv:action_select:channelId
-    if (interaction.customId.startsWith('tv:') && interaction.customId.includes('_select')) {
+    if (
+      interaction.customId.startsWith("tv:") &&
+      interaction.customId.includes("_select")
+    ) {
       return this.some();
     }
     // Legacy format: tempvoice_action_select_channelId
     if (
-      interaction.customId.startsWith('tempvoice_') &&
-      interaction.customId.includes('_select_')
+      interaction.customId.startsWith("tempvoice_") &&
+      interaction.customId.includes("_select_")
     ) {
       return this.some();
     }
@@ -29,7 +39,11 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
     return this.none();
   }
 
-  public async run(interaction: UserSelectMenuInteraction) {
+  public async run(interaction: AnySelectMenuInteraction) {
+    if (interaction.customId.startsWith("tv:grace_transfer_select:")) {
+      return this.handleGraceTransfer(interaction);
+    }
+
     if (!interaction.guild || !interaction.guildId) {
       return interaction.reply({
         content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
@@ -39,68 +53,123 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
 
     const { action, channelId } = this.parseCustomId(interaction.customId);
     if (!channelId) {
-      return this.safeReply(interaction, `${EMOJI.STATUS.ERROR} Invalid user select interaction.`);
+      return this.safeReply(
+        interaction,
+        `${EMOJI.STATUS.ERROR} Invalid user select interaction.`,
+      );
     }
 
     const { operations } = getTempVoiceServices();
 
     // Build operation context
-    const ctx = await operations.buildContext(interaction.guild, channelId);
+    const ctx = await operations.buildContext(
+      interaction.guild,
+      channelId,
+      interaction.user.id,
+    );
     if (!ctx) {
       return this.safeReply(
         interaction,
-        `${EMOJI.STATUS.ERROR} This temporary voice channel no longer exists.`
+        `${EMOJI.STATUS.ERROR} This temporary voice channel no longer exists.`,
       );
     }
 
     // Permission check
     const member = interaction.member as GuildMember;
-    const accessError = operations.checkAccess(member, ctx.tempChannel, ctx.config);
+    const accessError =
+      action === "transfer"
+        ? operations.checkTransferAccess(member, ctx.tempChannel, ctx.config)
+        : operations.checkAccess(member, ctx.tempChannel, ctx.config);
     if (accessError) {
-      return this.safeReply(interaction, `${EMOJI.STATUS.ERROR} ${accessError}`);
+      return this.safeReply(
+        interaction,
+        `${EMOJI.STATUS.ERROR} ${accessError}`,
+      );
     }
 
     const selectedUsers = interaction.values;
 
     // Route to appropriate handler
     switch (action) {
-      case 'permit':
-        return this.handleOperation(interaction, () => operations.permit(ctx, selectedUsers));
-      case 'deny':
-        return this.handleOperation(interaction, () => operations.deny(ctx, selectedUsers));
-      case 'trust':
-        return this.handleOperation(interaction, () => operations.toggleTrust(ctx, selectedUsers));
-      case 'kick':
-        return this.handleOperation(interaction, () => operations.kick(ctx, selectedUsers));
-      case 'transfer':
+      case "permit":
+        return this.handleOperation(interaction, () =>
+          operations.permit(ctx, selectedUsers),
+        );
+      case "deny":
+        return this.handleOperation(interaction, () =>
+          operations.deny(ctx, selectedUsers),
+        );
+      case "trust":
+        return this.handleOperation(interaction, () =>
+          operations.toggleTrust(ctx, selectedUsers),
+        );
+      case "kick":
+        return this.handleOperation(interaction, () =>
+          operations.kick(ctx, selectedUsers),
+        );
+      case "transfer":
         return this.handleTransfer(interaction, ctx, selectedUsers, member);
       default:
-        return this.safeReply(interaction, `${EMOJI.STATUS.ERROR} Unknown action.`);
+        return this.safeReply(
+          interaction,
+          `${EMOJI.STATUS.ERROR} Unknown action.`,
+        );
     }
+  }
+
+  private async handleGraceTransfer(interaction: AnySelectMenuInteraction) {
+    const parsed = decodeCustomId(interaction.customId);
+    const [guildId, channelId, epochValue] = parsed.params;
+    const targetUserId = interaction.values[0];
+    if (!guildId || !channelId || !epochValue || !targetUserId) {
+      return this.safeReply(
+        interaction,
+        `${EMOJI.STATUS.ERROR} Invalid ownership selection.`,
+      );
+    }
+
+    await interaction.deferUpdate();
+    const result = await getTempVoiceTransport().submit({
+      kind: "TRANSFER_OWNERSHIP",
+      guildId,
+      channelId,
+      actorId: interaction.user.id,
+      targetUserId,
+      expectedOwnershipEpoch: Number.parseInt(epochValue, 10),
+    });
+    return interaction.editReply({
+      content: `${result.ok ? EMOJI.STATUS.SUCCESS : EMOJI.STATUS.ERROR} ${
+        result.ok ? result.data.message : result.message
+      }`,
+      components: [],
+    });
   }
 
   // ───── Custom ID Parsing ─────
 
-  private parseCustomId(customId: string): { action: string; channelId: string } {
+  private parseCustomId(customId: string): {
+    action: string;
+    channelId: string;
+  } {
     // New format: tv:permit_select:channelId
-    if (customId.startsWith('tv:')) {
+    if (customId.startsWith("tv:")) {
       const parsed = decodeCustomId(customId);
       // action is e.g. "permit_select" — strip the _select suffix to get the action
-      const action = parsed.action.replace(/_select$/, '');
-      return { action, channelId: parsed.params[0] || '' };
+      const action = parsed.action.replace(/_select$/, "");
+      return { action, channelId: parsed.params[0] || "" };
     }
 
     // Legacy format: tempvoice_permit_select_channelId
-    const parts = customId.split('_');
+    const parts = customId.split("_");
     // parts: ['tempvoice', action, 'select', channelId]
-    return { action: parts[1] || '', channelId: parts[3] || '' };
+    return { action: parts[1] || "", channelId: parts[3] || "" };
   }
 
   // ───── Generic Operation Handler ─────
 
   private async handleOperation(
-    interaction: UserSelectMenuInteraction,
-    operationFn: () => Promise<{ ok: boolean; message: string }>
+    interaction: AnySelectMenuInteraction,
+    operationFn: () => Promise<{ ok: boolean; message: string }>,
   ) {
     try {
       await interaction.deferUpdate();
@@ -111,7 +180,7 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
         components: [],
       });
     } catch (error) {
-      this.container.logger.error('User select operation failed:', error);
+      this.container.logger.error("User select operation failed:", error);
       if (!interaction.deferred) {
         return interaction.update({
           content: `${EMOJI.STATUS.ERROR} An unexpected error occurred. Please try again.`,
@@ -128,10 +197,10 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
   // ───── Transfer (with ownership check) ─────
 
   private async handleTransfer(
-    interaction: UserSelectMenuInteraction,
-    ctx: import('../../modules/temp-voice/services/operations.service.js').OperationContext,
+    interaction: AnySelectMenuInteraction,
+    ctx: import("../../modules/temp-voice/services/operations.service.js").OperationContext,
     userIds: string[],
-    member: GuildMember
+    member: GuildMember,
   ) {
     try {
       await interaction.deferUpdate();
@@ -154,7 +223,11 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
 
       // Only the owner or admins can transfer ownership
       const { operations } = getTempVoiceServices();
-      const accessError = operations.checkAccess(member, ctx.tempChannel, ctx.config);
+      const accessError = operations.checkTransferAccess(
+        member,
+        ctx.tempChannel,
+        ctx.config,
+      );
       if (accessError) {
         return interaction.editReply({
           content: `${EMOJI.STATUS.ERROR} ${accessError}`,
@@ -169,7 +242,10 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
         components: [],
       });
     } catch (error) {
-      this.container.logger.error('[TempVoice UserSelect] Failed to transfer ownership:', error);
+      this.container.logger.error(
+        "[TempVoice UserSelect] Failed to transfer ownership:",
+        error,
+      );
       if (!interaction.deferred) {
         return interaction.update({
           content: `${EMOJI.STATUS.ERROR} Failed to transfer ownership. Please try again.`,
@@ -188,7 +264,10 @@ export class TempVoiceUserSelectHandler extends InteractionHandler {
   /**
    * Try to update the message first (removes components), fall back to ephemeral reply.
    */
-  private async safeReply(interaction: UserSelectMenuInteraction, content: string) {
+  private async safeReply(
+    interaction: AnySelectMenuInteraction,
+    content: string,
+  ) {
     try {
       return await interaction.update({
         content,

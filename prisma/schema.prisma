@@ -29,9 +29,9 @@ enum ModAction {
 
 // Mute type variants
 enum MuteType {
-  TEXT    // Can't send messages in text channels
-  VOICE   // Server deafened in voice channels
-  BOTH    // Both text and voice muted
+  TEXT // Can't send messages in text channels
+  VOICE // Server deafened in voice channels
+  BOTH // Both text and voice muted
 }
 
 // Permission system enums
@@ -96,20 +96,20 @@ model Guild {
   updatedAt DateTime @updatedAt
   settings  Json?
 
-  users            User[]
-  modCases         ModCase[]
-  modConfig        ModConfig?
-  logConfig        LogConfig?
-  xpConfig         GuildXPConfig?
-  userXP           UserXP[]
-  xpEventLogs      XPEventLog[]
-  voiceXPConfig    GuildVoiceXPConfig?
-  userVoiceXP      UserVoiceXP[]
-  voiceXPEventLogs VoiceXPEventLog[]
-  voiceSessions    VoiceSession[]
+  users             User[]
+  modCases          ModCase[]
+  modConfig         ModConfig?
+  logConfig         LogConfig?
+  xpConfig          GuildXPConfig?
+  userXP            UserXP[]
+  xpEventLogs       XPEventLog[]
+  voiceXPConfig     GuildVoiceXPConfig?
+  userVoiceXP       UserVoiceXP[]
+  voiceXPEventLogs  VoiceXPEventLog[]
+  voiceSessions     VoiceSession[]
   reputationVouches ReputationVouch[]
-  evidence         Evidence[]
-  messageSnapshots MessageSnapshot[]
+  evidence          Evidence[]
+  messageSnapshots  MessageSnapshot[]
 
   @@index([guildId])
   @@map("guilds")
@@ -121,7 +121,7 @@ model User {
   username  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   guild   Guild?  @relation(fields: [guildId], references: [id], onDelete: Cascade)
   guildId String?
 
@@ -145,7 +145,7 @@ model Log {
 // Moderation Case Tracking
 model ModCase {
   id            String     @id @default(cuid())
-  caseNumber    Int        // Auto-incrementing per guild
+  caseNumber    Int // Auto-incrementing per guild
   guildId       String
   action        ModAction
   targetId      String
@@ -153,9 +153,9 @@ model ModCase {
   moderatorId   String
   moderatorTag  String
   reason        String?
-  duration      Int?       // Duration in seconds for timeouts/tempbans
+  duration      Int? // Duration in seconds for timeouts/tempbans
   status        CaseStatus @default(OPEN)
-  evidence      Json?      // Message links, attachments, etc.
+  evidence      Json? // Message links, attachments, etc.
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   expiresAt     DateTime?
@@ -183,14 +183,14 @@ model ModCase {
 model ModConfig {
   id                 String   @id @default(cuid())
   guildId            String   @unique
-  modLogChannelId    String?  // Channel for moderation logs
-  muteRoleId         String?  // Role for muting users (legacy, use mutedTextRole)
-  mutedTextRole      String?  // Role to apply for text mutes
-  mutedVoiceRole     String?  // Role to apply for voice mutes (alternative to server mute)
+  modLogChannelId    String? // Channel for moderation logs
+  muteRoleId         String? // Role for muting users (legacy, use mutedTextRole)
+  mutedTextRole      String? // Role to apply for text mutes
+  mutedVoiceRole     String? // Role to apply for voice mutes (alternative to server mute)
   muteSettings       Json     @default("{}") // { allowInThreads: false, exemptChannels: [] }
   autoModEnabled     Boolean  @default(false)
   warningEscalation  Json     @default("{}") // { enabled: true, thresholds: { 3: 'timeout', 5: 'mute', 10: 'tempban' } }
-  metadata           Json?    // Guild-level config like { customEvidenceTags: string[] }
+  metadata           Json? // Guild-level config like { customEvidenceTags: string[] }
   // NH-8: Watermark Config
   watermarkDownloads Boolean  @default(true)
   watermarkText      String?
@@ -229,11 +229,11 @@ model Mute {
   createdById String
   type        MuteType
   reason      String
-  duration    Int?      // seconds, null = permanent
+  duration    Int? // seconds, null = permanent
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
   active      Boolean   @default(true)
-  
+
   @@unique([guildId, userId, type])
   @@index([guildId, active])
   @@index([expiresAt])
@@ -245,13 +245,13 @@ model UserFlag {
   id          String    @id @default(cuid())
   guildId     String
   userId      String
-  flag        String    // SUSPICIOUS, AUTO_FLAGGED, RAID_PARTICIPANT, ALT_ACCOUNT, TRUSTED, APPEALED
+  flag        String // SUSPICIOUS, AUTO_FLAGGED, RAID_PARTICIPANT, ALT_ACCOUNT, TRUSTED, APPEALED
   reason      String?
   createdById String
   createdAt   DateTime  @default(now())
   expiresAt   DateTime?
   active      Boolean   @default(true)
-  
+
   @@unique([guildId, userId, flag])
   @@index([guildId, active])
   @@map("user_flags")
@@ -259,15 +259,15 @@ model UserFlag {
 
 // Case Templates for quick moderation actions
 model CaseTemplate {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   guildId     String
   name        String
   action      ModAction
   reason      String
-  duration    String?  // Duration string like "1h", "7d"
+  duration    String? // Duration string like "1h", "7d"
   createdById String
-  createdAt   DateTime @default(now())
-  
+  createdAt   DateTime  @default(now())
+
   @@unique([guildId, name])
   @@index([guildId])
   @@map("case_templates")
@@ -287,7 +287,7 @@ model ModerationQueueItem {
   resolvedAt   DateTime?
   resolution   String?
   createdAt    DateTime  @default(now())
-  
+
   @@index([guildId, status])
   @@index([priority])
   @@map("moderation_queue")
@@ -295,36 +295,36 @@ model ModerationQueueItem {
 
 // Moderation Events for analytics
 model ModEvent {
-  id            String   @id @default(cuid())
-  guildId       String
-  timestamp     DateTime @default(now())
-  
+  id        String   @id @default(cuid())
+  guildId   String
+  timestamp DateTime @default(now())
+
   // Actor
-  actorId       String
-  actorType     String   // user, bot, automod
-  
+  actorId   String
+  actorType String // user, bot, automod
+
   // Target
-  targetId      String?
-  targetType    String?  // user, message, channel, role
-  
+  targetId   String?
+  targetType String? // user, message, channel, role
+
   // Action
-  action        String   // ModAction enum or custom action string
-  category      String   // punishment, info, config, appeal
-  
+  action   String // ModAction enum or custom action string
+  category String // punishment, info, config, appeal
+
   // Context
-  reason        String?
-  metadata      Json     @default("{}")
-  
+  reason   String?
+  metadata Json    @default("{}")
+
   // Outcome
-  success       Boolean
-  errorType     String?
-  latencyMs     Int      @default(0)
-  
+  success   Boolean
+  errorType String?
+  latencyMs Int     @default(0)
+
   // Correlation
   caseId        String?
   caseNumber    Int?
-  correlationId String?  // Link related events
-  
+  correlationId String? // Link related events
+
   @@index([guildId, timestamp])
   @@index([action])
   @@index([actorId])
@@ -334,55 +334,55 @@ model ModEvent {
 
 // Logging Configuration per Guild
 model LogConfig {
-  id                    String   @id @default(cuid())
-  guildId               String   @unique
-  categoryId            String?  // Category for log channels
-  enabled               Boolean  @default(false)
-  
+  id         String  @id @default(cuid())
+  guildId    String  @unique
+  categoryId String? // Category for log channels
+  enabled    Boolean @default(false)
+
   // Enable/disable specific log types
-  messagesEnabled       Boolean  @default(false)
-  voiceEnabled          Boolean  @default(false)
-  voiceStateEnabled     Boolean  @default(false)
-  ticketsEnabled        Boolean  @default(false)
-  transcriptsEnabled    Boolean  @default(false)
-  rolesEnabled          Boolean  @default(false)
-  channelsEnabled       Boolean  @default(false)
-  membersEnabled        Boolean  @default(false)
-  stageEnabled          Boolean  @default(false)
-  eventsEnabled         Boolean  @default(false)
-  pollsEnabled          Boolean  @default(false)
-  emojisEnabled         Boolean  @default(false)
-  stickersEnabled       Boolean  @default(false)
-  webhooksEnabled       Boolean  @default(false)
-  joinsEnabled          Boolean  @default(false)
-  leavesEnabled         Boolean  @default(false)
-  serverEnabled         Boolean  @default(false)
-  
+  messagesEnabled    Boolean @default(false)
+  voiceEnabled       Boolean @default(false)
+  voiceStateEnabled  Boolean @default(false)
+  ticketsEnabled     Boolean @default(false)
+  transcriptsEnabled Boolean @default(false)
+  rolesEnabled       Boolean @default(false)
+  channelsEnabled    Boolean @default(false)
+  membersEnabled     Boolean @default(false)
+  stageEnabled       Boolean @default(false)
+  eventsEnabled      Boolean @default(false)
+  pollsEnabled       Boolean @default(false)
+  emojisEnabled      Boolean @default(false)
+  stickersEnabled    Boolean @default(false)
+  webhooksEnabled    Boolean @default(false)
+  joinsEnabled       Boolean @default(false)
+  leavesEnabled      Boolean @default(false)
+  serverEnabled      Boolean @default(false)
+
   // Ignored channels - logs from these channels won't be recorded
-  ignoredChannels       String[] @default([])
-  
+  ignoredChannels String[] @default([])
+
   // Webhook URLs for each log type
-  messagesWebhook       String?
-  voiceWebhook          String?
-  voiceStateWebhook     String?
-  ticketsWebhook        String?
-  transcriptsWebhook    String?
-  rolesWebhook          String?
-  channelsWebhook       String?
-  membersWebhook        String?
-  stageWebhook          String?
-  eventsWebhook         String?
-  pollsWebhook          String?
-  emojisWebhook         String?
-  stickersWebhook       String?
-  webhooksWebhook       String?
-  joinsWebhook          String?
-  leavesWebhook         String?
-  serverWebhook         String?
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  messagesWebhook    String?
+  voiceWebhook       String?
+  voiceStateWebhook  String?
+  ticketsWebhook     String?
+  transcriptsWebhook String?
+  rolesWebhook       String?
+  channelsWebhook    String?
+  membersWebhook     String?
+  stageWebhook       String?
+  eventsWebhook      String?
+  pollsWebhook       String?
+  emojisWebhook      String?
+  stickersWebhook    String?
+  webhooksWebhook    String?
+  joinsWebhook       String?
+  leavesWebhook      String?
+  serverWebhook      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@index([guildId])
@@ -393,8 +393,8 @@ model LogConfig {
 model UserModNote {
   id          String   @id @default(cuid())
   guildId     String
-  userId      String   // Target user ID
-  createdById String   // Moderator who created the note
+  userId      String // Target user ID
+  createdById String // Moderator who created the note
   note        String   @db.Text
   tags        String[] // Tags for categorization
   createdAt   DateTime @default(now())
@@ -408,18 +408,18 @@ model UserModNote {
 
 // Moderation Appeals
 model ModAppeal {
-  id          String       @id @default(cuid())
-  guildId     String
-  targetId    String       // User who submitted the appeal
-  caseId      String?      // Optional reference to the case being appealed
-  createdById String       // Can be different from targetId if mod creates on behalf
-  reason      String       @db.Text
-  status      AppealStatus @default(PENDING)
-  resolution  String?      @db.Text
-  resolvedById String?     // Moderator who resolved the appeal
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  resolvedAt  DateTime?
+  id           String       @id @default(cuid())
+  guildId      String
+  targetId     String // User who submitted the appeal
+  caseId       String? // Optional reference to the case being appealed
+  createdById  String // Can be different from targetId if mod creates on behalf
+  reason       String       @db.Text
+  status       AppealStatus @default(PENDING)
+  resolution   String?      @db.Text
+  resolvedById String? // Moderator who resolved the appeal
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  resolvedAt   DateTime?
 
   @@index([guildId])
   @@index([targetId])
@@ -434,14 +434,14 @@ model ModAppeal {
 
 // Evidence attached to moderation cases
 model Evidence {
-  id               String         @id @default(cuid())
-  guildId          String
-  caseId           String
-  caseNumber       Int // Denormalized for fast lookups
-  uploadedById     String // Discord user ID
-  uploadedByTag    String
-  type             EvidenceType
-  status           EvidenceStatus @default(PENDING)
+  id            String         @id @default(cuid())
+  guildId       String
+  caseId        String
+  caseNumber    Int // Denormalized for fast lookups
+  uploadedById  String // Discord user ID
+  uploadedByTag String
+  type          EvidenceType
+  status        EvidenceStatus @default(PENDING)
 
   // Storage
   storageKey       String? // B2 object key (null for URLs)
@@ -451,27 +451,27 @@ model Evidence {
   sizeBytes        Int?
 
   // Integrity
-  contentHash      String? // SHA-256 of file content
-  hmacSignature    String? // HMAC-SHA256 with server secret
+  contentHash   String? // SHA-256 of file content
+  hmacSignature String? // HMAC-SHA256 with server secret
 
   // URL evidence
-  url              String? // For URL/DISCORD_URL types
+  url String? // For URL/DISCORD_URL types
 
   // Snapshot reference
-  snapshotId       String? // FK to MessageSnapshot.id
+  snapshotId String? // FK to MessageSnapshot.id
 
   // Metadata
-  description      String?
-  metadata         Json?
-  tags             String[] @default([])
+  description String?
+  metadata    Json?
+  tags        String[] @default([])
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  guild      Guild            @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
-  case       ModCase          @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  snapshot   MessageSnapshot? @relation(fields: [snapshotId], references: [id])
+  guild      Guild               @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+  case       ModCase             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  snapshot   MessageSnapshot?    @relation(fields: [snapshotId], references: [id])
   amendments EvidenceAmendment[]
   accessLogs EvidenceAccessLog[]
 
@@ -517,8 +517,8 @@ model EvidenceAccessLog {
   guildId    String
   userId     String
   userTag    String
-  action     String   // "VIEW", "DOWNLOAD", "EXPORT"
-  ipHash     String?  // SHA-256 of IP for audit without PII storage
+  action     String // "VIEW", "DOWNLOAD", "EXPORT"
+  ipHash     String? // SHA-256 of IP for audit without PII storage
   userAgent  String?
   metadata   Json     @default("{}")
   createdAt  DateTime @default(now())
@@ -533,11 +533,11 @@ model EvidenceAccessLog {
 
 // Captured message state for evidence preservation
 model MessageSnapshot {
-  id             String   @id @default(cuid())
-  guildId        String
-  channelId      String
-  capturedById   String // Moderator who triggered the capture
-  capturedByTag  String
+  id            String @id @default(cuid())
+  guildId       String
+  channelId     String
+  capturedById  String // Moderator who triggered the capture
+  capturedByTag String
 
   // Range info
   firstMessageId String
@@ -545,16 +545,16 @@ model MessageSnapshot {
   messageCount   Int     @default(1)
 
   // Serialized content (the actual snapshot data)
-  snapshotData   Json // Array of MessageSnapshotEntry objects
+  snapshotData Json // Array of MessageSnapshotEntry objects
 
   // Storage for media extracted from messages
   mediaStorageKeys Json? // Array of B2 keys for attachments/embeds captured
 
   // Integrity
-  contentHash    String // SHA-256 of snapshotData JSON
-  hmacSignature  String // HMAC-SHA256 with server secret
+  contentHash   String // SHA-256 of snapshotData JSON
+  hmacSignature String // HMAC-SHA256 with server secret
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
   guild    Guild      @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
   evidence Evidence[]
@@ -568,14 +568,14 @@ model MessageSnapshot {
 
 // Scheduled Tasks for Tempbans
 model ScheduledTask {
-  id          String   @id @default(cuid())
-  type        String   // e.g., "TEMPBAN_UNBAN"
-  guildId     String
-  targetId    String
-  data        Json?    // Additional task data
-  executeAt   DateTime
-  createdAt   DateTime @default(now())
-  processed   Boolean  @default(false)
+  id        String   @id @default(cuid())
+  type      String // e.g., "TEMPBAN_UNBAN"
+  guildId   String
+  targetId  String
+  data      Json? // Additional task data
+  executeAt DateTime
+  createdAt DateTime @default(now())
+  processed Boolean  @default(false)
 
   @@index([type])
   @@index([executeAt])
@@ -585,15 +585,15 @@ model ScheduledTask {
 
 // Permission Grants for custom permission system
 model PermissionGrant {
-  id            String                 @id @default(cuid())
-  guildId       String
-  subjectType   PermissionSubjectType
-  subjectId     String                 // Discord user or role ID
-  resourceType  PermissionResourceType
-  resourceKey   String                 // Command key (e.g., "mod.warn") or category key (e.g., "moderation")
-  effect        PermissionEffect
-  createdById   String?                // Moderator who created this grant
-  createdAt     DateTime               @default(now())
+  id           String                 @id @default(cuid())
+  guildId      String
+  subjectType  PermissionSubjectType
+  subjectId    String // Discord user or role ID
+  resourceType PermissionResourceType
+  resourceKey  String // Command key (e.g., "mod.warn") or category key (e.g., "moderation")
+  effect       PermissionEffect
+  createdById  String? // Moderator who created this grant
+  createdAt    DateTime               @default(now())
 
   @@unique([guildId, subjectType, subjectId, resourceType, resourceKey])
   @@index([guildId])
@@ -601,45 +601,46 @@ model PermissionGrant {
   @@index([guildId, resourceType, resourceKey])
   @@map("permission_grants")
 }
+
 // XP/Leveling Configuration per Guild
 model GuildXPConfig {
-  id                    String   @id @default(cuid())
-  guildId               String   @unique
-  enabled               Boolean  @default(true)
-  
+  id      String  @id @default(cuid())
+  guildId String  @unique
+  enabled Boolean @default(true)
+
   // XP Award Settings
-  cooldownSec           Int      @default(60)    // Cooldown between XP awards
-  xpMode                String   @default("RANDOM") // "RANDOM" | "FIXED"
-  minXp                 Int      @default(15)    // For RANDOM mode
-  maxXp                 Int      @default(25)    // For RANDOM mode
-  fixedXp               Int      @default(20)    // For FIXED mode
-  minMessageLength      Int      @default(5)     // Minimum message length to award XP
-  maxXpPerMinute        Int?                     // Optional rate limit
-  
+  cooldownSec      Int    @default(60) // Cooldown between XP awards
+  xpMode           String @default("RANDOM") // "RANDOM" | "FIXED"
+  minXp            Int    @default(15) // For RANDOM mode
+  maxXp            Int    @default(25) // For RANDOM mode
+  fixedXp          Int    @default(20) // For FIXED mode
+  minMessageLength Int    @default(5) // Minimum message length to award XP
+  maxXpPerMinute   Int? // Optional rate limit
+
   // Channel & Role Filters (JSONB arrays)
-  allowedChannels       String[] @default([])   // If empty, all channels allowed
-  ignoredChannels       String[] @default([])   // Always ignored
-  ignoredRoles          String[] @default([])   // Users with these roles ignored
-  
+  allowedChannels String[] @default([]) // If empty, all channels allowed
+  ignoredChannels String[] @default([]) // Always ignored
+  ignoredRoles    String[] @default([]) // Users with these roles ignored
+
   // Level-Up Announcements
-  announceLevelUp       Boolean  @default(true)
-  announceChannelId     String?                 // If null, announce in message channel
-  messageTemplate       String   @default("🎉 {user} reached level {level}!")
-  embedEnabled          Boolean  @default(true)
-  embedColor            Int      @default(5793266) // Hex 0x5865F2 (Discord Blurple)
-  
+  announceLevelUp   Boolean @default(true)
+  announceChannelId String? // If null, announce in message channel
+  messageTemplate   String  @default("🎉 {user} reached level {level}!")
+  embedEnabled      Boolean @default(true)
+  embedColor        Int     @default(5793266) // Hex 0x5865F2 (Discord Blurple)
+
   // Level Curve Configuration
-  levelCurveType        String   @default("FORMULA") // "FORMULA" | "TABLE"
+  levelCurveType  String @default("FORMULA") // "FORMULA" | "TABLE"
   // Formula: xpRequired = base * (level ^ exponent) + offset
-  formulaBase           Float    @default(5.0)
-  formulaExponent       Float    @default(2.0)
-  formulaOffset         Float    @default(50.0)
+  formulaBase     Float  @default(5.0)
+  formulaExponent Float  @default(2.0)
+  formulaOffset   Float  @default(50.0)
   // Table: Array of cumulative XP thresholds [100, 255, 475, 770, ...] for levels 1, 2, 3, 4...
-  tableThresholds       Int[]    @default([])
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  tableThresholds Int[]  @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@index([guildId])
@@ -648,22 +649,22 @@ model GuildXPConfig {
 
 // User XP per Guild
 model UserXP {
-  id            String    @id @default(cuid())
-  guildId       String
-  userId        String
-  xp            Int       @default(0)
-  level         Int       @default(0)
-  messageCount  Int       @default(0)
-  lastAwardAt   DateTime?                    // For cooldown enforcement
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  id           String    @id @default(cuid())
+  guildId      String
+  userId       String
+  xp           Int       @default(0)
+  level        Int       @default(0)
+  messageCount Int       @default(0)
+  lastAwardAt  DateTime? // For cooldown enforcement
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@unique([guildId, userId])
-  @@index([guildId, xp(sort: Desc)])          // For leaderboard queries
+  @@index([guildId, xp(sort: Desc)]) // For leaderboard queries
   @@index([guildId, userId])
-  @@index([lastAwardAt])                       // For cooldown checks
+  @@index([lastAwardAt]) // For cooldown checks
   @@map("user_xp")
 }
 
@@ -672,16 +673,16 @@ model XPEventLog {
   id          String   @id @default(cuid())
   guildId     String
   userId      String
-  eventType   String                          // "AWARD" | "LEVEL_UP" | "RESET" | "MANUAL_ADJUST"
-  xpChange    Int                             // Amount of XP change (can be negative)
+  eventType   String // "AWARD" | "LEVEL_UP" | "RESET" | "MANUAL_ADJUST"
+  xpChange    Int // Amount of XP change (can be negative)
   xpBefore    Int
   xpAfter     Int
   levelBefore Int
   levelAfter  Int
-  reason      String?                         // Optional context (e.g., "message", "admin reset")
-  metadata    Json?                           // Additional context (channelId, messageId, etc.)
+  reason      String? // Optional context (e.g., "message", "admin reset")
+  metadata    Json? // Additional context (channelId, messageId, etc.)
   createdAt   DateTime @default(now())
-  
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@index([guildId, userId])
@@ -703,43 +704,43 @@ model GuildVoiceXPConfig {
   updatedAt DateTime @updatedAt
 
   // XP Award Settings
-  xpPerMinute       Int     @default(5)                // XP awarded per minute in voice
-  minSessionMinutes Int     @default(1)                // Minimum minutes before XP is awarded
-  xpMode            String  @default("PER_MINUTE")     // "PER_MINUTE" | "PER_SESSION"
-  
+  xpPerMinute       Int    @default(5) // XP awarded per minute in voice
+  minSessionMinutes Int    @default(1) // Minimum minutes before XP is awarded
+  xpMode            String @default("PER_MINUTE") // "PER_MINUTE" | "PER_SESSION"
+
   // Channel Filters
-  allowedChannels   String[] @default([])              // If not empty, only these channels award XP
-  ignoredChannels   String[] @default([])              // These channels never award XP
-  
+  allowedChannels String[] @default([]) // If not empty, only these channels award XP
+  ignoredChannels String[] @default([]) // These channels never award XP
+
   // User State Filters
-  awardMuted        Boolean  @default(false)           // Award XP to muted users?
-  awardDeafened     Boolean  @default(false)           // Award XP to deafened users?
-  awardStreaming    Boolean  @default(true)            // Award XP to streaming users?
-  awardVideo        Boolean  @default(true)            // Award XP to video users?
-  ignoreAfkChannel  Boolean  @default(true)            // Ignore AFK channel?
+  awardMuted       Boolean @default(false) // Award XP to muted users?
+  awardDeafened    Boolean @default(false) // Award XP to deafened users?
+  awardStreaming   Boolean @default(true) // Award XP to streaming users?
+  awardVideo       Boolean @default(true) // Award XP to video users?
+  ignoreAfkChannel Boolean @default(true) // Ignore AFK channel?
 
   // Optional anti-farm dampening (reduces XP, doesn't hard-block)
-  antiFarmDampeningEnabled     Boolean @default(false)
-  antiFarmDampeningMultiplier  Float   @default(0.35)
-  antiFarmMinimumParticipants  Int     @default(2)
-  
+  antiFarmDampeningEnabled    Boolean @default(false)
+  antiFarmDampeningMultiplier Float   @default(0.35)
+  antiFarmMinimumParticipants Int     @default(2)
+
   // Role Filters
-  ignoredRoles      String[] @default([])              // Users with these roles don't earn XP
-  
+  ignoredRoles String[] @default([]) // Users with these roles don't earn XP
+
   // Level-Up Announcements
-  announceLevelUp      Boolean @default(true)
-  announceChannelId    String?                         // If null, announce in text channel
-  messageTemplate      String  @default("🎤 {user} reached voice level {level}!")
-  embedEnabled         Boolean @default(true)
-  embedColor           Int     @default(5814783)       // Discord embed color (hex: 58B9FF)
-  
+  announceLevelUp   Boolean @default(true)
+  announceChannelId String? // If null, announce in text channel
+  messageTemplate   String  @default("🎤 {user} reached voice level {level}!")
+  embedEnabled      Boolean @default(true)
+  embedColor        Int     @default(5814783) // Discord embed color (hex: 58B9FF)
+
   // Level Curve Configuration
-  levelCurveType    String  @default("FORMULA")        // "FORMULA" | "TABLE"
-  formulaBase       Float   @default(5.0)              // Base XP required
-  formulaExponent   Float   @default(2.0)              // Level scaling exponent
-  formulaOffset     Float   @default(50.0)             // Additional XP offset
-  tableThresholds   Int[]   @default([])               // Custom XP thresholds per level
-  
+  levelCurveType  String @default("FORMULA") // "FORMULA" | "TABLE"
+  formulaBase     Float  @default(5.0) // Base XP required
+  formulaExponent Float  @default(2.0) // Level scaling exponent
+  formulaOffset   Float  @default(50.0) // Additional XP offset
+  tableThresholds Int[]  @default([]) // Custom XP thresholds per level
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@index([guildId])
@@ -748,43 +749,43 @@ model GuildVoiceXPConfig {
 
 // User Voice XP per Guild
 model UserVoiceXP {
-  id            String    @id @default(cuid())
-  guildId       String
-  userId        String
-  xp            Int       @default(0)
-  level         Int       @default(0)
-  minutesInVoice Int      @default(0)                  // Total minutes tracked
-  lastAwardAt   DateTime?                              // Last XP award time
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  id             String    @id @default(cuid())
+  guildId        String
+  userId         String
+  xp             Int       @default(0)
+  level          Int       @default(0)
+  minutesInVoice Int       @default(0) // Total minutes tracked
+  lastAwardAt    DateTime? // Last XP award time
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@unique([guildId, userId])
-  @@index([guildId, xp(sort: Desc)])                   // For leaderboard queries
+  @@index([guildId, xp(sort: Desc)]) // For leaderboard queries
   @@index([guildId, userId])
   @@map("user_voice_xp")
 }
 
 // Voice Session Tracking
 model VoiceSession {
-  id             String    @id @default(cuid())
-  guildId        String
-  userId         String
-  channelId      String
-  joinedAt       DateTime  @default(now())
-  leftAt         DateTime?
-  durationMinutes Int      @default(0)                 // Calculated on session end
-  xpAwarded      Int       @default(0)                 // XP awarded for this session
-  wasMuted       Boolean   @default(false)
-  wasDeafened    Boolean   @default(false)
-  wasStreaming   Boolean   @default(false)
-  wasVideo       Boolean   @default(false)
-  
+  id              String    @id @default(cuid())
+  guildId         String
+  userId          String
+  channelId       String
+  joinedAt        DateTime  @default(now())
+  leftAt          DateTime?
+  durationMinutes Int       @default(0) // Calculated on session end
+  xpAwarded       Int       @default(0) // XP awarded for this session
+  wasMuted        Boolean   @default(false)
+  wasDeafened     Boolean   @default(false)
+  wasStreaming    Boolean   @default(false)
+  wasVideo        Boolean   @default(false)
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@index([guildId, userId])
-  @@index([guildId, userId, leftAt])                   // For active session queries
+  @@index([guildId, userId, leftAt]) // For active session queries
   @@index([joinedAt])
   @@map("voice_sessions")
 }
@@ -794,16 +795,16 @@ model VoiceXPEventLog {
   id          String   @id @default(cuid())
   guildId     String
   userId      String
-  eventType   String                                   // "AWARD" | "LEVEL_UP" | "RESET" | "SESSION_END"
+  eventType   String // "AWARD" | "LEVEL_UP" | "RESET" | "SESSION_END"
   xpChange    Int
   xpBefore    Int
   xpAfter     Int
   levelBefore Int
   levelAfter  Int
   reason      String?
-  metadata    Json?                                    // Session details, channel info
+  metadata    Json? // Session details, channel info
   createdAt   DateTime @default(now())
-  
+
   guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
 
   @@index([guildId, userId])
@@ -818,145 +819,255 @@ model VoiceXPEventLog {
 
 // Naming scheme for temporary voice channels
 enum TempVoiceNamingScheme {
-  USERNAME      // Use Discord username
-  DISPLAYNAME   // Use Discord display name/nickname
-  SEQUENTIAL    // Numbered channels (e.g., "Channel 1", "Channel 2")
-  CUSTOM        // Use custom template from defaultNameTemplate
+  USERNAME // Use Discord username
+  DISPLAYNAME // Use Discord display name/nickname
+  SEQUENTIAL // Numbered channels (e.g., "Channel 1", "Channel 2")
+  CUSTOM // Use custom template from defaultNameTemplate
+}
+
+enum TempVoiceLifecycle {
+  CREATING
+  ACTIVE
+  DELETE_PENDING
+  DELETING
+  DELETE_FAILED
+  DELETED
+}
+
+enum TempVoiceOwnershipStatus {
+  OWNER_PRESENT
+  OWNER_GRACE
+  CLAIMABLE
+}
+
+enum TempVoiceEffectKind {
+  CREATE_CHANNEL
+  MOVE_OWNER
+  DISCONNECT_USERS
+  DELETE_CHANNEL
+  RECONCILE_CHANNEL
+  RECONCILE_PERMISSIONS
+  RECONCILE_PANEL
+  DELIVER_OWNERSHIP_NOTICE
+  DELIVER_OWNER_DM
+}
+
+enum TempVoiceOutboxStatus {
+  PENDING
+  ENQUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum TempVoiceDeliveryKind {
+  CONTROL_PANEL
+  OWNERSHIP_NOTICE
+  OWNER_DM
+}
+
+enum TempVoiceDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SUPERSEDED
 }
 
 // Configuration for the temp voice module per guild
 model TempVoiceConfig {
-  id                    String                    @id @default(cuid())
-  guildId               String                    @unique
-  enabled               Boolean                   @default(true)
-  
+  id         String    @id @default(cuid())
+  guildId    String    @unique
+  enabled    Boolean   @default(true)
+  drainingAt DateTime?
+
   // Join to Create channels
-  joinToCreateChannels  Json                      @default("[]")        // string[] of channel IDs
-  
+  joinToCreateChannels Json @default("[]") // string[] of channel IDs
+
   // Creation settings
-  categoryId            String?
-  fallbackCategoryId    String?
-  namingScheme          TempVoiceNamingScheme     @default(USERNAME)
-  defaultNameTemplate   String                    @default("{username}'s Channel")
-  
+  categoryId          String?
+  fallbackCategoryId  String?
+  namingScheme        TempVoiceNamingScheme @default(USERNAME)
+  defaultNameTemplate String                @default("{username}'s Channel")
+
   // Default channel settings
-  defaultUserLimit      Int      @default(0)           // 0 = unlimited
-  defaultBitrate        Int?                            // null = Discord default (in kbps)
-  defaultRegion         String?                         // null = auto
-  defaultLocked         Boolean  @default(false)
-  defaultHidden         Boolean  @default(false)
-  
+  defaultUserLimit Int     @default(0) // 0 = unlimited
+  defaultBitrate   Int?    @default(64) // null = Discord default (in kbps)
+  defaultRegion    String? // null = auto
+  defaultLocked    Boolean @default(false)
+  defaultHidden    Boolean @default(false)
+
   // Cleanup settings
-  deleteDelaySeconds    Int      @default(5)
-  ownerLeaveStrategy    String   @default("TRANSFER")  // TRANSFER | KEEP | DELETE
-  
+  deleteDelaySeconds Int @default(300)
+
   // Anti-abuse
-  cooldownSeconds       Int      @default(10)
-  maxChannelsPerUser    Int      @default(3)
-  
+  cooldownSeconds    Int @default(10)
+  maxChannelsPerUser Int @default(3)
+
   // Control panel
-  controlPanelEnabled   Boolean  @default(true)
-  controlPanelOnCreate  Boolean  @default(true)
-  allowCustomization    Boolean  @default(true)        // Allow users to customize their channels
-  
+  controlPanelEnabled Boolean @default(true)
+  allowCustomization  Boolean @default(true) // Allow users to customize their channels
+
   // Logging
-  logChannelId          String?
-  logWebhook            String?  // Webhook URL for logging
-  
+  logChannelId String?
+  logWebhook   String? // Webhook URL for logging
+
   // Permissions
-  adminRoleIds          Json     @default("[]")        // string[] - roles that can manage any temp channel
-  
+  adminRoleIds Json @default("[]") // string[] - roles that can manage any temp channel
+
   // Name Moderation settings (optional, disabled by default)
-  moderationEnabled     Boolean                     @default(false)  // Disabled by default - admins must opt-in
-  moderationAction      TempVoiceModerationAction   @default(AUTO_RENAME)
-  strictMode            Boolean                     @default(false)  // Enable aggressive heuristics
-  allowListEnabled      Boolean                     @default(false)  // Whitelist mode
-  customPatterns        Json                        @default("[]")   // string[] - Guild-specific regex patterns
-  allowedKeywords       Json                        @default("[]")   // string[] - Guild allowlist
-  
+  moderationEnabled Boolean                   @default(false) // Disabled by default - admins must opt-in
+  moderationAction  TempVoiceModerationAction @default(AUTO_RENAME)
+  strictMode        Boolean                   @default(false) // Enable aggressive heuristics
+  allowListEnabled  Boolean                   @default(false) // Whitelist mode
+  customPatterns    Json                      @default("[]") // string[] - Guild-specific regex patterns
+  allowedKeywords   Json                      @default("[]") // string[] - Guild allowlist
+
   // Multi-language settings (Phase 7)
-  primaryLanguage       String                      @default("en")   // Primary language (ISO 639-1)
-  additionalLanguages   Json                        @default("[]")   // string[] - Additional languages to check
-  multiLangMode         Boolean                     @default(false)  // Check all languages vs primary only
-  languageSettings      Json                        @default("{}")   // Language-specific settings
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  primaryLanguage     String  @default("en") // Primary language (ISO 639-1)
+  additionalLanguages Json    @default("[]") // string[] - Additional languages to check
+  multiLangMode       Boolean @default(false) // Check all languages vs primary only
+  languageSettings    Json    @default("{}") // Language-specific settings
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([guildId])
   @@map("temp_voice_configs")
 }
 
 // Active temporary voice channels
 model TempVoiceChannel {
-  id                    String   @id @default(cuid())
-  guildId               String
-  channelId             String   @unique
-  ownerId               String
-  
+  id          String  @id @default(cuid())
+  guildId     String
+  channelId   String? @unique
+  ownerId     String
+  operationId String  @unique
+
+  lifecycle       TempVoiceLifecycle       @default(CREATING)
+  ownershipStatus TempVoiceOwnershipStatus @default(OWNER_PRESENT)
+  revision        Int                      @default(0)
+  ownershipEpoch  Int                      @default(0)
+  ownerAbsentAt   DateTime?
+  claimableAt     DateTime?
+
   // Creation context
   createdByJoinChannelId String
-  createdAt             DateTime @default(now())
-  lastActiveAt          DateTime @default(now())
-  
+  createdAt              DateTime @default(now())
+  lastActiveAt           DateTime @default(now())
+
   // Custom settings (null = using defaults)
-  customName            String?
-  customUserLimit       Int?
-  customBitrate         Int?
-  customRegion          String?
-  
+  customName      String?
+  customUserLimit Int?
+  customBitrate   Int?
+  customRegion    String?
+
   // State flags
-  isLocked              Boolean  @default(false)
-  isHidden              Boolean  @default(false)
-  
+  isLocked Boolean @default(false)
+  isHidden Boolean @default(false)
+
   // Permission overrides
-  allowedUserIds        Json     @default("[]")        // string[]
-  deniedUserIds         Json     @default("[]")        // string[]
-  trustedUserIds        Json     @default("[]")        // string[] - users with owner-like permissions (except claim)
-  
+  allowedUserIds Json @default("[]") // string[]
+  deniedUserIds  Json @default("[]") // string[]
+  trustedUserIds Json @default("[]") // string[] - users with owner-like permissions (except claim)
+  managedUserIds Json @default("[]") // string[] - member overwrites owned by this module
+
   // Deletion management
-  deletionScheduledAt   DateTime?
-  
+  emptySince       DateTime?
+  deleteAfter      DateTime?
+  nextReconcileAt  DateTime  @default(now())
+  lastReconciledAt DateTime?
+  failureCount     Int       @default(0)
+  lastErrorCode    String?
+  lastErrorMessage String?
+  deletedAt        DateTime?
+
   // Control panel
   controlPanelMessageId String?
   controlPanelChannelId String?
-  
+
   // Metadata
-  metadata              Json     @default("{}")
-  
-  updatedAt             DateTime @updatedAt
-  
+  metadata Json @default("{}")
+
+  outbox     TempVoiceOutbox[]
+  deliveries TempVoiceDelivery[]
+
+  updatedAt DateTime @updatedAt
+
   @@index([guildId])
   @@index([ownerId])
   @@index([channelId])
-  @@index([deletionScheduledAt])
+  @@index([lifecycle, nextReconcileAt])
+  @@index([ownershipStatus, claimableAt])
+  @@index([deleteAfter])
   @@map("temp_voice_channels")
+}
+
+model TempVoiceOutbox {
+  id          String                @id @default(cuid())
+  aggregateId String
+  aggregate   TempVoiceChannel      @relation(fields: [aggregateId], references: [id], onDelete: Cascade)
+  revision    Int
+  kind        TempVoiceEffectKind
+  payload     Json                  @default("{}")
+  dedupeKey   String                @unique
+  status      TempVoiceOutboxStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  availableAt DateTime              @default(now())
+  lastError   String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  completedAt DateTime?
+
+  @@index([status, availableAt])
+  @@index([status, completedAt])
+  @@index([aggregateId, revision])
+  @@map("temp_voice_outbox")
+}
+
+model TempVoiceDelivery {
+  id            String                  @id @default(cuid())
+  aggregateId   String
+  aggregate     TempVoiceChannel        @relation(fields: [aggregateId], references: [id], onDelete: Cascade)
+  kind          TempVoiceDeliveryKind
+  epoch         Int                     @default(0)
+  destinationId String?
+  messageId     String?
+  renderHash    String?
+  status        TempVoiceDeliveryStatus @default(PENDING)
+  attempts      Int                     @default(0)
+  lastError     String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  @@unique([aggregateId, kind, epoch])
+  @@index([status, updatedAt])
+  @@map("temp_voice_deliveries")
 }
 
 // User-specific temp voice channel preferences
 model TempVoiceUserPreference {
-  id                    String   @id @default(cuid())
-  guildId               String
-  userId                String
-  
+  id      String @id @default(cuid())
+  guildId String
+  userId  String
+
   // Saved channel settings
-  customName            String?
-  customUserLimit       Int?
-  customBitrate         Int?
-  customRegion          String?
-  
+  customName      String?
+  customUserLimit Int?
+  customBitrate   Int?
+  customRegion    String?
+
   // Saved state flags
-  preferLocked          Boolean  @default(false)
-  preferHidden          Boolean  @default(false)
-  
+  preferLocked Boolean @default(false)
+  preferHidden Boolean @default(false)
+
   // Saved permission lists
-  allowedUserIds        Json     @default("[]")        // string[]
-  deniedUserIds         Json     @default("[]")        // string[]
-  trustedUserIds        Json     @default("[]")        // string[]
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  allowedUserIds Json @default("[]") // string[]
+  deniedUserIds  Json @default("[]") // string[]
+  trustedUserIds Json @default("[]") // string[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([guildId, userId])
   @@index([guildId])
   @@index([userId])
@@ -969,51 +1080,51 @@ model TempVoiceUserPreference {
 
 // Moderation action enforcement strategies
 enum TempVoiceModerationAction {
-  AUTO_RENAME  // Automatically rename to safe name
-  BLOCK        // Revert to previous name
-  WARN_ONLY    // Log and notify but allow
+  AUTO_RENAME // Automatically rename to safe name
+  BLOCK // Revert to previous name
+  WARN_ONLY // Log and notify but allow
 }
 
 // Keyword approval status
 enum KeywordApprovalStatus {
-  PENDING   // Awaiting manual review
-  APPROVED  // Added to blocklist
-  DENIED    // Not added to blocklist
-  IGNORED   // Dismissed without action
+  PENDING // Awaiting manual review
+  APPROVED // Added to blocklist
+  DENIED // Not added to blocklist
+  IGNORED // Dismissed without action
 }
 
 // Moderation log entries
 model TempVoiceModerationLog {
-  id                String   @id @default(cuid())
-  guildId           String
-  channelId         String
-  userId            String
-  
+  id        String @id @default(cuid())
+  guildId   String
+  channelId String
+  userId    String
+
   // Event details
-  originalName      String
-  normalizedName    String
-  finalName         String?   // Name after moderation action
-  
+  originalName   String
+  normalizedName String
+  finalName      String? // Name after moderation action
+
   // Detection details
-  isAllowed         Boolean
-  reasonCodes       Json      @default("[]")    // string[] of reason codes
-  matchedPatterns   Json      @default("[]")    // PatternMatch[] objects
-  heuristicScore    Float?                      // Optional heuristic score
-  
+  isAllowed       Boolean
+  reasonCodes     Json    @default("[]") // string[] of reason codes
+  matchedPatterns Json    @default("[]") // PatternMatch[] objects
+  heuristicScore  Float? // Optional heuristic score
+
   // Language detection (Phase 7)
-  detectedLanguage  String?                     // Detected language (ISO 639-1)
-  matchedLanguage   String?                     // Language that matched pattern
-  
+  detectedLanguage String? // Detected language (ISO 639-1)
+  matchedLanguage  String? // Language that matched pattern
+
   // Action taken
-  actionTaken       String    // AUTO_RENAMED, BLOCKED, WARNED, ALLOWED
-  strategyUsed      String?   // For auto-rename: SAFE_TEMPLATE, CREATIVE_COMBO, etc.
-  
+  actionTaken  String // AUTO_RENAMED, BLOCKED, WARNED, ALLOWED
+  strategyUsed String? // For auto-rename: SAFE_TEMPLATE, CREATIVE_COMBO, etc.
+
   // Metadata
-  processingTimeMs  Int?
-  metadata          Json      @default("{}")
-  
-  createdAt         DateTime  @default(now())
-  
+  processingTimeMs Int?
+  metadata         Json @default("{}")
+
+  createdAt DateTime @default(now())
+
   @@index([guildId, createdAt])
   @@index([channelId])
   @@index([userId])
@@ -1024,32 +1135,32 @@ model TempVoiceModerationLog {
 
 // Pending keywords from Discovery revocations or manual reports
 model TempVoiceKeywordQueue {
-  id                String                  @id @default(cuid())
-  guildId           String
-  
+  id      String @id @default(cuid())
+  guildId String
+
   // Keyword details
   keyword           String
   normalizedKeyword String
-  source            String                  // DISCOVERY_REVOCATION, MANUAL_REPORT, AUTO_DETECTED
-  contextSnippet    String?                 // Original full name that triggered it
-  
+  source            String // DISCOVERY_REVOCATION, MANUAL_REPORT, AUTO_DETECTED
+  contextSnippet    String? // Original full name that triggered it
+
   // Context
-  channelId         String?
-  userId            String?
-  
+  channelId String?
+  userId    String?
+
   // Review status
-  status            KeywordApprovalStatus   @default(PENDING)
-  reviewedBy        String?                 // User ID of reviewer
-  reviewedAt        DateTime?
-  reviewNote        String?
-  
+  status     KeywordApprovalStatus @default(PENDING)
+  reviewedBy String? // User ID of reviewer
+  reviewedAt DateTime?
+  reviewNote String?
+
   // Metadata
-  occurrences       Int                     @default(1)  // How many times detected
-  lastSeenAt        DateTime                @default(now())
-  
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  
+  occurrences Int      @default(1) // How many times detected
+  lastSeenAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([guildId, normalizedKeyword])
   @@index([guildId, status])
   @@index([status, createdAt])
@@ -1058,29 +1169,29 @@ model TempVoiceKeywordQueue {
 
 // Global moderation patterns (admin-managed)
 model TempVoiceModerationPattern {
-  id              String    @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Pattern details
-  pattern         String    // Regex pattern
-  patternType     String    // PROFANITY, HATE_SPEECH, SPAM, OBFUSCATION, etc.
-  description     String?
-  severity        Int       @default(5)   // 1-10 scale
-  
+  pattern     String // Regex pattern
+  patternType String // PROFANITY, HATE_SPEECH, SPAM, OBFUSCATION, etc.
+  description String?
+  severity    Int     @default(5) // 1-10 scale
+
   // Language support (Phase 7)
-  language        String    @default("en")  // ISO 639-1 language code
-  regionalVariant String?                   // Regional variant (e.g., 'US', 'GB', 'MX')
-  
+  language        String  @default("en") // ISO 639-1 language code
+  regionalVariant String? // Regional variant (e.g., 'US', 'GB', 'MX')
+
   // Configuration
-  enabled         Boolean   @default(true)
-  caseInsensitive Boolean   @default(true)
-  
+  enabled         Boolean @default(true)
+  caseInsensitive Boolean @default(true)
+
   // Usage tracking
-  matchCount      Int       @default(0)
-  lastMatchedAt   DateTime?
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  matchCount    Int       @default(0)
+  lastMatchedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([enabled, patternType])
   @@index([enabled, language, patternType])
   @@map("temp_voice_moderation_patterns")
@@ -1092,46 +1203,46 @@ model TempVoiceModerationPattern {
 
 // User reputation/social credit tracking
 model UserReputation {
-  id                    String   @id @default(cuid())
-  guildId               String
-  userId                String
-  
+  id      String @id @default(cuid())
+  guildId String
+  userId  String
+
   // Reputation scores
-  reputationScore       Int      @default(0)         // Total reputation points
-  vouchesReceived       Int      @default(0)         // Count of vouches received
-  vouchesGiven          Int      @default(0)         // Count of vouches given
-  
+  reputationScore Int @default(0) // Total reputation points
+  vouchesReceived Int @default(0) // Count of vouches received
+  vouchesGiven    Int @default(0) // Count of vouches given
+
   // Reputation breakdown by type
-  helpfulVouches        Int      @default(0)
-  friendlyVouches       Int      @default(0)
-  skilledVouches        Int      @default(0)
-  reliableVouches       Int      @default(0)
-  
+  helpfulVouches  Int @default(0)
+  friendlyVouches Int @default(0)
+  skilledVouches  Int @default(0)
+  reliableVouches Int @default(0)
+
   // Tier system
-  reputationTier        String   @default("Bronze")  // Bronze, Silver, Gold, Platinum, Diamond
-  tierReachedAt         DateTime?
-  
+  reputationTier String    @default("Bronze") // Bronze, Silver, Gold, Platinum, Diamond
+  tierReachedAt  DateTime?
+
   // Anti-abuse tracking
-  lastVouchGiven        DateTime?
-  suspiciousActivity    Boolean  @default(false)
-  
+  lastVouchGiven     DateTime?
+  suspiciousActivity Boolean   @default(false)
+
   // Decay system
-  lastActiveDate        DateTime @default(now())
-  decayAppliedAt        DateTime?
-  
+  lastActiveDate DateTime  @default(now())
+  decayAppliedAt DateTime?
+
   // Stats & achievements
-  longestVouchStreak    Int      @default(0)
-  totalHelpfulness      Int      @default(0)         // Calculated metric
-  
+  longestVouchStreak Int @default(0)
+  totalHelpfulness   Int @default(0) // Calculated metric
+
   // Metadata
-  metadata              Json     @default("{}")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  vouchesReceived_      ReputationVouch[] @relation("VouchReceiver")
-  vouchesGiven_         ReputationVouch[] @relation("VouchGiver")
-  
+  vouchesReceived_ ReputationVouch[] @relation("VouchReceiver")
+  vouchesGiven_    ReputationVouch[] @relation("VouchGiver")
+
   @@unique([guildId, userId])
   @@index([guildId])
   @@index([userId])
@@ -1142,35 +1253,35 @@ model UserReputation {
 
 // Individual vouch records
 model ReputationVouch {
-  id                    String   @id @default(cuid())
-  guildId               String
-  
+  id      String @id @default(cuid())
+  guildId String
+
   // Who vouched for whom
-  giverUserId           String
-  receiverUserId        String
-  
+  giverUserId    String
+  receiverUserId String
+
   // Vouch details
-  vouchType             String                       // helpful, friendly, skilled, reliable
-  reason                String?                      // Optional message
-  weight                Int      @default(1)         // Vouch weight (can vary by giver's reputation)
-  
+  vouchType String // helpful, friendly, skilled, reliable
+  reason    String? // Optional message
+  weight    Int     @default(1) // Vouch weight (can vary by giver's reputation)
+
   // Context
-  contextType           String?                      // Where it happened: voice, text, event
-  contextId             String?                      // Channel/event ID
-  
+  contextType String? // Where it happened: voice, text, event
+  contextId   String? // Channel/event ID
+
   // Validation
-  isValid               Boolean  @default(true)      // Can be invalidated if abuse detected
-  validatedBy           String?                      // Moderator who validated/invalidated
-  
+  isValid     Boolean @default(true) // Can be invalidated if abuse detected
+  validatedBy String? // Moderator who validated/invalidated
+
   // Timestamps
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  giver                 UserReputation @relation("VouchGiver", fields: [guildId, giverUserId], references: [guildId, userId], onDelete: Cascade)
-  receiver              UserReputation @relation("VouchReceiver", fields: [guildId, receiverUserId], references: [guildId, userId], onDelete: Cascade)
-  guild                 Guild    @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
-  
+  giver    UserReputation @relation("VouchGiver", fields: [guildId, giverUserId], references: [guildId, userId], onDelete: Cascade)
+  receiver UserReputation @relation("VouchReceiver", fields: [guildId, receiverUserId], references: [guildId, userId], onDelete: Cascade)
+  guild    Guild          @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
   @@unique([guildId, giverUserId, receiverUserId, vouchType, createdAt])
   @@index([guildId])
   @@index([giverUserId])
@@ -1186,12 +1297,12 @@ model ReputationVouch {
 
 // Configurable rewards per guild per level
 model LevelReward {
-  id                    String   @id @default(cuid())
-  guildId               String
-  level                 Int                          // Level requirement
-  xpType                String                       // "TEXT" | "VOICE" | "BOTH"
-  rewardType            String                       // See reward types below
-  
+  id         String @id @default(cuid())
+  guildId    String
+  level      Int // Level requirement
+  xpType     String // "TEXT" | "VOICE" | "BOTH"
+  rewardType String // See reward types below
+
   // Reward-specific data stored as JSON
   // Examples:
   // ROLE: { "roleId": "123456789", "action": "ADD" | "REMOVE" | "STACK" }
@@ -1200,30 +1311,30 @@ model LevelReward {
   // PERMISSION: { "permissions": ["EMBED_LINKS", "USE_EXTERNAL_EMOJIS"] }
   // MULTIPLIER: { "multiplier": 1.5, "durationMinutes": 1440 }
   // CUSTOM: { "customData": {...} }
-  rewardData            Json
-  
+  rewardData Json
+
   // Display settings
-  name                  String                       // e.g., "Gold Role", "VIP Access"
-  description           String?                      // User-friendly description
-  icon                  String?                      // Emoji or icon identifier
-  
+  name        String // e.g., "Gold Role", "VIP Access"
+  description String? // User-friendly description
+  icon        String? // Emoji or icon identifier
+
   // Behavior settings
-  oneTime               Boolean  @default(true)      // Award once or repeatable
-  stackable             Boolean  @default(false)     // Can accumulate (for roles/perms)
-  requiresPrevious      Boolean  @default(false)     // Must claim previous level rewards
-  
+  oneTime          Boolean @default(true) // Award once or repeatable
+  stackable        Boolean @default(false) // Can accumulate (for roles/perms)
+  requiresPrevious Boolean @default(false) // Must claim previous level rewards
+
   // Priority and ordering
-  priority              Int      @default(0)         // Higher = applied first
-  enabled               Boolean  @default(true)
-  
+  priority Int     @default(0) // Higher = applied first
+  enabled  Boolean @default(true)
+
   // Metadata
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  createdBy             String?                      // Admin who created this reward
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String? // Admin who created this reward
+
   // Relations
-  claimedRewards        UserRewardClaim[]
-  
+  claimedRewards UserRewardClaim[]
+
   @@unique([guildId, level, xpType, rewardType, name])
   @@index([guildId])
   @@index([guildId, level, xpType])
@@ -1233,29 +1344,29 @@ model LevelReward {
 
 // Track which rewards users have claimed
 model UserRewardClaim {
-  id                    String   @id @default(cuid())
-  guildId               String
-  userId                String
-  rewardId              String
-  
+  id       String @id @default(cuid())
+  guildId  String
+  userId   String
+  rewardId String
+
   // Claim details
-  levelAtClaim          Int                          // Level when reward was claimed
-  xpAtClaim             Int                          // XP total when claimed
-  claimedAt             DateTime @default(now())
-  
+  levelAtClaim Int // Level when reward was claimed
+  xpAtClaim    Int // XP total when claimed
+  claimedAt    DateTime @default(now())
+
   // Status tracking
-  status                String   @default("ACTIVE")  // ACTIVE | REVOKED | EXPIRED
-  expiresAt             DateTime?                    // For temporary rewards
-  revokedAt             DateTime?
-  revokedBy             String?
-  revokeReason          String?
-  
+  status       String    @default("ACTIVE") // ACTIVE | REVOKED | EXPIRED
+  expiresAt    DateTime? // For temporary rewards
+  revokedAt    DateTime?
+  revokedBy    String?
+  revokeReason String?
+
   // Metadata
-  metadata              Json     @default("{}")      // Store additional context
-  
+  metadata Json @default("{}") // Store additional context
+
   // Relations
-  reward                LevelReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  
+  reward LevelReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
   @@unique([guildId, userId, rewardId])
   @@index([guildId, userId])
   @@index([rewardId])
@@ -1266,25 +1377,25 @@ model UserRewardClaim {
 
 // Reward presets/templates for easy setup
 model RewardTemplate {
-  id                    String   @id @default(cuid())
-  name                  String                       // e.g., "Standard Role Progression"
-  description           String?
-  category              String                       // "ROLES", "ECONOMY", "ACCESS", "MIXED"
-  
+  id          String  @id @default(cuid())
+  name        String // e.g., "Standard Role Progression"
+  description String?
+  category    String // "ROLES", "ECONOMY", "ACCESS", "MIXED"
+
   // Template data - array of reward configurations
-  template              Json                         // Full reward structure array
-  
+  template Json // Full reward structure array
+
   // Visibility
-  isPublic              Boolean  @default(true)      // Available to all guilds
-  isOfficial            Boolean  @default(false)     // Created by bot developer
-  
+  isPublic   Boolean @default(true) // Available to all guilds
+  isOfficial Boolean @default(false) // Created by bot developer
+
   // Stats
-  timesUsed             Int      @default(0)
-  rating                Float?
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  
+  timesUsed Int    @default(0)
+  rating    Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([category])
   @@index([isPublic])
   @@map("reward_templates")

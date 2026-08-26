@@ -139,6 +139,15 @@ export class ReadyListener extends Listener {
         this.container.logger.error('Error shutting down scheduler:', error);
       }
 
+      try {
+        const { shutdownTempVoiceTransport } =
+          await import('../modules/temp-voice/application/temp-voice-runtime.js');
+        await shutdownTempVoiceTransport();
+        this.container.logger.info('Temp voice transport shut down');
+      } catch (error) {
+        this.container.logger.error('Error shutting down temp voice transport:', error);
+      }
+
       // Shutdown logging service
       try {
         await loggingService.destroy();

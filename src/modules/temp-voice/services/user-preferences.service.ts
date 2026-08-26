@@ -2,9 +2,13 @@
  * Service for managing user-specific temp voice channel preferences
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
+import type {
+  TempVoicePreferenceData,
+  TempVoicePreferenceStore,
+} from "../ports/temp-voice-settings.port.js";
 
-export interface UserPreferenceData {
+export interface UserPreferenceData extends TempVoicePreferenceData {
   customName?: string | null;
   customUserLimit?: number | null;
   customBitrate?: number | null;
@@ -16,13 +20,16 @@ export interface UserPreferenceData {
   trustedUserIds?: string[];
 }
 
-export class UserPreferencesService {
+export class UserPreferencesService implements TempVoicePreferenceStore {
   constructor(private prisma: PrismaClient) {}
 
   /**
    * Get user preferences for a guild
    */
-  async get(guildId: string, userId: string): Promise<UserPreferenceData | null> {
+  async get(
+    guildId: string,
+    userId: string,
+  ): Promise<UserPreferenceData | null> {
     const prefs = await this.prisma.tempVoiceUserPreference.findUnique({
       where: { guildId_userId: { guildId, userId } },
     });
@@ -38,16 +45,26 @@ export class UserPreferencesService {
       customRegion: prefs.customRegion,
       preferLocked: prefs.preferLocked,
       preferHidden: prefs.preferHidden,
-      allowedUserIds: Array.isArray(prefs.allowedUserIds) ? (prefs.allowedUserIds as string[]) : [],
-      deniedUserIds: Array.isArray(prefs.deniedUserIds) ? (prefs.deniedUserIds as string[]) : [],
-      trustedUserIds: Array.isArray(prefs.trustedUserIds) ? (prefs.trustedUserIds as string[]) : [],
+      allowedUserIds: Array.isArray(prefs.allowedUserIds)
+        ? (prefs.allowedUserIds as string[])
+        : [],
+      deniedUserIds: Array.isArray(prefs.deniedUserIds)
+        ? (prefs.deniedUserIds as string[])
+        : [],
+      trustedUserIds: Array.isArray(prefs.trustedUserIds)
+        ? (prefs.trustedUserIds as string[])
+        : [],
     };
   }
 
   /**
    * Save or update user preferences
    */
-  async save(guildId: string, userId: string, data: UserPreferenceData): Promise<void> {
+  async save(
+    guildId: string,
+    userId: string,
+    data: UserPreferenceData,
+  ): Promise<void> {
     await this.prisma.tempVoiceUserPreference.upsert({
       where: { guildId_userId: { guildId, userId } },
       create: {
@@ -84,7 +101,7 @@ export class UserPreferencesService {
       allowedUserIds?: string[];
       deniedUserIds?: string[];
       trustedUserIds?: string[];
-    }
+    },
   ): Promise<void> {
     await this.save(guildId, userId, {
       customName: channelData.customName,
