@@ -2,9 +2,15 @@
  * Vouch command - Allow users to vouch for each other
  */
 
-import { Command } from '@sapphire/framework';
-import { EmbedBuilder, Colors } from 'discord.js';
+import { Args, Command } from '@sapphire/framework';
+import { EmbedBuilder, Colors, type Message, type User } from 'discord.js';
 import { EMOJI } from '#lib/discord/design/index.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import { readPrefixArgs, resolvePrefixUser } from '#lib/interaction/prefixArgs.js';
 import { ReputationService } from '#modules/reputation/services/reputation.service.js';
 import { VouchType, REPUTATION_TIERS } from '#modules/reputation/models/reputation.model.js';
 
@@ -16,6 +22,7 @@ export class VouchCommand extends Command {
       ...options,
       name: 'rep',
       description: 'Give reputation to another member to increase their standing',
+      preconditions: ['GuildOnly'],
     });
   }
 
@@ -64,30 +71,55 @@ export class VouchCommand extends Command {
     );
   }
 
-  public async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    return this.run(
+      interaction.options.getUser('user', true),
+      interaction.options.getString('type', true) as VouchType,
+      interaction.options.getString('reason'),
+      new InteractionResponder(interaction)
+    );
+  }
+
+  public override async messageRun(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const responder = new MessageResponder(guildMessage);
+    const targetUser = values[0] ? await resolvePrefixUser(guildMessage, values[0]) : null;
+    const vouchType = values[1]?.toLocaleLowerCase() as VouchType | undefined;
+    const reason = values.slice(2).join(' ') || null;
+
+    if (
+      !targetUser ||
+      !Object.values(VouchType).includes(vouchType as VouchType) ||
+      (reason?.length ?? 0) > 200
+    ) {
+      await responder.replyError(
+        'Usage: `rep <user> <helpful|friendly|skilled|reliable> [reason]`'
+      );
+      return;
+    }
+
+    return this.run(targetUser, vouchType as VouchType, reason, responder);
+  }
+
+  private async run(
+    targetUser: User,
+    vouchType: VouchType,
+    reason: string | null,
+    ctx: CommandResponder
+  ) {
     // Initialize service
     if (!this.reputationService) {
       this.reputationService = new ReputationService(this.container.prisma);
     }
 
-    await interaction.deferReply();
+    await ctx.deferPublicClassic();
 
-    // Ensure command is run in a guild
-    if (!interaction.guild || !interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
-    const guild = interaction.guild;
-    const guildId = interaction.guildId;
-
-    const targetUser = interaction.options.getUser('user', true);
-    const vouchType = interaction.options.getString('type', true) as VouchType;
-    const reason = interaction.options.getString('reason');
+    const { guild } = ctx;
+    const guildId = guild.id;
 
     // Get guild member objects
-    const giver = await guild.members.fetch(interaction.user.id);
+    const giver = await guild.members.fetch(ctx.user.id);
     const receiver = await guild.members.fetch(targetUser.id);
 
     // Validate vouch
@@ -99,7 +131,7 @@ export class VouchCommand extends Command {
     );
 
     if (!validation.isValid) {
-      return interaction.editReply({
+      return ctx.editReply({
         content: validation.reason,
       });
     }
@@ -107,12 +139,12 @@ export class VouchCommand extends Command {
     // Submit vouch
     try {
       await this.reputationService.submitVouch(guildId, {
-        giverUserId: interaction.user.id,
+        giverUserId: ctx.user.id,
         receiverUserId: targetUser.id,
         vouchType,
         reason: reason || undefined,
         contextType: 'text',
-        contextId: interaction.channelId,
+        contextId: ctx.channelId,
       });
 
       // Get updated stats
@@ -154,10 +186,10 @@ export class VouchCommand extends Command {
         });
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return ctx.editReply({ embeds: [embed] });
     } catch (error) {
       this.container.logger.error('Failed to submit vouch:', error);
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to submit vouch. Please try again later.`,
       });
     }

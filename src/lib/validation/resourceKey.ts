@@ -27,6 +27,7 @@ import type {
 } from 'discord.js';
 import type { GateableInteraction } from './Gate.js';
 import { buildCommandKey } from './Gate.js';
+import { MODERATION_DIRECT_SHORTCUTS } from '#lib/interaction/moderationPrefix.js';
 
 // Types
 
@@ -331,15 +332,7 @@ export function getModPanelActionKey(action: string): string {
  * Mapping from top-level alias command names to their full resource keys.
  */
 const ALIAS_TO_RESOURCE_KEY: Record<string, string> = {
-  ban: 'mod.ban',
-  kick: 'mod.kick',
-  timeout: 'mod.timeout',
-  warn: 'mod.warn',
-  unban: 'mod.unban',
-  softban: 'mod.softban',
-  tempban: 'mod.tempban',
-  case: 'mod.case',
-  history: 'mod.history',
+  ...MODERATION_DIRECT_SHORTCUTS,
 };
 
 /** Valid mute/unmute type keywords */

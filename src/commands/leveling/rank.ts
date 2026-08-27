@@ -2,9 +2,15 @@
  * Rank command - Display user XP rank with a custom generated card
  */
 
-import { Command } from '@sapphire/framework';
-import { AttachmentBuilder, EmbedBuilder, Colors } from 'discord.js';
+import { Args, Command } from '@sapphire/framework';
+import { AttachmentBuilder, EmbedBuilder, Colors, type Message, type User } from 'discord.js';
 import { EMOJI } from '#lib/discord/design/index.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import { readPrefixArgs, resolvePrefixUser } from '#lib/interaction/prefixArgs.js';
 import { RankCardDataService } from '#modules/xp/services/rank-card-data.service.js';
 import { leaderboardService } from '#root/modules/xp/xp-text/index.js';
 import * as voiceLeaderboardService from '#root/modules/xp/xp-voice/index.js';
@@ -18,6 +24,7 @@ export class RankCommand extends Command {
       ...options,
       name: 'rank',
       description: "View your or another user's XP rank card",
+      preconditions: ['GuildOnly'],
     });
 
     this.rankDataService = new RankCardDataService(this.container.prisma);
@@ -53,48 +60,62 @@ export class RankCommand extends Command {
     );
   }
 
-  public async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    // Ensure command is run in a guild
-    if (!interaction.guild || !interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
     const targetUser = interaction.options.getUser('user') || interaction.user;
+    return this.run(subcommand, targetUser, new InteractionResponder(interaction));
+  }
+
+  public override async messageRun(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const first = values[0]?.toLocaleLowerCase();
+    const subcommand = first === 'voice' || first === 'text' ? first : 'text';
+    const userArg = first === 'voice' || first === 'text' ? values[1] : values[0];
+    const maxArgs = first === 'voice' || first === 'text' ? 2 : 1;
+    const targetUser = userArg
+      ? await resolvePrefixUser(guildMessage, userArg)
+      : guildMessage.author;
+
+    if (!targetUser || values.length > maxArgs) {
+      await new MessageResponder(guildMessage).replyError(
+        `Could not find user \`${userArg}\`. Usage: \`rank [text|voice] [user]\``
+      );
+      return;
+    }
+
+    return this.run(subcommand, targetUser, new MessageResponder(guildMessage));
+  }
+
+  private async run(subcommand: string, targetUser: User, ctx: CommandResponder) {
+    await ctx.deferPublicClassic();
 
     // Check if bot
     if (targetUser.bot) {
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Bots don't earn XP!`,
       });
     }
 
     if (subcommand === 'voice') {
-      return this.handleVoiceRank(interaction, targetUser, interaction.guildId);
+      return this.handleVoiceRank(ctx, targetUser);
     } else {
-      return this.handleTextRank(interaction, targetUser, interaction.guildId);
+      return this.handleTextRank(ctx, targetUser);
     }
   }
 
   /**
    * Handle text/message XP rank card
    */
-  private async handleTextRank(
-    interaction: Command.ChatInputCommandInteraction,
-    targetUser: NonNullable<ReturnType<typeof interaction.options.getUser>>,
-    guildId: string
-  ) {
+  private async handleTextRank(ctx: CommandResponder, targetUser: User) {
+    const guildId = ctx.guild.id;
     try {
       // Get user stats
       const stats = await leaderboardService.getUserStats(guildId, targetUser.id);
 
       if (!stats) {
-        return interaction.editReply({
-          content: `${EMOJI.STATUS.ERROR} ${targetUser.id === interaction.user.id ? 'You have' : 'This user has'} not earned any XP yet. Start chatting to earn XP!`,
+        return ctx.editReply({
+          content: `${EMOJI.STATUS.ERROR} ${targetUser.id === ctx.user.id ? 'You have' : 'This user has'} not earned any XP yet. Start chatting to earn XP!`,
         });
       }
 
@@ -106,7 +127,10 @@ export class RankCommand extends Command {
       const xpInCurrentLevel = stats.xp - stats.currentLevelXp;
 
       // Get user avatar
-      const avatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
+      const avatarUrl = targetUser.displayAvatarURL({
+        extension: 'png',
+        size: 256,
+      });
 
       // Determine accent color based on level
       const accentColor = this.rankDataService.getLevelColor(stats.level);
@@ -140,10 +164,12 @@ export class RankCommand extends Command {
       });
 
       // Create attachment
-      const attachment = new AttachmentBuilder(cardImage, { name: 'rank-card.png' });
+      const attachment = new AttachmentBuilder(cardImage, {
+        name: 'rank-card.png',
+      });
 
       // Send the image
-      return interaction.editReply({
+      return ctx.editReply({
         files: [attachment],
       });
     } catch (error) {
@@ -153,7 +179,7 @@ export class RankCommand extends Command {
       const stats = await leaderboardService.getUserStats(guildId, targetUser.id);
 
       if (!stats) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} Failed to retrieve user stats.`,
         });
       }
@@ -180,7 +206,7 @@ export class RankCommand extends Command {
         .setFooter({ text: 'Card generation failed, showing text-based stats' })
         .setTimestamp();
 
-      return interaction.editReply({
+      return ctx.editReply({
         embeds: [embed],
         content: `${EMOJI.STATUS.WARNING} Image generation failed, showing text-based stats instead.`,
       });
@@ -190,18 +216,15 @@ export class RankCommand extends Command {
   /**
    * Handle voice XP rank card
    */
-  private async handleVoiceRank(
-    interaction: Command.ChatInputCommandInteraction,
-    targetUser: NonNullable<ReturnType<typeof interaction.options.getUser>>,
-    guildId: string
-  ) {
+  private async handleVoiceRank(ctx: CommandResponder, targetUser: User) {
+    const guildId = ctx.guild.id;
     try {
       // Get voice stats
       const stats = await voiceLeaderboardService.getVoiceUserStats(guildId, targetUser.id);
 
       if (!stats) {
-        return interaction.editReply({
-          content: `${EMOJI.STATUS.ERROR} ${targetUser.id === interaction.user.id ? 'You have' : 'This user has'} not earned any voice XP yet. Join voice channels to earn voice XP!`,
+        return ctx.editReply({
+          content: `${EMOJI.STATUS.ERROR} ${targetUser.id === ctx.user.id ? 'You have' : 'This user has'} not earned any voice XP yet. Join voice channels to earn voice XP!`,
         });
       }
 
@@ -213,7 +236,10 @@ export class RankCommand extends Command {
       const xpInCurrentLevel = stats.xp - stats.currentLevelXp;
 
       // Get user avatar
-      const avatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
+      const avatarUrl = targetUser.displayAvatarURL({
+        extension: 'png',
+        size: 256,
+      });
 
       // Determine accent color based on level
       const accentColor = this.rankDataService.getLevelColor(stats.level);
@@ -252,10 +278,12 @@ export class RankCommand extends Command {
       });
 
       // Create attachment
-      const attachment = new AttachmentBuilder(cardImage, { name: 'voice-rank-card.png' });
+      const attachment = new AttachmentBuilder(cardImage, {
+        name: 'voice-rank-card.png',
+      });
 
       // Send the image
-      return interaction.editReply({
+      return ctx.editReply({
         files: [attachment],
       });
     } catch (error) {
@@ -265,7 +293,7 @@ export class RankCommand extends Command {
       const stats = await voiceLeaderboardService.getVoiceUserStats(guildId, targetUser.id);
 
       if (!stats) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} Failed to retrieve voice stats.`,
         });
       }
@@ -295,7 +323,7 @@ export class RankCommand extends Command {
         .setFooter({ text: 'Card generation failed, showing text-based stats' })
         .setTimestamp();
 
-      return interaction.editReply({
+      return ctx.editReply({
         embeds: [embed],
         content: `${EMOJI.STATUS.WARNING} Image generation failed, showing text-based stats instead.`,
       });

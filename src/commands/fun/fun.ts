@@ -3,17 +3,28 @@
  */
 
 import { Subcommand } from '@sapphire/plugin-subcommands';
+import { Args } from '@sapphire/framework';
 import {
   AttachmentBuilder,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  MessageFlags,
   type Guild,
+  type Message,
   type User,
 } from 'discord.js';
 import { EMOJI } from '#lib/discord/design/index.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import {
+  parsePrefixBoolean,
+  readPrefixArgs,
+  resolvePrefixUser,
+} from '#lib/interaction/prefixArgs.js';
 import { type BonkStyle, type BonkVisualConfig } from '#lib/services/image-gen-types.js';
 import { imageGenClient } from '#lib/services/image-gen-client.js';
 import { CONFIG } from '#config.js';
@@ -195,14 +206,22 @@ export class FunCommand extends Subcommand {
       description: 'Fun interactive commands',
       cooldownDelay: 10_000,
       cooldownLimit: 3,
+      preconditions: ['GuildOnly'],
       subcommands: [
+        {
+          name: 'help',
+          default: true,
+          messageRun: 'messageHelp',
+        },
         {
           name: 'bonk',
           chatInputRun: 'chatInputBonk',
+          messageRun: 'messageBonk',
         },
         {
           name: 'superbonk',
           chatInputRun: 'chatInputSuperBonk',
+          messageRun: 'messageSuperBonk',
         },
       ],
     });
@@ -261,24 +280,64 @@ export class FunCommand extends Subcommand {
     );
   }
 
+  public async messageHelp(message: Message) {
+    const prefix = this.container.client.options.defaultPrefix ?? '!';
+    return new MessageResponder(message as Message<true>).reply({
+      content: [
+        '**Fun Commands**',
+        `\`${prefix}fun bonk <user> [style] [yes|no]\` — Bonk another user`,
+        `\`${prefix}fun superbonk <user> [ban|timeout]\` — Owner-only super bonk`,
+      ].join('\n'),
+    });
+  }
+
   public async chatInputBonk(interaction: Subcommand.ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    if (!interaction.guild || !interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
     const targetUser = interaction.options.getUser('target', true);
     const style = (interaction.options.getString('style') ?? 'doge') as BonkStyle;
     const effects = interaction.options.getBoolean('effects') ?? false;
-    const bonkerUser = interaction.user;
+    return this.runBonk(targetUser, style, effects, new InteractionResponder(interaction));
+  }
+
+  public async messageBonk(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const responder = new MessageResponder(guildMessage);
+    const targetUser = values[0] ? await resolvePrefixUser(guildMessage, values[0]) : null;
+    const styles: BonkStyle[] = ['doge', 'cat', 'lions', 'rabbit', 'capybara'];
+    const possibleStyle = values[1]?.toLocaleLowerCase() as BonkStyle | undefined;
+    const hasStyle = possibleStyle !== undefined && styles.includes(possibleStyle);
+    const style = hasStyle ? possibleStyle : 'doge';
+    const effectsRaw = hasStyle ? values[2] : values[1];
+    const effects = parsePrefixBoolean(effectsRaw) ?? false;
+
+    if (
+      !targetUser ||
+      (effectsRaw !== undefined && parsePrefixBoolean(effectsRaw) === null) ||
+      values.length > (hasStyle ? 3 : 2)
+    ) {
+      await responder.replyError(
+        'Usage: `fun bonk <user> [doge|cat|lions|rabbit|capybara] [yes|no]`'
+      );
+      return;
+    }
+
+    return this.runBonk(targetUser, style, effects, responder);
+  }
+
+  private async runBonk(
+    targetUser: User,
+    style: BonkStyle,
+    effects: boolean,
+    ctx: CommandResponder
+  ) {
+    await ctx.deferPublicClassic();
+
+    const bonkerUser = ctx.user;
     const isSelfBonk = bonkerUser.id === targetUser.id;
 
     try {
-      await this.container.redis.incr(`bonk:guild:${interaction.guildId}:bonked:${targetUser.id}`);
-      await this.container.redis.incr(`bonk:guild:${interaction.guildId}:bonker:${bonkerUser.id}`);
+      await this.container.redis.incr(`bonk:guild:${ctx.guild.id}:bonked:${targetUser.id}`);
+      await this.container.redis.incr(`bonk:guild:${ctx.guild.id}:bonker:${bonkerUser.id}`);
     } catch {
       // Redis unavailable, continue without tracking
     }
@@ -298,13 +357,21 @@ export class FunCommand extends Subcommand {
 
     try {
       const imageBuffer = await imageGenClient.generateBonk({
-        bonkerAvatarUrl: bonkerUser.displayAvatarURL({ extension: 'png', size: 256 }),
-        bonkedAvatarUrl: targetUser.displayAvatarURL({ extension: 'png', size: 256 }),
+        bonkerAvatarUrl: bonkerUser.displayAvatarURL({
+          extension: 'png',
+          size: 256,
+        }),
+        bonkedAvatarUrl: targetUser.displayAvatarURL({
+          extension: 'png',
+          size: 256,
+        }),
         style,
         visuals,
       });
 
-      const attachment = new AttachmentBuilder(imageBuffer, { name: 'bonk.png' });
+      const attachment = new AttachmentBuilder(imageBuffer, {
+        name: 'bonk.png',
+      });
 
       const embed = new EmbedBuilder()
         .setColor(0x2b2d31)
@@ -321,7 +388,7 @@ export class FunCommand extends Subcommand {
         components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(bonkBackButton));
       }
 
-      return interaction.editReply({
+      return ctx.editReply({
         embeds: [embed],
         files: [attachment],
         components,
@@ -330,7 +397,7 @@ export class FunCommand extends Subcommand {
     } catch (error) {
       this.container.logger.error('Failed to generate bonk image:', error);
 
-      return interaction.editReply({
+      return ctx.editReply({
         content: bonkMessage,
         allowedMentions: { users: [bonkerUser.id, targetUser.id] },
       });
@@ -338,32 +405,43 @@ export class FunCommand extends Subcommand {
   }
 
   public async chatInputSuperBonk(interaction: Subcommand.ChatInputCommandInteraction) {
-    if (!CONFIG.OWNER_IDS.includes(interaction.user.id)) {
-      return interaction.reply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used by bot owners.`,
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    await interaction.deferReply();
-
-    if (!interaction.guild || !interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
     const targetUser = interaction.options.getUser('target', true);
     const action = (interaction.options.getString('type') ?? 'ban') as 'ban' | 'timeout';
-    const bonkerUser = interaction.user;
+    return this.runSuperBonk(targetUser, action, new InteractionResponder(interaction));
+  }
+
+  public async messageSuperBonk(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const responder = new MessageResponder(guildMessage);
+    const targetUser = values[0] ? await resolvePrefixUser(guildMessage, values[0]) : null;
+    const action = values[1]?.toLocaleLowerCase() ?? 'ban';
+
+    if (!targetUser || (action !== 'ban' && action !== 'timeout') || values.length > 2) {
+      await responder.replyError('Usage: `fun superbonk <user> [ban|timeout]`');
+      return;
+    }
+
+    return this.runSuperBonk(targetUser, action, responder);
+  }
+
+  private async runSuperBonk(targetUser: User, action: 'ban' | 'timeout', ctx: CommandResponder) {
+    if (!CONFIG.OWNER_IDS.includes(ctx.user.id)) {
+      await ctx.replyError('This command can only be used by bot owners.');
+      return;
+    }
+
+    await ctx.deferPublicClassic();
+
+    const bonkerUser = ctx.user;
 
     // Pre-check: can the bot moderate this target?
-    const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+    const targetMember = await ctx.guild.members.fetch(targetUser.id).catch(() => null);
     if (targetMember) {
-      const moderatorMember = await interaction.guild.members.fetch(bonkerUser.id);
+      const moderatorMember = await ctx.guild.members.fetch(bonkerUser.id);
       const check = moderationService.canModerate(moderatorMember, targetMember);
       if (!check.canModerate) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} Cannot superbonk this target: ${check.reason}`,
         });
       }
@@ -374,30 +452,40 @@ export class FunCommand extends Subcommand {
 
     try {
       const imageBuffer = await imageGenClient.generateBonk({
-        bonkerAvatarUrl: bonkerUser.displayAvatarURL({ extension: 'png', size: 256 }),
-        bonkedAvatarUrl: targetUser.displayAvatarURL({ extension: 'png', size: 256 }),
+        bonkerAvatarUrl: bonkerUser.displayAvatarURL({
+          extension: 'png',
+          size: 256,
+        }),
+        bonkedAvatarUrl: targetUser.displayAvatarURL({
+          extension: 'png',
+          size: 256,
+        }),
         style: 'doge_fatality',
         visuals: SUPERBONK_VISUALS,
       });
 
-      const attachment = new AttachmentBuilder(imageBuffer, { name: 'superbonk.png' });
+      const attachment = new AttachmentBuilder(imageBuffer, {
+        name: 'superbonk.png',
+      });
 
       // DM the target before punishment
       try {
-        const dmAttachment = new AttachmentBuilder(imageBuffer, { name: 'superbonk.png' });
+        const dmAttachment = new AttachmentBuilder(imageBuffer, {
+          name: 'superbonk.png',
+        });
         const dmEmbed = new EmbedBuilder()
           .setColor(0xff00ff)
           .setTitle('SUPER MEGA ULTRA BONK!')
           .setDescription(banReason)
           .setImage('attachment://superbonk.png')
-          .setFooter({ text: `From: ${interaction.guild.name}` });
+          .setFooter({ text: `From: ${ctx.guild.name}` });
         await targetUser.send({ embeds: [dmEmbed], files: [dmAttachment] });
       } catch {
         // DMs closed, continue
       }
 
       const { success, label } = await this.executeModerationAction(
-        interaction.guild,
+        ctx.guild,
         targetUser,
         bonkerUser,
         reason,
@@ -413,7 +501,7 @@ export class FunCommand extends Subcommand {
         )
         .setImage('attachment://superbonk.png');
 
-      return interaction.editReply({
+      return ctx.editReply({
         embeds: [channelEmbed],
         files: [attachment],
         allowedMentions: { users: [bonkerUser.id, targetUser.id] },
@@ -421,7 +509,7 @@ export class FunCommand extends Subcommand {
     } catch (error) {
       this.container.logger.error('Failed to generate superbonk image:', error);
 
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to generate the super bonk image.`,
       });
     }

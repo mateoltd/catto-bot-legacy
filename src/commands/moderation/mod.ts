@@ -1074,9 +1074,9 @@ export class ModCommand extends Subcommand {
             `\`${p}case\` / \`${p}c\` \`<number>\` — View a case`,
             `\`${p}history\` / \`${p}hist\` \`[user]\` — Moderation history`,
             `\`${p}mod void <number> [reason]\` / \`${p}v <number> [reason]\` — Void a case`,
-            `\`${p}mod panel <user>\` — Interactive mod panel`,
+            `\`${p}panel <user>\` — Interactive mod panel`,
             `\`${p}mod context <user> [window]\` — Context bundle`,
-            `\`${p}mod mutes [user]\` — List active mutes`,
+            `\`${p}mutes [user] [type]\` — List active mutes`,
           ].join('\n'),
         },
         {

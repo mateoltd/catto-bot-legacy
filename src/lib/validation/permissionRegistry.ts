@@ -1,4 +1,5 @@
 import { PermissionFlagsBits, type PermissionResolvable } from 'discord.js';
+import { MODERATION_DIRECT_SHORTCUTS } from '#lib/interaction/moderationPrefix.js';
 
 export type ResourceType = 'COMMAND' | 'CATEGORY';
 
@@ -151,6 +152,12 @@ const COMMANDS: Record<string, CommandDefinition> = {
   'mod.history': {
     key: 'mod.history',
     displayName: 'View History',
+    categories: ['moderation', 'moderation.info'],
+    fallbackDiscordPermission: PermissionFlagsBits.ModerateMembers,
+  },
+  'mod.void': {
+    key: 'mod.void',
+    displayName: 'Void Case',
     categories: ['moderation', 'moderation.info'],
     fallbackDiscordPermission: PermissionFlagsBits.ModerateMembers,
   },
@@ -319,20 +326,10 @@ const COMMANDS: Record<string, CommandDefinition> = {
 };
 
 const COMMAND_SHORTCUTS: Record<string, string> = {
-  warn: 'mod.warn',
-  kick: 'mod.kick',
-  ban: 'mod.ban',
-  unban: 'mod.unban',
-  timeout: 'mod.timeout',
-  softban: 'mod.softban',
-  tempban: 'mod.tempban',
+  ...MODERATION_DIRECT_SHORTCUTS,
   mute: 'mod.mute.both',
   unmute: 'mod.unmute.both',
-  case: 'mod.case',
-  history: 'mod.history',
-  panel: 'mod.panel',
   context: 'mod.context',
-  mutes: 'mod.mutes',
   note: 'mod.note.add',
   evidence: 'mod.evidence.add',
   capture: 'mod.evidence.capture',

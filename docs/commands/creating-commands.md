@@ -17,27 +17,44 @@ src/commands/general/hello.ts
 ```typescript
 import { Command } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
+import type { Message } from 'discord.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
 
 @ApplyOptions<Command.Options>({
   name: 'hello',
   description: 'Say hello to the bot',
+  preconditions: ['GuildOnly'],
 })
 export class HelloCommand extends Command {
-  // Register slash command
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
       builder.setName(this.name).setDescription(this.description)
     );
   }
 
-  // Handle slash command
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    return interaction.reply('Hello!');
+    return this.run(new InteractionResponder(interaction));
+  }
+
+  public override async messageRun(message: Message) {
+    return this.run(new MessageResponder(message as Message<true>));
+  }
+
+  private async run(ctx: CommandResponder) {
+    return ctx.reply({ content: 'Hello!' });
   }
 }
 ```
 
+Every chat-input command must expose a `messageRun` path and delegate both transports to one shared handler. This keeps behavior aligned and makes the command discoverable in `help`. Context-menu-only commands are the intentional exception.
+
 ## Command with Options
+
+The next examples focus on slash-option and validation details. Keep the shared handler structure above and parse equivalent prefix arguments in `messageRun`; reusable helpers live in `src/lib/interaction/prefixArgs.ts`.
 
 ```typescript
 import { Command } from '@sapphire/framework';
@@ -163,41 +180,18 @@ export class StatsCommand extends Command {
 }
 ```
 
-## Command with Message Support
+## Shared Response Transport
 
-Support both slash and message commands:
+`CommandResponder` accepts both Components V2 containers and ordinary Discord payloads (content, embeds, files, and components). Choose the defer method that matches the response:
 
 ```typescript
-import { Command } from '@sapphire/framework';
-import { ApplyOptions } from '@sapphire/decorators';
-import type { Message } from 'discord.js';
+await ctx.defer();              // Ephemeral Components V2 interaction / typing for prefix
+await ctx.deferPublic();        // Public Components V2 interaction / typing for prefix
+await ctx.deferClassic();       // Ephemeral traditional interaction / typing for prefix
+await ctx.deferPublicClassic(); // Public traditional interaction / typing for prefix
 
-@ApplyOptions<Command.Options>({
-  name: 'ping',
-  aliases: ['pong'],
-  description: 'Check latency',
-})
-export class PingCommand extends Command {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description)
-    );
-  }
-
-  // Slash command handler
-  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    const latency = this.container.client.ws.ping;
-    return interaction.reply(`Pong! Latency: ${latency}ms`);
-  }
-
-  // Message command handler
-  public override async messageRun(message: Message) {
-    if (!message.channel.isSendable()) return;
-
-    const latency = this.container.client.ws.ping;
-    return message.reply(`Pong! Latency: ${latency}ms`);
-  }
-}
+await ctx.editReply({ embeds: [embed], files: [attachment] });
+await ctx.editReply(successMessage('Done', 'The operation completed.'));
 ```
 
 ## Subcommands
@@ -215,9 +209,9 @@ import { ApplyOptions } from '@sapphire/decorators';
   name: 'mod',
   description: 'Moderation commands',
   subcommands: [
-    { name: 'ban', chatInputRun: 'chatInputBan' },
-    { name: 'kick', chatInputRun: 'chatInputKick' },
-    { name: 'warn', chatInputRun: 'chatInputWarn' },
+    { name: 'ban', chatInputRun: 'chatInputBan', messageRun: 'messageBan' },
+    { name: 'kick', chatInputRun: 'chatInputKick', messageRun: 'messageKick' },
+    { name: 'warn', chatInputRun: 'chatInputWarn', messageRun: 'messageWarn' },
   ],
 })
 export class ModCommand extends Subcommand {

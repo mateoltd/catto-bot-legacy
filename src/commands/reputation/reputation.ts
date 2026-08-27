@@ -3,8 +3,15 @@
  */
 
 import { Subcommand } from '@sapphire/plugin-subcommands';
-import { EmbedBuilder, Colors } from 'discord.js';
+import { Args } from '@sapphire/framework';
+import { EmbedBuilder, Colors, type Message, type User } from 'discord.js';
 import { EMOJI } from '#lib/discord/design/index.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import { readPrefixArgs, resolvePrefixUser } from '#lib/interaction/prefixArgs.js';
 import { ReputationService } from '#modules/reputation/services/reputation.service.js';
 import { REPUTATION_TIERS, ReputationTier } from '#modules/reputation/models/reputation.model.js';
 import type { UserReputation } from '@prisma/client';
@@ -17,22 +24,28 @@ export class ReputationCommand extends Subcommand {
       ...options,
       name: 'reputation',
       description: 'View reputation information',
+      preconditions: ['GuildOnly'],
       subcommands: [
         {
           name: 'view',
+          default: true,
           chatInputRun: 'chatInputView',
+          messageRun: 'messageView',
         },
         {
           name: 'history',
           chatInputRun: 'chatInputHistory',
+          messageRun: 'messageHistory',
         },
         {
           name: 'leaderboard',
           chatInputRun: 'chatInputLeaderboard',
+          messageRun: 'messageLeaderboard',
         },
         {
           name: 'tiers',
           chatInputRun: 'chatInputTiers',
+          messageRun: 'messageTiers',
         },
       ],
     });
@@ -85,22 +98,37 @@ export class ReputationCommand extends Subcommand {
   }
 
   public async chatInputView(interaction: Subcommand.ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getUser('user') || interaction.user;
+    return this.runView(targetUser, new InteractionResponder(interaction));
+  }
+
+  public async messageView(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const userArg = values[0];
+    const targetUser = userArg
+      ? await resolvePrefixUser(guildMessage, userArg)
+      : guildMessage.author;
+    const responder = new MessageResponder(guildMessage);
+
+    if (!targetUser || values.length > 1) {
+      await responder.replyError('Could not find that user. Usage: `reputation view [user]`');
+      return;
+    }
+
+    return this.runView(targetUser, responder);
+  }
+
+  private async runView(targetUser: User, ctx: CommandResponder) {
     // Initialize service
     if (!this.reputationService) {
       this.reputationService = new ReputationService(this.container.prisma);
     }
 
-    await interaction.deferReply();
+    await ctx.deferPublicClassic();
 
-    if (!interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
-    const guildId = interaction.guildId;
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-    const isOwn = targetUser.id === interaction.user.id;
+    const guildId = ctx.guild.id;
+    const isOwn = targetUser.id === ctx.user.id;
 
     try {
       const stats = await this.reputationService.getReputationStats(guildId, targetUser.id);
@@ -128,7 +156,9 @@ export class ReputationCommand extends Subcommand {
             inline: true,
           }
         )
-        .setFooter({ text: `Use /rep to give reputation to ${isOwn ? 'others' : 'this user'}` })
+        .setFooter({
+          text: `Use the rep command to vouch for ${isOwn ? 'others' : 'this user'}`,
+        })
         .setTimestamp();
 
       // Add next tier info
@@ -155,33 +185,61 @@ export class ReputationCommand extends Subcommand {
         inline: false,
       });
 
-      return interaction.editReply({ embeds: [embed] });
+      return ctx.editReply({ embeds: [embed] });
     } catch (error) {
       this.container.logger.error('Failed to get reputation stats:', error);
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to retrieve reputation information.`,
       });
     }
   }
 
   public async chatInputHistory(interaction: Subcommand.ChatInputCommandInteraction) {
+    const targetUser = interaction.options.getUser('user') || interaction.user;
+    const historyType =
+      (interaction.options.getString('type') as 'received' | 'given') || 'received';
+    return this.runHistory(targetUser, historyType, new InteractionResponder(interaction));
+  }
+
+  public async messageHistory(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const userOrType = values[0];
+    const first = userOrType?.toLocaleLowerCase();
+    const hasTypeFirst = first === 'received' || first === 'given';
+    const targetUser = hasTypeFirst
+      ? guildMessage.author
+      : userOrType
+        ? await resolvePrefixUser(guildMessage, userOrType)
+        : guildMessage.author;
+    const historyType = (hasTypeFirst ? first : values[1]?.toLocaleLowerCase()) ?? 'received';
+    const responder = new MessageResponder(guildMessage);
+
+    if (
+      !targetUser ||
+      (historyType !== 'received' && historyType !== 'given') ||
+      values.length > 2
+    ) {
+      await responder.replyError('Usage: `reputation history [user] [received|given]`');
+      return;
+    }
+
+    return this.runHistory(targetUser, historyType, responder);
+  }
+
+  private async runHistory(
+    targetUser: User,
+    historyType: 'received' | 'given',
+    ctx: CommandResponder
+  ) {
     // Initialize service
     if (!this.reputationService) {
       this.reputationService = new ReputationService(this.container.prisma);
     }
 
-    await interaction.deferReply();
+    await ctx.deferPublicClassic();
 
-    if (!interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
-    const guildId = interaction.guildId;
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-    const historyType =
-      (interaction.options.getString('type') as 'received' | 'given') || 'received';
+    const guildId = ctx.guild.id;
 
     try {
       const history = await this.reputationService.getVouchHistory(
@@ -191,7 +249,7 @@ export class ReputationCommand extends Subcommand {
       );
 
       if (history.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${targetUser.username} has no ${historyType} vouches yet.`,
         });
       }
@@ -218,36 +276,38 @@ export class ReputationCommand extends Subcommand {
         });
       }
 
-      return interaction.editReply({ embeds: [embed] });
+      return ctx.editReply({ embeds: [embed] });
     } catch (error) {
       this.container.logger.error('Failed to get vouch history:', error);
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to retrieve vouch history.`,
       });
     }
   }
 
   public async chatInputLeaderboard(interaction: Subcommand.ChatInputCommandInteraction) {
+    return this.runLeaderboard(new InteractionResponder(interaction));
+  }
+
+  public async messageLeaderboard(message: Message) {
+    return this.runLeaderboard(new MessageResponder(message as Message<true>));
+  }
+
+  private async runLeaderboard(ctx: CommandResponder) {
     // Initialize service
     if (!this.reputationService) {
       this.reputationService = new ReputationService(this.container.prisma);
     }
 
-    await interaction.deferReply();
+    await ctx.deferPublicClassic();
 
-    if (!interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
-    const guildId = interaction.guildId;
+    const guildId = ctx.guild.id;
 
     try {
       const leaderboard = await this.reputationService.getLeaderboard(guildId, 10);
 
       if (leaderboard.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} No reputation data available yet.`,
         });
       }
@@ -277,17 +337,25 @@ export class ReputationCommand extends Subcommand {
         inline: false,
       });
 
-      return interaction.editReply({ embeds: [embed] });
+      return ctx.editReply({ embeds: [embed] });
     } catch (error) {
       this.container.logger.error('Failed to get leaderboard:', error);
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to retrieve leaderboard.`,
       });
     }
   }
 
   public async chatInputTiers(interaction: Subcommand.ChatInputCommandInteraction) {
-    await interaction.deferReply();
+    return this.runTiers(new InteractionResponder(interaction));
+  }
+
+  public async messageTiers(message: Message) {
+    return this.runTiers(new MessageResponder(message as Message<true>));
+  }
+
+  private async runTiers(ctx: CommandResponder) {
+    await ctx.deferPublicClassic();
 
     const embed = new EmbedBuilder()
       .setColor(Colors.Purple)
@@ -304,9 +372,11 @@ export class ReputationCommand extends Subcommand {
       });
     }
 
-    embed.setFooter({ text: 'Use /rep to help others gain reputation!' });
+    embed.setFooter({
+      text: 'Use the rep command to help others gain reputation!',
+    });
 
-    return interaction.editReply({ embeds: [embed] });
+    return ctx.editReply({ embeds: [embed] });
   }
 
   private getVouchEmoji(type: string): string {

@@ -1,8 +1,14 @@
 import { Command } from '@sapphire/framework';
 import { type Message, EmbedBuilder, version as djsVersion } from 'discord.js';
 import { version as sapphireVersion } from '@sapphire/framework';
+import { version as typescriptVersion } from 'typescript';
 import { formatUptime } from '#lib/utils.js';
 import { COLORS } from '#lib/constants.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
 
 export class InfoCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -13,11 +19,28 @@ export class InfoCommand extends Command {
       description: 'Display bot information and statistics',
       detailedDescription:
         'Shows detailed information about the bot including version, uptime, and statistics.',
+      preconditions: ['GuildOnly'],
     });
   }
 
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      builder.setName(this.name).setDescription(this.description)
+    );
+  }
+
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    return this.run(new InteractionResponder(interaction));
+  }
+
   public override async messageRun(message: Message) {
+    if (!message.inGuild()) return;
+    return this.run(new MessageResponder(message));
+  }
+
+  private async run(ctx: CommandResponder) {
     const { client } = this.container;
+    await ctx.deferPublicClassic();
 
     const embed = new EmbedBuilder()
       .setColor(COLORS.DEFAULT)
@@ -47,21 +70,17 @@ export class InfoCommand extends Command {
           value: [
             `**Discord.js:** v${djsVersion}`,
             `**Sapphire:** v${sapphireVersion}`,
-            `**TypeScript:** v${require('typescript').version}`,
+            `**TypeScript:** v${typescriptVersion}`,
           ].join('\n'),
           inline: true,
         }
       )
       .setFooter({
-        text: `Requested by ${message.author.tag}`,
-        iconURL: message.author.displayAvatarURL(),
+        text: `Requested by ${ctx.user.tag}`,
+        iconURL: ctx.user.displayAvatarURL(),
       })
       .setTimestamp();
 
-    if (!message.channel.isSendable()) {
-      return;
-    }
-
-    return message.channel.send({ embeds: [embed] });
+    return ctx.editReply({ embeds: [embed] });
   }
 }

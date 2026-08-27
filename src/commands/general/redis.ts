@@ -1,12 +1,17 @@
 import { Command } from '@sapphire/framework';
 import { ApplyOptions } from '@sapphire/decorators';
-import { EmbedBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import { EmbedBuilder, type ChatInputCommandInteraction, type Message } from 'discord.js';
 import { pingRedis, getRedisInfo } from '#lib/redis.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
 
 @ApplyOptions<Command.Options>({
   name: 'redis',
   description: 'Check Redis connection and stats',
-  preconditions: ['OwnerOnly'],
+  preconditions: ['GuildOnly', 'OwnerOnly'],
   cooldownDelay: 10_000,
 })
 export class RedisCommand extends Command {
@@ -17,7 +22,15 @@ export class RedisCommand extends Command {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    return this.run(new InteractionResponder(interaction));
+  }
+
+  public override async messageRun(message: Message) {
+    return this.run(new MessageResponder(message as Message<true>));
+  }
+
+  private async run(ctx: CommandResponder): Promise<void> {
+    await ctx.deferClassic();
 
     try {
       // Ping Redis
@@ -51,14 +64,22 @@ export class RedisCommand extends Command {
         .addFields(
           { name: '🏓 Ping', value: `${pong} (${pingTime}ms)`, inline: true },
           { name: '📦 Version', value: version, inline: true },
-          { name: '⏱️ Uptime', value: `${uptimeDays}d ${uptimeHours % 24}h`, inline: true },
-          { name: '👥 Connected Clients', value: connectedClients, inline: true },
+          {
+            name: '⏱️ Uptime',
+            value: `${uptimeDays}d ${uptimeHours % 24}h`,
+            inline: true,
+          },
+          {
+            name: '👥 Connected Clients',
+            value: connectedClients,
+            inline: true,
+          },
           { name: '💾 Memory Usage', value: usedMemory, inline: true },
           { name: '🔑 Total Keys', value: totalKeys, inline: true }
         )
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await ctx.editReply({ embeds: [embed] });
     } catch (error) {
       const errorEmbed = new EmbedBuilder()
         .setTitle('❌ Redis Error')
@@ -68,7 +89,7 @@ export class RedisCommand extends Command {
         .setColor(0xff0000)
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await ctx.editReply({ embeds: [errorEmbed] });
     }
   }
 }

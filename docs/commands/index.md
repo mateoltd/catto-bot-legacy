@@ -10,6 +10,8 @@ Commands are built using the Sapphire Framework. The bot supports:
 - **Message commands** - Traditional prefix-based commands
 - **Subcommands** - Nested command structures
 
+All chat-input commands use the shared command responder and provide an equivalent prefix entry point. As a result, the prefix `help` command reflects the complete chat-command surface. Discord context-menu commands remain application-command-only.
+
 ## Command Categories
 
 | Category | Location | Commands |
@@ -21,7 +23,31 @@ Commands are built using the Sapphire Framework. The bot supports:
 | Leveling | `src/commands/leveling/` | rank, leaderboard |
 | Reputation | `src/commands/reputation/` | rep, reputation |
 | Rewards | `src/commands/rewards/` | rewards |
-| Temp Voice | `src/commands/temp-voice/` | tempvoice |
+| Temp Voice | `src/commands/temp-voice/` | voice |
+
+### Moderation Prefix Convention
+
+Prefix help lists each moderation action once using its shortest unambiguous callable path. For
+example, it displays `ban` instead of duplicating `mod ban` and `ban`, while voice monitoring uses
+`mvc where` to avoid colliding with the temporary-channel `voice` command. Generic or operational
+actions without a safe shortcut retain their namespace, such as `mod context` and `mod setup`.
+
+Top-level shortcuts are reserved for unambiguous moderation concepts. This includes `!panel` and
+`!mutes`; grouped actions use scoped shortcuts such as `!note`, `!evidence`, `!mute`, `!unmute`,
+and `!mvc`.
+
+### Help Pagination Convention
+
+Help pages use category boundaries rather than a fixed number of raw lines. Categories with at
+most ten entries are packed together in display order while the combined page remains within the
+readability budget. A category with more than ten entries receives a dedicated page. Categories
+are never split between pages unless Discord's hard 25-field or aggregate embed-text limit makes
+that unavoidable.
+
+Nested siblings are compacted by their common path automatically. For example, the moderation
+actions `note add`, `note list`, and `note delete` render as one explained
+`note <add | list | delete>` entry. This keeps category size and future pagination behavior stable
+as new commands are added.
 
 ## Command Structure
 
@@ -86,26 +112,7 @@ The target receives a DM with the bonk image before the punishment is applied. T
 
 See [Creating Commands](creating-commands.md) for detailed instructions.
 
-```typescript
-import { Command } from '@sapphire/framework';
-import { ApplyOptions } from '@sapphire/decorators';
-
-@ApplyOptions<Command.Options>({
-  name: 'hello',
-  description: 'Say hello',
-})
-export class HelloCommand extends Command {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description)
-    );
-  }
-
-  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    return interaction.reply('Hello!');
-  }
-}
-```
+Start from the dual-transport example in [Creating Commands](creating-commands.md). It registers the slash command, adds its prefix entry point, and delegates both to one handler.
 
 ## Topics
 

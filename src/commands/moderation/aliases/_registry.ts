@@ -3,6 +3,7 @@ import type { StoreRegistry } from '@sapphire/pieces';
 import type { Constructor } from '@sapphire/utilities';
 import type { Message } from 'discord.js';
 import { MessageResponder } from '#lib/discord/index.js';
+import { MODERATION_DIRECT_SHORTCUTS } from '#lib/interaction/moderationPrefix.js';
 import { runAliasCommand } from './_shared.js';
 
 // Parsers
@@ -17,6 +18,8 @@ import {
   parseCaseFromMessage,
   parseHistoryFromMessage,
   parseVoidFromMessage,
+  parsePanelFromMessage,
+  parseMutesListFromMessage,
 } from '#lib/interaction/messageArgs.js';
 
 // Handlers
@@ -30,6 +33,8 @@ import { handleUnban } from '../_unban.js';
 import { handleCase } from '../_case.js';
 import { handleHistory } from '../_history.js';
 import { handleCaseVoid } from '../_void.js';
+import { handlePanel } from '../_panel.js';
+import { handleMutesList } from '../_mute.js';
 
 interface AliasConfig {
   name: string;
@@ -117,6 +122,18 @@ const SIMPLE_ALIASES: AliasConfig[] = [
     parser: parseVoidFromMessage,
     handler: handleCaseVoid,
   },
+  {
+    name: 'panel',
+    description: 'Open the interactive moderation panel for a user',
+    parser: parsePanelFromMessage,
+    handler: handlePanel,
+  },
+  {
+    name: 'mutes',
+    description: 'List active moderation mutes',
+    parser: parseMutesListFromMessage,
+    handler: handleMutesList,
+  },
 ];
 
 function createAliasCommand(config: AliasConfig): Constructor<Command> {
@@ -141,6 +158,14 @@ function createAliasCommand(config: AliasConfig): Constructor<Command> {
 
 export function registerSimpleAliases(stores: StoreRegistry): void {
   const commandStore = stores.get('commands');
+  const configuredNames = new Set(SIMPLE_ALIASES.map((config) => config.name));
+  const missingShortcuts = Object.keys(MODERATION_DIRECT_SHORTCUTS).filter(
+    (name) => !configuredNames.has(name)
+  );
+  if (missingShortcuts.length > 0) {
+    throw new Error(`Missing moderation shortcut implementations: ${missingShortcuts.join(', ')}`);
+  }
+
   for (const config of SIMPLE_ALIASES) {
     void commandStore.loadPiece({ name: config.name, piece: createAliasCommand(config) });
   }

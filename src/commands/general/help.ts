@@ -3,17 +3,24 @@ import { Subcommand } from '@sapphire/plugin-subcommands';
 import { type Message, EmbedBuilder, ComponentType } from 'discord.js';
 import { COLORS } from '#lib/constants.js';
 import { paginationRow } from '#lib/discord/components/buttons.js';
-
-const COMMANDS_PER_PAGE = 10;
-
-/** Map raw directory-based categories to display names. */
-function formatCategory(raw: string): string {
-  if (raw.startsWith('moderation')) return 'Moderation';
-  if (raw === 'admin') return 'Admin';
-  if (raw === 'general') return 'General';
-  // Capitalize first letter for anything else
-  return raw.charAt(0).toUpperCase() + raw.slice(1);
-}
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import {
+  buildHelpPages,
+  compareHelpCategories,
+  collectSubcommandHelpActions,
+  formatHelpCategoryHeading,
+  formatHelpCommandBlocks,
+  getConfiguredHelpActions,
+  getHelpCategory,
+  isHelpCategoryAlias,
+  isCommandHiddenFromHelp,
+  splitHelpCategory,
+  type HelpSubcommandMetadata,
+} from '#lib/interaction/index.js';
 
 export class HelpCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -23,42 +30,71 @@ export class HelpCommand extends Command {
       aliases: ['h', 'commands'],
       description: 'Display all available commands',
       detailedDescription: 'Shows a list of all available commands and their descriptions.',
+      preconditions: ['GuildOnly'],
     });
   }
 
+  public override registerApplicationCommands(registry: Command.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      builder.setName(this.name).setDescription(this.description)
+    );
+  }
+
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    return this.run(new InteractionResponder(interaction));
+  }
+
   public override async messageRun(message: Message): Promise<void> {
+    if (!message.inGuild()) return;
+    return this.run(new MessageResponder(message));
+  }
+
+  private async run(ctx: CommandResponder): Promise<void> {
     const { client, stores } = this.container;
     const commands = stores.get('commands');
 
     // Filter to only commands that support prefix (have messageRun)
     const prefixCommands: Command[] = [];
     for (const command of commands.values()) {
-      if (this.supportsPrefix(command) && !this.isHiddenFromHelp(command)) {
+      if (this.supportsPrefix(command) && !isCommandHiddenFromHelp(command)) {
         prefixCommands.push(command);
       }
     }
+    prefixCommands.sort((left, right) => left.name.localeCompare(right.name));
 
     // Group by category (normalize directory paths to friendly names)
     const categories = new Map<string, Command[]>();
     for (const command of prefixCommands) {
-      const rawCategory = command.fullCategory.join('/') || 'general';
-      const category = formatCategory(rawCategory);
-      if (!categories.has(category)) categories.set(category, []);
-      categories.get(category)!.push(command);
+      const category = getHelpCategory(command);
+      if (category === 'Moderation' && isHelpCategoryAlias(command)) continue;
+
+      const categoryCommands = categories.get(category);
+      if (categoryCommands) categoryCommands.push(command);
+      else categories.set(category, [command]);
     }
 
-    // Build pages from category entries
-    const categoryEntries = [...categories.entries()];
-    const pages = this.buildPages(categoryEntries);
+    const configuredPrefix = client.options.defaultPrefix ?? '!';
+    const prefix =
+      typeof configuredPrefix === 'string' ? configuredPrefix : (configuredPrefix[0] ?? '!');
+
+    // Split large categories into fields that stay within Discord's value limit.
+    const categoryEntries = [...categories.entries()].sort(([left], [right]) =>
+      compareHelpCategories(left, right)
+    );
+    const sections = categoryEntries.flatMap(([category, categoryCommands]) => {
+      const blocks = categoryCommands.flatMap((command) =>
+        formatHelpCommandBlocks(command, this.getActions(command))
+      );
+      return splitHelpCategory(category, blocks);
+    });
+    const pages = buildHelpPages(sections);
 
     if (pages.length === 0) {
-      if (message.channel.isSendable()) {
-        await message.channel.send({ content: 'No prefix commands available.' });
-      }
+      await ctx.replyError('No prefix commands available.');
       return;
     }
 
-    const prefix = client.options.defaultPrefix ?? '!';
+    const commandPathCount = sections.reduce((count, section) => count + section.blocks.length, 0);
 
     const buildEmbed = (page: number) => {
       const embed = new EmbedBuilder()
@@ -67,39 +103,47 @@ export class HelpCommand extends Command {
         .setDescription(`Use \`${prefix}<command>\` to run a command`)
         .setThumbnail(client.user?.displayAvatarURL() ?? null);
 
-      for (const [category, cmds] of pages[page - 1]!) {
-        const commandList = cmds.map((cmd) => `\`${cmd.name}\` — ${cmd.description}`).join('\n');
-        embed.addFields({ name: category, value: commandList || 'No commands', inline: false });
+      for (const [category, blocks] of pages[page - 1] ?? []) {
+        embed.addFields({
+          name: formatHelpCategoryHeading(category),
+          value: blocks.join('\n') || 'No commands',
+          inline: false,
+        });
       }
 
       embed.setFooter({
-        text: `Page ${page}/${pages.length} • ${prefixCommands.length} commands available`,
-        iconURL: message.author.displayAvatarURL(),
+        text: `Page ${page}/${pages.length} • ${commandPathCount} command paths available`,
+        iconURL: ctx.user.displayAvatarURL(),
       });
 
       return embed;
     };
 
-    if (!message.channel.isSendable()) return;
+    await ctx.deferPublicClassic();
 
-    // Single page — no pagination needed
+    // Single page - no pagination needed
     if (pages.length === 1) {
-      await message.channel.send({ embeds: [buildEmbed(1)] });
+      await ctx.editReply({ embeds: [buildEmbed(1)] });
       return;
     }
 
     // Multi-page with pagination buttons
     let currentPage = 1;
-    const baseId = `help:${message.id}`;
-    const sent = await message.channel.send({
+    const baseId = `help:${ctx.user.id}:${Date.now()}`;
+    const sent = await ctx.editReply({
       embeds: [buildEmbed(1)],
-      components: [paginationRow(baseId, 1, pages.length, { showFirst: false, showLast: false })],
+      components: [
+        paginationRow(baseId, 1, pages.length, {
+          showFirst: false,
+          showLast: false,
+        }),
+      ],
     });
 
     const collector = sent.createMessageComponentCollector({
       componentType: ComponentType.Button,
       time: 120_000,
-      filter: (i) => i.user.id === message.author.id,
+      filter: (i) => i.user.id === ctx.user.id,
     });
 
     collector.on('collect', async (interaction) => {
@@ -110,7 +154,10 @@ export class HelpCommand extends Command {
       await interaction.update({
         embeds: [buildEmbed(currentPage)],
         components: [
-          paginationRow(baseId, currentPage, pages.length, { showFirst: false, showLast: false }),
+          paginationRow(baseId, currentPage, pages.length, {
+            showFirst: false,
+            showLast: false,
+          }),
         ],
       });
     });
@@ -157,32 +204,12 @@ export class HelpCommand extends Command {
     return false;
   }
 
-  /** Hide internal/special commands from global help list. */
-  private isHiddenFromHelp(command: Command): boolean {
-    const rawCategory = command.fullCategory.join('/');
-    if (rawCategory.startsWith('moderation/creative-bans')) return true;
-
-    // Safety net in case category metadata changes.
-    return ['captcha', 'quicksand', 'ctrl-z', 'missile-strike', 'eject'].includes(command.name);
-  }
-
-  /** Split category entries into pages of ~COMMANDS_PER_PAGE commands each. */
-  private buildPages(entries: [string, Command[]][]): [string, Command[]][][] {
-    const pages: [string, Command[]][][] = [];
-    let currentPage: [string, Command[]][] = [];
-    let currentCount = 0;
-
-    for (const entry of entries) {
-      if (currentCount + entry[1].length > COMMANDS_PER_PAGE && currentPage.length > 0) {
-        pages.push(currentPage);
-        currentPage = [];
-        currentCount = 0;
-      }
-      currentPage.push(entry);
-      currentCount += entry[1].length;
+  private getActions(command: Command): readonly string[] {
+    if (command instanceof Subcommand) {
+      const subcommands = (command.options as Subcommand.Options).subcommands ?? [];
+      return collectSubcommandHelpActions(subcommands as readonly HelpSubcommandMetadata[]);
     }
 
-    if (currentPage.length > 0) pages.push(currentPage);
-    return pages;
+    return getConfiguredHelpActions(command.name);
   }
 }

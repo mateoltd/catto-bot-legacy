@@ -49,7 +49,12 @@ export {
   editReply,
 } from './reply.js';
 
-export { type CommandResponder, InteractionResponder, MessageResponder } from './responder.js';
+export {
+  type CommandResponder,
+  type CommandResponse,
+  InteractionResponder,
+  MessageResponder,
+} from './responder.js';
 
 export {
   type UIResponse,

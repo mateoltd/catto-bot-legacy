@@ -1,11 +1,55 @@
-import { Command } from "@sapphire/framework";
+import { Args, Command } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
-import { ChannelType, type GuildMember } from "discord.js";
+import { ChannelType, type Message } from "discord.js";
 import { EMOJI } from "#lib/discord/design/index.js";
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from "#lib/discord/index.js";
+import {
+  readPrefixArgs,
+  resolvePrefixUser,
+} from "#lib/interaction/prefixArgs.js";
 import { getTempVoiceServices } from "../../modules/temp-voice/services/service-container.js";
 import { NameModerationService } from "#modules/temp-voice/services/moderation/name-moderation.service.js";
 import type { OperationContext } from "../../modules/temp-voice/services/operations.service.js";
 import { handleVoiceSetup } from "./_setup.js";
+
+interface TempVoiceRequest {
+  subcommand: string;
+  text?: string;
+  number?: number;
+  userId?: string;
+}
+
+const NO_ARGUMENT_SUBCOMMANDS = new Set([
+  "lock",
+  "unlock",
+  "hide",
+  "show",
+  "reset",
+  "claim",
+  "panel",
+  "setup",
+]);
+
+const VOICE_REGIONS = new Set([
+  "auto",
+  "brazil",
+  "hongkong",
+  "india",
+  "japan",
+  "rotterdam",
+  "russia",
+  "singapore",
+  "southafrica",
+  "sydney",
+  "us-central",
+  "us-east",
+  "us-south",
+  "us-west",
+]);
 
 @ApplyOptions<Command.Options>({
   name: "voice",
@@ -204,173 +248,257 @@ export class TempVoiceCommand extends Command {
   public override async chatInputRun(
     interaction: Command.ChatInputCommandInteraction,
   ) {
-    if (!interaction.guild || !interaction.member) {
-      return interaction.reply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-        ephemeral: true,
-      });
+    const subcommand = interaction.options.getSubcommand();
+    const request: TempVoiceRequest = { subcommand };
+
+    if (subcommand === "rename") {
+      request.text = interaction.options.getString("name", true);
+    } else if (subcommand === "limit") {
+      request.number = interaction.options.getInteger("limit", true);
+    } else if (subcommand === "bitrate") {
+      request.number = interaction.options.getInteger("bitrate", true);
+    } else if (subcommand === "region") {
+      request.text = interaction.options.getString("region", true);
+    } else if (
+      ["permit", "deny", "trust", "untrust", "kick", "transfer"].includes(
+        subcommand,
+      )
+    ) {
+      request.userId = interaction.options.getUser("user", true).id;
     }
 
-    const member = interaction.member as GuildMember;
-    const subcommand = interaction.options.getSubcommand();
+    return this.run(request, new InteractionResponder(interaction));
+  }
+
+  public override async messageRun(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const responder = new MessageResponder(guildMessage);
+    const values = await readPrefixArgs(args);
+    const subcommand = values[0]?.toLocaleLowerCase();
+
+    if (!subcommand) {
+      return this.sendUsage(responder);
+    }
+
+    const request: TempVoiceRequest = { subcommand };
+
+    if (NO_ARGUMENT_SUBCOMMANDS.has(subcommand)) {
+      if (values.length > 1) return this.sendUsage(responder);
+    } else if (subcommand === "rename") {
+      const name = values.slice(1).join(" ").trim();
+      if (!name || name.length > 100) return this.sendUsage(responder);
+      request.text = name;
+    } else if (subcommand === "limit" || subcommand === "bitrate") {
+      const value = Number(values[1]);
+      const validRange =
+        subcommand === "limit"
+          ? Number.isInteger(value) && value >= 0 && value <= 99
+          : Number.isInteger(value) && value >= 8 && value <= 384;
+      if (!validRange || values.length > 2) return this.sendUsage(responder);
+      request.number = value;
+    } else if (subcommand === "region") {
+      const region = values[1]?.toLocaleLowerCase();
+      if (!region || !VOICE_REGIONS.has(region) || values.length > 2) {
+        return this.sendUsage(responder);
+      }
+      request.text = region;
+    } else if (
+      ["permit", "deny", "trust", "untrust", "kick", "transfer"].includes(
+        subcommand,
+      )
+    ) {
+      const user = values[1]
+        ? await resolvePrefixUser(guildMessage, values[1])
+        : null;
+      if (!user || values.length > 2) return this.sendUsage(responder);
+      request.userId = user.id;
+    } else {
+      return this.sendUsage(responder);
+    }
+
+    return this.run(request, responder);
+  }
+
+  private async sendUsage(ctx: CommandResponder) {
+    const prefix = this.container.client.options.defaultPrefix ?? "!";
+    return ctx.replyError(
+      [
+        `Usage: \`${prefix}voice <action> [value]\``,
+        "Actions: rename, limit, lock, unlock, hide, show, permit, deny, trust, untrust, kick, transfer, bitrate, region, reset, claim, panel, setup",
+      ].join("\n"),
+    );
+  }
+
+  private async run(request: TempVoiceRequest, responder: CommandResponder) {
+    const { subcommand } = request;
 
     // Setup doesn't require being in a voice channel
     if (subcommand === "setup") {
-      return handleVoiceSetup(interaction);
+      return handleVoiceSetup(responder);
     }
+
+    const member = responder.member;
 
     // Must be in a voice channel
     const voiceChannel = member.voice.channel;
     if (!voiceChannel || voiceChannel.type !== ChannelType.GuildVoice) {
-      return interaction.reply({
-        content: `${EMOJI.STATUS.ERROR} You must be in a voice channel to use this command.`,
-        ephemeral: true,
-      });
+      return responder.replyError(
+        "You must be in a voice channel to use this command.",
+      );
     }
 
     const { operations } = getTempVoiceServices();
 
     // Build context (fetches temp channel + config)
-    const ctx = await operations.buildContext(
-      interaction.guild,
+    const operationContext = await operations.buildContext(
+      responder.guild,
       voiceChannel.id,
       member.id,
     );
-    if (!ctx) {
-      return interaction.reply({
-        content: `${EMOJI.STATUS.ERROR} This is not a temporary voice channel.`,
-        ephemeral: true,
-      });
+    if (!operationContext) {
+      return responder.replyError("This is not a temporary voice channel.");
     }
 
     // Permission check (except for claim which checks owner presence instead)
     if (subcommand !== "claim") {
       const accessError =
         subcommand === "transfer"
-          ? operations.checkTransferAccess(member, ctx.tempChannel, ctx.config)
-          : operations.checkAccess(member, ctx.tempChannel, ctx.config);
+          ? operations.checkTransferAccess(
+              member,
+              operationContext.tempChannel,
+              operationContext.config,
+            )
+          : operations.checkAccess(
+              member,
+              operationContext.tempChannel,
+              operationContext.config,
+            );
       if (accessError) {
-        return interaction.reply({
-          content: `${EMOJI.STATUS.ERROR} ${accessError}`,
-          ephemeral: true,
-        });
+        return responder.replyError(accessError);
       }
 
       // Check if customization is allowed (except panel/claim/transfer)
       if (
-        !ctx.config.allowCustomization &&
+        !operationContext.config.allowCustomization &&
         !["panel", "transfer"].includes(subcommand)
       ) {
-        return interaction.reply({
-          content: `${EMOJI.STATUS.ERROR} Channel customization is disabled in this server.`,
-          ephemeral: true,
-        });
+        return responder.replyError(
+          "Channel customization is disabled in this server.",
+        );
       }
     }
 
     // Route to operations service
     switch (subcommand) {
       case "lock":
-        return this.handleToggleLock(interaction, ctx, true);
+        return this.handleToggleLock(responder, operationContext, true);
       case "unlock":
-        return this.handleToggleLock(interaction, ctx, false);
+        return this.handleToggleLock(responder, operationContext, false);
       case "hide":
-        return this.handleToggleHide(interaction, ctx, true);
+        return this.handleToggleHide(responder, operationContext, true);
       case "show":
-        return this.handleToggleHide(interaction, ctx, false);
-      case "rename":
-        return this.handleRename(interaction, ctx);
-      case "limit":
-        return this.handleSimpleOp(interaction, () =>
-          operations.setLimit(
-            ctx,
-            interaction.options.getInteger("limit", true),
-          ),
+        return this.handleToggleHide(responder, operationContext, false);
+      case "rename": {
+        if (request.text === undefined) return this.sendUsage(responder);
+        return this.handleRename(responder, operationContext, request.text);
+      }
+      case "limit": {
+        const value = request.number;
+        if (value === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.setLimit(operationContext, value),
         );
-      case "permit":
-        return this.handleSimpleOp(interaction, () =>
-          operations.permit(ctx, [
-            interaction.options.getUser("user", true).id,
-          ]),
+      }
+      case "permit": {
+        const userId = request.userId;
+        if (userId === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.permit(operationContext, [userId]),
         );
-      case "deny":
-        return this.handleSimpleOp(interaction, () =>
-          operations.deny(ctx, [interaction.options.getUser("user", true).id]),
+      }
+      case "deny": {
+        const userId = request.userId;
+        if (userId === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.deny(operationContext, [userId]),
         );
-      case "trust":
-        return this.handleSimpleOp(interaction, () =>
-          operations.toggleTrust(ctx, [
-            interaction.options.getUser("user", true).id,
-          ]),
+      }
+      case "trust": {
+        const userId = request.userId;
+        if (userId === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.toggleTrust(operationContext, [userId]),
         );
-      case "untrust":
-        return this.handleSimpleOp(interaction, () =>
-          operations.toggleTrust(ctx, [
-            interaction.options.getUser("user", true).id,
-          ]),
+      }
+      case "untrust": {
+        const userId = request.userId;
+        if (userId === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.toggleTrust(operationContext, [userId]),
         );
-      case "kick":
-        return this.handleSimpleOp(interaction, () =>
-          operations.kick(ctx, [interaction.options.getUser("user", true).id]),
+      }
+      case "kick": {
+        const userId = request.userId;
+        if (userId === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.kick(operationContext, [userId]),
         );
-      case "transfer":
-        return this.handleSimpleOp(interaction, () =>
-          operations.transfer(
-            ctx,
-            interaction.options.getUser("user", true).id,
-          ),
+      }
+      case "transfer": {
+        const userId = request.userId;
+        if (userId === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.transfer(operationContext, userId),
         );
-      case "bitrate":
-        return this.handleSimpleOp(interaction, () =>
-          operations.setBitrate(
-            ctx,
-            interaction.options.getInteger("bitrate", true),
-          ),
+      }
+      case "bitrate": {
+        const value = request.number;
+        if (value === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.setBitrate(operationContext, value),
         );
-      case "region":
-        return this.handleSimpleOp(interaction, () =>
-          operations.setRegion(
-            ctx,
-            interaction.options.getString("region", true),
-          ),
+      }
+      case "region": {
+        const region = request.text;
+        if (region === undefined) return this.sendUsage(responder);
+        return this.handleSimpleOp(responder, () =>
+          operations.setRegion(operationContext, region),
         );
+      }
       case "reset":
-        return this.handleSimpleOp(interaction, () => operations.reset(ctx));
+        return this.handleSimpleOp(responder, () =>
+          operations.reset(operationContext),
+        );
       case "claim":
-        return this.handleSimpleOp(interaction, () =>
-          operations.claim(ctx, member.id, member.voice.channelId),
+        return this.handleSimpleOp(responder, () =>
+          operations.claim(operationContext, member.id, member.voice.channelId),
         );
       case "panel":
-        return this.handlePanel(interaction, ctx);
+        return this.handlePanel(responder, operationContext);
       default:
-        return interaction.reply({
-          content: `${EMOJI.STATUS.ERROR} Unknown subcommand.`,
-          ephemeral: true,
-        });
+        return responder.replyError("Unknown subcommand.");
     }
   }
 
   // ───── Generic operation handler ─────
 
   private async handleSimpleOp(
-    interaction: Command.ChatInputCommandInteraction,
+    responder: CommandResponder,
     operationFn: () => Promise<{ ok: boolean; message: string }>,
   ) {
     try {
       const result = await operationFn();
       const emoji = result.ok ? EMOJI.STATUS.SUCCESS : EMOJI.STATUS.ERROR;
-      return interaction.reply({
+      return responder.reply({
         content: `${emoji} ${result.message}`,
-        ephemeral: true,
       });
     } catch (error) {
       this.container.logger.error(
         "[TempVoice] Command operation failed:",
         error,
       );
-      return interaction.reply({
+      return responder.reply({
         content: `${EMOJI.STATUS.ERROR} An unexpected error occurred. Please try again.`,
-        ephemeral: true,
       });
     }
   }
@@ -378,52 +506,51 @@ export class TempVoiceCommand extends Command {
   // ───── Lock/Unlock (directional, not toggle) ─────
 
   private async handleToggleLock(
-    interaction: Command.ChatInputCommandInteraction,
-    ctx: OperationContext,
+    responder: CommandResponder,
+    operationContext: OperationContext,
     wantLocked: boolean,
   ) {
     // If already in desired state, just confirm
-    if (ctx.tempChannel.isLocked === wantLocked) {
-      return interaction.reply({
+    if (operationContext.tempChannel.isLocked === wantLocked) {
+      return responder.reply({
         content: wantLocked
           ? `${EMOJI.CHANNELS.STATE.LOCKED} Channel is already locked.`
           : `${EMOJI.CHANNELS.STATE.UNLOCKED} Channel is already unlocked.`,
-        ephemeral: true,
       });
     }
 
     // toggleLock will flip to the desired state since current != desired
-    return this.handleSimpleOp(interaction, () =>
-      getTempVoiceServices().operations.toggleLock(ctx),
+    return this.handleSimpleOp(responder, () =>
+      getTempVoiceServices().operations.toggleLock(operationContext),
     );
   }
 
   // ───── Hide/Show (directional, not toggle) ─────
 
   private async handleToggleHide(
-    interaction: Command.ChatInputCommandInteraction,
-    ctx: OperationContext,
+    responder: CommandResponder,
+    operationContext: OperationContext,
     wantHidden: boolean,
   ) {
-    if (ctx.tempChannel.isHidden === wantHidden) {
-      return interaction.reply({
+    if (operationContext.tempChannel.isHidden === wantHidden) {
+      return responder.reply({
         content: wantHidden
           ? `${EMOJI.UI.INDICATORS.HIDDEN} Channel is already hidden.`
           : `${EMOJI.UI.INDICATORS.VISIBILITY} Channel is already visible.`,
-        ephemeral: true,
       });
     }
 
-    return this.handleSimpleOp(interaction, () =>
-      getTempVoiceServices().operations.toggleHide(ctx),
+    return this.handleSimpleOp(responder, () =>
+      getTempVoiceServices().operations.toggleHide(operationContext),
     );
   }
 
   // ───── Rename (with moderation) ─────
 
   private async handleRename(
-    interaction: Command.ChatInputCommandInteraction,
-    ctx: OperationContext,
+    responder: CommandResponder,
+    operationContext: OperationContext,
+    newName: string,
   ) {
     if (!this.moderationService) {
       this.moderationService = new NameModerationService(
@@ -432,21 +559,22 @@ export class TempVoiceCommand extends Command {
       );
     }
 
-    const newName = interaction.options.getString("name", true);
     const { operations } = getTempVoiceServices();
 
     try {
       let finalName = newName;
 
       // Apply moderation if enabled
-      if (ctx.config.moderationEnabled) {
-        const voiceChannel = await ctx.guild.channels.fetch(ctx.channelId, {
-          force: true,
-        });
+      if (operationContext.config.moderationEnabled) {
+        const voiceChannel = await operationContext.guild.channels.fetch(
+          operationContext.channelId,
+          {
+            force: true,
+          },
+        );
         if (!voiceChannel || !voiceChannel.isVoiceBased()) {
-          return interaction.reply({
+          return responder.reply({
             content: `${EMOJI.STATUS.ERROR} Voice channel not found.`,
-            ephemeral: true,
           });
         }
 
@@ -456,45 +584,44 @@ export class TempVoiceCommand extends Command {
             voiceChannel as import("discord.js").VoiceChannel,
             oldName,
             newName,
-            ctx.config,
-            interaction.user.id,
+            operationContext.config,
+            responder.user.id,
           );
 
         if (moderationResult && !moderationResult.validation.isAllowed) {
           finalName = moderationResult.finalName;
 
-          if (ctx.config.moderationAction === "AUTO_RENAME") {
-            await operations.rename(ctx, finalName);
-            return interaction.reply({
+          if (operationContext.config.moderationAction === "AUTO_RENAME") {
+            await operations.rename(operationContext, finalName);
+            return responder.reply({
               content: `${EMOJI.STATUS.WARNING} Your channel name was automatically changed to **${finalName}** because "${newName}" contains inappropriate content.`,
-              ephemeral: true,
             });
-          } else if (ctx.config.moderationAction === "BLOCK") {
-            return interaction.reply({
+          } else if (operationContext.config.moderationAction === "BLOCK") {
+            return responder.reply({
               content: `${EMOJI.STATUS.ERROR} That channel name is not allowed. Please choose a different name.`,
-              ephemeral: true,
             });
           }
         }
 
         // Mark as bot rename to prevent channelUpdate listener from re-processing
-        this.moderationService.markAsBotRename(ctx.channelId, finalName);
+        this.moderationService.markAsBotRename(
+          operationContext.channelId,
+          finalName,
+        );
       }
 
-      const result = await operations.rename(ctx, finalName);
+      const result = await operations.rename(operationContext, finalName);
       const emoji = result.ok ? EMOJI.STATUS.SUCCESS : EMOJI.STATUS.ERROR;
-      return interaction.reply({
+      return responder.reply({
         content: `${emoji} ${result.message}`,
-        ephemeral: true,
       });
     } catch (error) {
       this.container.logger.error(
         "[TempVoice] Failed to rename channel:",
         error,
       );
-      return interaction.reply({
+      return responder.reply({
         content: `${EMOJI.STATUS.ERROR} Failed to rename channel. Please try again.`,
-        ephemeral: true,
       });
     }
   }
@@ -502,24 +629,23 @@ export class TempVoiceCommand extends Command {
   // ───── Panel ─────
 
   private async handlePanel(
-    interaction: Command.ChatInputCommandInteraction,
-    ctx: OperationContext,
+    responder: CommandResponder,
+    operationContext: OperationContext,
   ) {
     try {
-      const result = await getTempVoiceServices().operations.reconcile(ctx);
+      const result =
+        await getTempVoiceServices().operations.reconcile(operationContext);
 
-      return interaction.reply({
+      return responder.reply({
         content: `${result.ok ? EMOJI.STATUS.SUCCESS : EMOJI.STATUS.ERROR} ${result.message}`,
-        ephemeral: true,
       });
     } catch (error) {
       this.container.logger.error(
         "[TempVoice] Failed to send control panel:",
         error,
       );
-      return interaction.reply({
+      return responder.reply({
         content: `${EMOJI.STATUS.ERROR} Failed to send control panel. Please try again.`,
-        ephemeral: true,
       });
     }
   }

@@ -2,9 +2,15 @@
  * Leaderboard command - Display guild XP leaderboard with a custom generated card
  */
 
-import { Command } from '@sapphire/framework';
-import { AttachmentBuilder, EmbedBuilder, Colors } from 'discord.js';
+import { Args, Command } from '@sapphire/framework';
+import { AttachmentBuilder, EmbedBuilder, Colors, type Message } from 'discord.js';
 import { EMOJI } from '#lib/discord/design/index.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import { readPrefixArgs } from '#lib/interaction/prefixArgs.js';
 import { imageGenClient } from '#lib/services/image-gen-client.js';
 import * as leaderboardService from '#root/modules/xp/xp-text/services/xp-text-leaderboard.service.js';
 import * as voiceLeaderboardService from '#root/modules/xp/xp-voice/services/voice-xp-leaderboard.service.js';
@@ -16,6 +22,7 @@ export class LeaderboardCommand extends Command {
       name: 'leaderboard',
       description: 'View the server XP leaderboard',
       aliases: ['lb', 'top'],
+      preconditions: ['GuildOnly'],
     });
   }
 
@@ -53,39 +60,51 @@ export class LeaderboardCommand extends Command {
     );
   }
 
-  public async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    await interaction.deferReply();
-
-    // Ensure command is run in a guild
-    if (!interaction.guild || !interaction.guildId) {
-      return interaction.editReply({
-        content: `${EMOJI.STATUS.ERROR} This command can only be used in a server.`,
-      });
-    }
-
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand();
     const limit = interaction.options.getInteger('limit') || 10;
+    return this.run(subcommand, limit, new InteractionResponder(interaction));
+  }
+
+  public override async messageRun(message: Message, args: Args) {
+    const values = await readPrefixArgs(args);
+    const first = values[0]?.toLocaleLowerCase();
+    const subcommand = first === 'voice' || first === 'text' ? first : 'text';
+    const limitRaw = first === 'voice' || first === 'text' ? values[1] : values[0];
+    const maxArgs = first === 'voice' || first === 'text' ? 2 : 1;
+    const limit = limitRaw === undefined ? 10 : Number(limitRaw);
+    const responder = new MessageResponder(message as Message<true>);
+
+    if (!Number.isInteger(limit) || limit < 5 || limit > 25 || values.length > maxArgs) {
+      await responder.replyError(
+        'Limit must be a whole number from 5 to 25. Usage: `leaderboard [text|voice] [limit]`'
+      );
+      return;
+    }
+
+    return this.run(subcommand, limit, responder);
+  }
+
+  private async run(subcommand: string, limit: number, ctx: CommandResponder) {
+    await ctx.deferPublicClassic();
 
     if (subcommand === 'voice') {
-      return this.handleVoiceLeaderboard(interaction, limit);
+      return this.handleVoiceLeaderboard(ctx, limit);
     } else {
-      return this.handleTextLeaderboard(interaction, limit);
+      return this.handleTextLeaderboard(ctx, limit);
     }
   }
 
-  private async handleTextLeaderboard(
-    interaction: Command.ChatInputCommandInteraction,
-    limit: number
-  ) {
-    const guildId = interaction.guildId as string;
-    const guild = interaction.guild as NonNullable<typeof interaction.guild>;
+  private async handleTextLeaderboard(ctx: CommandResponder, limit: number) {
+    const { guild } = ctx;
+    const guildId = guild.id;
 
     try {
       // Get leaderboard data
       const leaderboardData = await leaderboardService.getLeaderboard(guildId, limit, 0);
 
       if (leaderboardData.users.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} No users have earned XP yet!`,
         });
       }
@@ -117,10 +136,12 @@ export class LeaderboardCommand extends Command {
       });
 
       // Create attachment
-      const attachment = new AttachmentBuilder(cardImage, { name: 'text-leaderboard.png' });
+      const attachment = new AttachmentBuilder(cardImage, {
+        name: 'text-leaderboard.png',
+      });
 
       // Send the image
-      return interaction.editReply({
+      return ctx.editReply({
         files: [attachment],
       });
     } catch (error) {
@@ -130,7 +151,7 @@ export class LeaderboardCommand extends Command {
       const leaderboardData = await leaderboardService.getLeaderboard(guildId, limit, 0);
 
       if (leaderboardData.users.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} No users have earned XP yet!`,
         });
       }
@@ -147,7 +168,9 @@ export class LeaderboardCommand extends Command {
             })
             .join('\n')
         )
-        .setFooter({ text: 'Image generation failed, showing text-based leaderboard' })
+        .setFooter({
+          text: 'Image generation failed, showing text-based leaderboard',
+        })
         .setTimestamp();
 
       const iconURL = guild.iconURL();
@@ -155,26 +178,23 @@ export class LeaderboardCommand extends Command {
         embed.setThumbnail(iconURL);
       }
 
-      return interaction.editReply({
+      return ctx.editReply({
         embeds: [embed],
         content: `${EMOJI.STATUS.WARNING} Image generation failed, showing text-based leaderboard instead.`,
       });
     }
   }
 
-  private async handleVoiceLeaderboard(
-    interaction: Command.ChatInputCommandInteraction,
-    limit: number
-  ) {
-    const guildId = interaction.guildId as string;
-    const guild = interaction.guild as NonNullable<typeof interaction.guild>;
+  private async handleVoiceLeaderboard(ctx: CommandResponder, limit: number) {
+    const { guild } = ctx;
+    const guildId = guild.id;
 
     try {
       // Get voice leaderboard data
       const leaderboardData = await voiceLeaderboardService.getVoiceLeaderboard(guildId, limit, 0);
 
       if (leaderboardData.users.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} No users have earned voice XP yet!`,
         });
       }
@@ -206,10 +226,12 @@ export class LeaderboardCommand extends Command {
       });
 
       // Create attachment
-      const attachment = new AttachmentBuilder(cardImage, { name: 'voice-leaderboard.png' });
+      const attachment = new AttachmentBuilder(cardImage, {
+        name: 'voice-leaderboard.png',
+      });
 
       // Send the image
-      return interaction.editReply({
+      return ctx.editReply({
         files: [attachment],
       });
     } catch (error) {
@@ -219,7 +241,7 @@ export class LeaderboardCommand extends Command {
       const leaderboardData = await voiceLeaderboardService.getVoiceLeaderboard(guildId, limit, 0);
 
       if (leaderboardData.users.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} No users have earned voice XP yet!`,
         });
       }
@@ -236,7 +258,9 @@ export class LeaderboardCommand extends Command {
             })
             .join('\n')
         )
-        .setFooter({ text: 'Image generation failed, showing text-based leaderboard' })
+        .setFooter({
+          text: 'Image generation failed, showing text-based leaderboard',
+        })
         .setTimestamp();
 
       const iconURL = guild.iconURL();
@@ -244,7 +268,7 @@ export class LeaderboardCommand extends Command {
         embed.setThumbnail(iconURL);
       }
 
-      return interaction.editReply({
+      return ctx.editReply({
         embeds: [embed],
         content: `${EMOJI.STATUS.WARNING} Image generation failed, showing text-based leaderboard instead.`,
       });

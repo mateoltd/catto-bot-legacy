@@ -8,7 +8,7 @@ const WELCOME_MESSAGE = [
   '**Welcome to the moderation team!** Here are some tips to get started:',
   '',
   '**Punitive:** `!ban` (`!b`), `!kick` (`!k`), `!warn` (`!w`), `!timeout` (`!to`), `!mute` (`!m`), `!softban` (`!sb`), `!tempban` (`!tb`)',
-  '**Info:** `!history @user` (`!hist`), `!case <#>` (`!c`), `!mod panel @user`, `!mod context @user`',
+  '**Info:** `!history @user` (`!hist`), `!case <#>` (`!c`), `!panel @user`, `!mod context @user`',
   '**Notes:** `!note add @user <text>`, `!note list @user`',
   '**Voice:** `!mvc where @user`, `!mvc snapshot #channel`',
   '',

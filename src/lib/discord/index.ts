@@ -67,6 +67,7 @@ export {
   editReply,
   // CommandResponder
   type CommandResponder,
+  type CommandResponse,
   InteractionResponder,
   MessageResponder,
   // Types

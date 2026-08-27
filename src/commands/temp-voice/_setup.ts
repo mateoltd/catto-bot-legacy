@@ -6,7 +6,6 @@
  */
 
 import { container } from '@sapphire/framework';
-import type { Command } from '@sapphire/framework';
 import {
   MessageFlags,
   ChannelType,
@@ -14,7 +13,7 @@ import {
   ComponentType,
   PermissionFlagsBits,
   type Guild,
-  type GuildMember,
+  type Message,
 } from 'discord.js';
 import {
   row,
@@ -22,12 +21,11 @@ import {
   channelSelectRow,
   stringSelectRow,
   EMOJI,
-  errorMessage,
   successMessage,
   warningMessage,
   infoContainer,
   errorContainer,
-  defer,
+  type CommandResponder,
 } from '#lib/discord/index.js';
 import { getTempVoiceServices } from '../../modules/temp-voice/services/service-container.js';
 import type { TempVoiceConfig } from '../../modules/temp-voice/models/config.model.js';
@@ -139,70 +137,52 @@ function buildSetupContainer(config: TempVoiceConfig) {
 // Entry Point
 // ─────────────────────────────────────────────
 
-export async function handleVoiceSetup(interaction: Command.ChatInputCommandInteraction) {
-  if (!interaction.guild) {
-    return interaction.reply({
-      components: [errorMessage('Error', 'This command can only be used in a server.').build()],
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-    });
-  }
-
-  const member = interaction.member as GuildMember;
+export async function handleVoiceSetup(ctx: CommandResponder) {
+  const { member } = ctx;
   if (
     !member.permissions.has(PermissionFlagsBits.ManageGuild) &&
     !member.permissions.has(PermissionFlagsBits.Administrator)
   ) {
-    return interaction.reply({
-      components: [
-        errorContainer()
-          .h2('Permission Denied')
-          .text(
-            'You need **Manage Server** or **Administrator** permissions to configure temp voice settings.'
-          )
-          .build(),
-      ],
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-    });
+    return ctx.reply(
+      errorContainer()
+        .h2('Permission Denied')
+        .text(
+          'You need **Manage Server** or **Administrator** permissions to configure temp voice settings.'
+        )
+    );
   }
 
-  await defer(interaction);
+  await ctx.defer();
 
   const { config: configService } = getTempVoiceServices();
 
   // Get or create config (get auto-creates with defaults)
-  const config = await configService.get(interaction.guild.id);
+  const config = await configService.get(ctx.guild.id);
 
-  return showSetupOverview(interaction, config);
+  return showSetupOverview(ctx, config);
 }
 
 // ─────────────────────────────────────────────
 // Overview & Collector
 // ─────────────────────────────────────────────
 
-async function showSetupOverview(
-  interaction: Command.ChatInputCommandInteraction,
-  config: TempVoiceConfig
-) {
+async function showSetupOverview(ctx: CommandResponder, config: TempVoiceConfig) {
   const setupContainer = buildSetupContainer(config).actions(
     buildSetupRow1(config),
     buildSetupRow2()
   );
 
-  await interaction.editReply({
-    components: [setupContainer.build()],
-    flags: MessageFlags.IsComponentsV2,
-  });
+  const message = await ctx.editReply(setupContainer);
 
-  await handleSetupInteractions(interaction);
+  await handleSetupInteractions(ctx, message);
 }
 
-async function handleSetupInteractions(interaction: Command.ChatInputCommandInteraction) {
-  const message = await interaction.fetchReply();
-  const guild = interaction.guild!;
+async function handleSetupInteractions(ctx: CommandResponder, message: Message) {
+  const guild = ctx.guild;
   const guildId = guild.id;
 
   const collector = message.createMessageComponentCollector({
-    filter: (i) => i.user.id === interaction.user.id,
+    filter: (i) => i.user.id === ctx.user.id,
     time: COLLECTOR_TIMEOUT,
   });
 
@@ -240,25 +220,25 @@ async function handleSetupInteractions(interaction: Command.ChatInputCommandInte
 
       // ── Set JTC Channel ──
       if (customId === `${CUSTOM_ID_PREFIX}:jtc_channel`) {
-        await handleJtcChannel(interaction, buttonInteraction, guild, guildId);
+        await handleJtcChannel(ctx, buttonInteraction, guild, guildId);
         return;
       }
 
       // ── Set Category ──
       if (customId === `${CUSTOM_ID_PREFIX}:category`) {
-        await handleCategory(interaction, buttonInteraction, guild, guildId);
+        await handleCategory(ctx, buttonInteraction, guild, guildId);
         return;
       }
 
       // ── Set Log Channel ──
       if (customId === `${CUSTOM_ID_PREFIX}:log_channel`) {
-        await handleLogChannel(interaction, buttonInteraction, guildId);
+        await handleLogChannel(ctx, buttonInteraction, guildId);
         return;
       }
 
       // ── Naming Scheme ──
       if (customId === `${CUSTOM_ID_PREFIX}:naming_scheme`) {
-        await handleNamingScheme(interaction, buttonInteraction, guildId);
+        await handleNamingScheme(ctx, buttonInteraction, guildId);
         return;
       }
 
@@ -272,15 +252,12 @@ async function handleSetupInteractions(interaction: Command.ChatInputCommandInte
   collector.on('end', async (_, reason) => {
     if (reason === 'time') {
       try {
-        await interaction.editReply({
-          components: [
-            warningMessage(
-              'Setup Timed Out',
-              'The setup wizard has timed out. Run `/voice setup` again to continue.'
-            ).build(),
-          ],
-          flags: MessageFlags.IsComponentsV2,
-        });
+        await ctx.editReply(
+          warningMessage(
+            'Setup Timed Out',
+            'The setup wizard has timed out. Run the voice setup command again to continue.'
+          )
+        );
       } catch {
         // Message may be deleted
       }
@@ -293,7 +270,7 @@ async function handleSetupInteractions(interaction: Command.ChatInputCommandInte
 // ─────────────────────────────────────────────
 
 async function handleJtcChannel(
-  originalInteraction: Command.ChatInputCommandInteraction,
+  ctx: CommandResponder,
   buttonInteraction: any,
   guild: Guild,
   guildId: string
@@ -323,7 +300,7 @@ async function handleJtcChannel(
   try {
     const collected = await buttonInteraction.channel?.awaitMessageComponent({
       filter: (i: any) =>
-        i.user.id === originalInteraction.user.id &&
+        i.user.id === ctx.user.id &&
         (i.customId === `${CUSTOM_ID_PREFIX}:select_jtc` ||
           i.customId === `${CUSTOM_ID_PREFIX}:auto_create_jtc`),
       time: SELECT_TIMEOUT,
@@ -371,14 +348,14 @@ async function handleJtcChannel(
     }
 
     // Refresh overview
-    await refreshOverview(originalInteraction, guildId);
+    await refreshOverview(ctx, guildId);
   } catch {
     // Timeout - ignore
   }
 }
 
 async function handleCategory(
-  originalInteraction: Command.ChatInputCommandInteraction,
+  ctx: CommandResponder,
   buttonInteraction: any,
   guild: Guild,
   guildId: string
@@ -407,7 +384,7 @@ async function handleCategory(
   try {
     const collected = await buttonInteraction.channel?.awaitMessageComponent({
       filter: (i: any) =>
-        i.user.id === originalInteraction.user.id &&
+        i.user.id === ctx.user.id &&
         (i.customId === `${CUSTOM_ID_PREFIX}:select_category` ||
           i.customId === `${CUSTOM_ID_PREFIX}:auto_create_category`),
       time: SELECT_TIMEOUT,
@@ -444,17 +421,13 @@ async function handleCategory(
       }
     }
 
-    await refreshOverview(originalInteraction, guildId);
+    await refreshOverview(ctx, guildId);
   } catch {
     // Timeout - ignore
   }
 }
 
-async function handleLogChannel(
-  originalInteraction: Command.ChatInputCommandInteraction,
-  buttonInteraction: any,
-  guildId: string
-) {
+async function handleLogChannel(ctx: CommandResponder, buttonInteraction: any, guildId: string) {
   const selectRow = channelSelectRow({
     customId: `${CUSTOM_ID_PREFIX}:select_log`,
     placeholder: 'Select a text channel for logs',
@@ -470,8 +443,7 @@ async function handleLogChannel(
   try {
     const collected = await buttonInteraction.channel?.awaitMessageComponent({
       filter: (i: any) =>
-        i.user.id === originalInteraction.user.id &&
-        i.customId === `${CUSTOM_ID_PREFIX}:select_log`,
+        i.user.id === ctx.user.id && i.customId === `${CUSTOM_ID_PREFIX}:select_log`,
       componentType: ComponentType.ChannelSelect,
       time: SELECT_TIMEOUT,
     });
@@ -510,7 +482,7 @@ async function handleLogChannel(
           components: [],
         });
 
-        await refreshOverview(originalInteraction, guildId);
+        await refreshOverview(ctx, guildId);
       }
     }
   } catch {
@@ -518,11 +490,7 @@ async function handleLogChannel(
   }
 }
 
-async function handleNamingScheme(
-  originalInteraction: Command.ChatInputCommandInteraction,
-  buttonInteraction: any,
-  guildId: string
-) {
+async function handleNamingScheme(ctx: CommandResponder, buttonInteraction: any, guildId: string) {
   const selectRow = stringSelectRow({
     customId: `${CUSTOM_ID_PREFIX}:select_naming`,
     placeholder: 'Choose a naming scheme',
@@ -542,8 +510,7 @@ async function handleNamingScheme(
   try {
     const collected = await buttonInteraction.channel?.awaitMessageComponent({
       filter: (i: any) =>
-        i.user.id === originalInteraction.user.id &&
-        i.customId === `${CUSTOM_ID_PREFIX}:select_naming`,
+        i.user.id === ctx.user.id && i.customId === `${CUSTOM_ID_PREFIX}:select_naming`,
       componentType: ComponentType.StringSelect,
       time: SELECT_TIMEOUT,
     });
@@ -571,7 +538,7 @@ async function handleNamingScheme(
           components: [],
         });
 
-        await refreshOverview(originalInteraction, guildId);
+        await refreshOverview(ctx, guildId);
       }
     }
   } catch {
@@ -583,7 +550,7 @@ async function handleNamingScheme(
 // Helpers
 // ─────────────────────────────────────────────
 
-async function refreshOverview(interaction: Command.ChatInputCommandInteraction, guildId: string) {
+async function refreshOverview(ctx: CommandResponder, guildId: string) {
   const { config: configService } = getTempVoiceServices();
   const config = await configService.get(guildId);
 
@@ -592,8 +559,5 @@ async function refreshOverview(interaction: Command.ChatInputCommandInteraction,
     buildSetupRow2()
   );
 
-  await interaction.editReply({
-    components: [setupContainer.build()],
-    flags: MessageFlags.IsComponentsV2,
-  });
+  await ctx.editReply(setupContainer);
 }

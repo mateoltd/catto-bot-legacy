@@ -1,7 +1,13 @@
 import { EMOJI } from '#lib/discord/design/index.js';
 import { RewardService, XPType, LevelRewardConfig } from '#root/modules/rewards/index.js';
-import { Command } from '@sapphire/framework';
-import { EmbedBuilder } from 'discord.js';
+import { Args, Command } from '@sapphire/framework';
+import { EmbedBuilder, type Message, type User } from 'discord.js';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
+import { readPrefixArgs, resolvePrefixUser } from '#lib/interaction/prefixArgs.js';
 
 export class RewardsCommand extends Command {
   private rewardService!: RewardService;
@@ -11,6 +17,7 @@ export class RewardsCommand extends Command {
       ...options,
       name: 'rewards',
       description: 'View available XP rewards in this server',
+      preconditions: ['GuildOnly'],
     });
   }
 
@@ -37,14 +44,34 @@ export class RewardsCommand extends Command {
   }
 
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    if (!interaction.inGuild()) {
-      return interaction.reply({
-        content: 'This command can only be used in a server.',
-        ephemeral: true,
-      });
+    const typeFilter = interaction.options.getString('type') as XPType | null;
+    const targetUser = interaction.options.getUser('user') || interaction.user;
+    return this.run(typeFilter, targetUser, new InteractionResponder(interaction));
+  }
+
+  public override async messageRun(message: Message, args: Args) {
+    const guildMessage = message as Message<true>;
+    const values = await readPrefixArgs(args);
+    const possibleType = values[0]?.toLocaleUpperCase();
+    const hasType =
+      possibleType !== undefined && Object.values(XPType).includes(possibleType as XPType);
+    const typeFilter = hasType ? (possibleType as XPType) : null;
+    const userArg = hasType ? values[1] : values[0];
+    const targetUser = userArg
+      ? await resolvePrefixUser(guildMessage, userArg)
+      : guildMessage.author;
+    const responder = new MessageResponder(guildMessage);
+
+    if (!targetUser || values.length > (hasType ? 2 : 1)) {
+      await responder.replyError('Usage: `rewards [text|voice|both] [user]`');
+      return;
     }
 
-    const guildId = interaction.guildId;
+    return this.run(typeFilter, targetUser, responder);
+  }
+
+  private async run(typeFilter: XPType | null, targetUser: User, ctx: CommandResponder) {
+    const guildId = ctx.guild.id;
 
     // Initialize service if needed
     if (!this.rewardService) {
@@ -52,10 +79,7 @@ export class RewardsCommand extends Command {
       this.rewardService = new RewardService(prisma);
     }
 
-    const typeFilter = interaction.options.getString('type') as XPType | null;
-    const targetUser = interaction.options.getUser('user') || interaction.user;
-
-    await interaction.deferReply();
+    await ctx.deferPublicClassic();
 
     try {
       // Get guild rewards
@@ -70,7 +94,7 @@ export class RewardsCommand extends Command {
       }
 
       if (filteredRewards.length === 0) {
-        return interaction.editReply({
+        return ctx.editReply({
           content: `${EMOJI.STATUS.ERROR} No rewards are configured in this server yet.`,
         });
       }
@@ -130,10 +154,10 @@ export class RewardsCommand extends Command {
         text: `${EMOJI.STATUS.SUCCESS} = Unlocked | ${EMOJI.PROGRESS.ARROW_UP} = Next Level | ${EMOJI.CHANNELS.STATE.LOCKED} = Locked`,
       });
 
-      return interaction.editReply({ embeds: [embed] });
+      return ctx.editReply({ embeds: [embed] });
     } catch (error) {
       this.container.logger.error('Failed to fetch rewards:', error);
-      return interaction.editReply({
+      return ctx.editReply({
         content: `${EMOJI.STATUS.ERROR} Failed to fetch rewards. Please try again.`,
       });
     }

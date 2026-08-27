@@ -1,14 +1,19 @@
 import { Command } from '@sapphire/framework';
 import { type Message } from 'discord.js';
-import { buildInfoEmbed } from '#lib/utils.js';
 import { resolveKey } from '@sapphire/plugin-i18next';
 import { ApplyOptions } from '@sapphire/decorators';
+import {
+  InteractionResponder,
+  MessageResponder,
+  type CommandResponder,
+} from '#lib/discord/index.js';
 
 @ApplyOptions<Command.Options>({
   name: 'ping',
   aliases: ['pong'],
   description: 'Check the bot latency',
   detailedDescription: "Returns the bot's websocket ping and API latency.",
+  preconditions: ['GuildOnly'],
 })
 export class PingCommand extends Command {
   public override registerApplicationCommands(registry: Command.Registry) {
@@ -18,41 +23,23 @@ export class PingCommand extends Command {
   }
 
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    const msg = await interaction.reply({
-      content: await resolveKey(interaction, 'commands/ping:content', {
-        latency: '...',
-        apiLatency: Math.round(this.container.client.ws.ping),
-      }),
-      ephemeral: true,
-      fetchReply: true,
-    });
-
-    const latency = msg.createdTimestamp - interaction.createdTimestamp;
-
-    return interaction.editReply({
-      content: await resolveKey(interaction, 'commands/ping:content', {
-        latency,
-        apiLatency: Math.round(this.container.client.ws.ping),
-      }),
-    });
+    return this.run(new InteractionResponder(interaction));
   }
 
   public override async messageRun(message: Message) {
-    if (!message.channel.isSendable()) {
-      return;
-    }
+    if (!message.inGuild()) return;
+    return this.run(new MessageResponder(message));
+  }
 
-    const msg = await message.channel.send('Pinging...');
+  private async run(ctx: CommandResponder) {
+    const startedAt = Date.now();
+    await ctx.deferClassic();
 
-    const embed = buildInfoEmbed(
-      [
-        `🏓 Pong!`,
-        `**Bot Latency:** ${Math.round(this.container.client.ws.ping)}ms`,
-        `**API Latency:** ${msg.createdTimestamp - message.createdTimestamp}ms`,
-      ].join('\n'),
-      { title: 'Ping Statistics' }
-    );
-
-    return msg.edit({ content: null, embeds: [embed] });
+    return ctx.editReply({
+      content: await resolveKey(ctx.guild, 'commands/ping:content', {
+        latency: Date.now() - startedAt,
+        apiLatency: Math.round(this.container.client.ws.ping),
+      }),
+    });
   }
 }
