@@ -14,6 +14,7 @@ import {
   TempVoiceLifecycleState,
   TempVoiceOwnershipState,
 } from "../domain/temp-voice.types.js";
+import { normalizeDiscordBitrateBps } from "../domain/temp-voice-bitrate.js";
 import type { TempVoiceRecord } from "../domain/temp-voice.types.js";
 import type {
   TempVoiceCreateRecord,
@@ -57,7 +58,7 @@ export class PrismaTempVoiceRepository implements TempVoiceRepository {
           createdByJoinChannelId: record.createdByJoinChannelId,
           customName: record.customName,
           customUserLimit: record.customUserLimit,
-          customBitrate: record.customBitrate,
+          customBitrate: normalizeDiscordBitrateBps(record.customBitrate),
           customRegion: record.customRegion,
           isLocked: record.isLocked,
           isHidden: record.isHidden,
@@ -236,7 +237,7 @@ export class PrismaTempVoiceRepository implements TempVoiceRepository {
         customUserLimit: update.customUserLimit,
       }),
       ...(update.customBitrate !== undefined && {
-        customBitrate: update.customBitrate,
+        customBitrate: normalizeDiscordBitrateBps(update.customBitrate),
       }),
       ...(update.customRegion !== undefined && {
         customRegion: update.customRegion,
@@ -297,7 +298,7 @@ export class PrismaTempVoiceRepository implements TempVoiceRepository {
       createdByJoinChannelId: record.createdByJoinChannelId,
       customName: record.customName,
       customUserLimit: record.customUserLimit,
-      customBitrate: record.customBitrate,
+      customBitrate: normalizeDiscordBitrateBps(record.customBitrate),
       customRegion: record.customRegion,
       isLocked: record.isLocked,
       isHidden: record.isHidden,

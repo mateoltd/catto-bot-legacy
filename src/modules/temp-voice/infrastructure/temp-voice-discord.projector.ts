@@ -6,6 +6,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
+  OverwriteType,
   PermissionFlagsBits,
   StringSelectMenuBuilder,
   type Client,
@@ -50,24 +51,44 @@ export class TempVoiceDiscordProjector implements TempVoiceProjection {
     channel: VoiceChannel,
     options: TempVoiceProjectionOptions,
   ): Promise<void> {
-    await this.reconcileChannelSettings(record, channel);
-    await this.reconcilePermissions(record, channel);
-
-    if (options.controlPanelEnabled) {
-      await this.reconcilePanel(
-        record,
-        channel,
-        options.forceMessageFetch ?? false,
-      );
-    } else {
-      await this.disableControlPanel(record, channel);
+    const forceMessageFetch = options.forceMessageFetch ?? false;
+    const slices: ReadonlyArray<readonly [string, () => Promise<void>]> = [
+      [
+        "channel settings",
+        () => this.reconcileChannelSettings(record, channel),
+      ],
+      ["permissions", () => this.reconcilePermissions(record, channel)],
+      [
+        "control panel",
+        () =>
+          options.controlPanelEnabled
+            ? this.reconcilePanel(record, channel, forceMessageFetch)
+            : this.disableControlPanel(record, channel),
+      ],
+      [
+        "ownership messages",
+        () =>
+          this.reconcileOwnershipMessages(record, channel, forceMessageFetch),
+      ],
+    ];
+    const failures: unknown[] = [];
+    for (const [name, reconcileSlice] of slices) {
+      try {
+        await reconcileSlice();
+      } catch (error) {
+        failures.push(error);
+        container.logger.warn(
+          `[TempVoiceProjection] ${name} failed for ${record.id}; independent projections will continue`,
+        );
+      }
     }
-
-    await this.reconcileOwnershipMessages(
-      record,
-      channel,
-      options.forceMessageFetch ?? false,
-    );
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) {
+      throw new AggregateError(
+        failures,
+        `${failures.length} temp voice projections failed for ${record.id}`,
+      );
+    }
   }
 
   private async reconcileChannelSettings(
@@ -233,7 +254,13 @@ export class TempVoiceDiscordProjector implements TempVoiceProjection {
       return isAllowed || isDenied;
     });
     if (!isDifferent) return;
-    await channel.permissionOverwrites.edit(targetId, desired);
+    await channel.permissionOverwrites.edit(targetId, desired, {
+      type:
+        targetId === channel.guild.roles.everyone.id
+          ? OverwriteType.Role
+          : OverwriteType.Member,
+      reason: `tempvoice:permissions:${channel.id}`,
+    });
   }
 
   private async reconcilePanel(
@@ -473,14 +500,19 @@ export class TempVoiceDiscordProjector implements TempVoiceProjection {
     });
     if (
       delivery?.status === TempVoiceDeliveryStatus.FAILED &&
-      delivery.renderHash === renderHash &&
-      !forceMessageFetch
+      delivery.renderHash === renderHash
     ) {
       const retryDelayMs = Math.min(
         300_000,
         30_000 * 2 ** Math.min(delivery.attempts, 4),
       );
       if (delivery.updatedAt.getTime() + retryDelayMs > Date.now()) return;
+    }
+    if (
+      delivery?.status === TempVoiceDeliveryStatus.SUPERSEDED &&
+      delivery.renderHash === renderHash
+    ) {
+      return;
     }
     if (
       delivery?.status === TempVoiceDeliveryStatus.DELIVERED &&
@@ -526,13 +558,17 @@ export class TempVoiceDiscordProjector implements TempVoiceProjection {
           aggregateId: record.id,
           kind: TempVoiceDeliveryKind.OWNER_DM,
           epoch: TEMP_VOICE_OWNERSHIP_DELIVERY_EPOCH,
-          status: TempVoiceDeliveryStatus.FAILED,
+          status: classified.isPermanentDeliveryFailure
+            ? TempVoiceDeliveryStatus.SUPERSEDED
+            : TempVoiceDeliveryStatus.FAILED,
           attempts: 1,
           renderHash,
           lastError: classified.message,
         },
         update: {
-          status: TempVoiceDeliveryStatus.FAILED,
+          status: classified.isPermanentDeliveryFailure
+            ? TempVoiceDeliveryStatus.SUPERSEDED
+            : TempVoiceDeliveryStatus.FAILED,
           attempts: { increment: 1 },
           renderHash,
           lastError: classified.message,

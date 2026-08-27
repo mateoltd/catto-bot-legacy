@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { container } from "@sapphire/framework";
 import {
@@ -43,6 +44,8 @@ const OUTBOX_RETENTION_MS = 86_400_000;
 const SUPERSEDED_DELIVERY_RETENTION_MS = 30 * 86_400_000;
 const PRESENCE_DIRTY_TTL_SECONDS = 3_600;
 const SIGNAL_ATTEMPTS = 12;
+const COMMAND_CONTENTION_TIMEOUT_MS = 10_000;
+const COMMAND_CONTENTION_RETRY_MS = 150;
 
 class TempVoiceRetryableResultError extends Error {
   public constructor(
@@ -133,7 +136,7 @@ export class BullTempVoiceTransport implements TempVoiceTransport {
   ): Promise<TempVoiceResult<{ message: string }>> {
     const message = job.data;
     if (message.type === "COMMAND") {
-      return this.coordinator.dispatch(message);
+      return this.dispatchInteractiveCommand(message);
     }
     if (
       message.type === "SIGNAL" &&
@@ -151,6 +154,32 @@ export class BullTempVoiceTransport implements TempVoiceTransport {
       });
     }
     return this.dispatchRetryable(message);
+  }
+
+  private async dispatchInteractiveCommand(
+    message: Extract<TempVoiceTransportMessage, { type: "COMMAND" }>,
+  ): Promise<TempVoiceResult<{ message: string }>> {
+    const deadline = Date.now() + COMMAND_CONTENTION_TIMEOUT_MS;
+    for (;;) {
+      try {
+        return await this.coordinator.dispatch(message);
+      } catch (error) {
+        const isLeaseBusy =
+          error instanceof TempVoiceLeaseBusyError ||
+          (error instanceof Error && error.name === "TempVoiceLeaseBusyError");
+        if (!isLeaseBusy) throw error;
+        if (Date.now() >= deadline) {
+          return {
+            ok: false,
+            code: "CHANNEL_BUSY",
+            message:
+              "This channel is processing another update. Please try again in a moment.",
+            retryable: true,
+          };
+        }
+        await delay(COMMAND_CONTENTION_RETRY_MS);
+      }
+    }
   }
 
   private async enqueuePresenceReconciliations(
@@ -271,13 +300,14 @@ export class BullTempVoiceTransport implements TempVoiceTransport {
         COMMAND_TIMEOUT_MS,
       )) as TempVoiceResult<{ message: string }>;
     } catch (error) {
+      container.logger.warn(
+        `[TempVoiceTransport] Interactive command ${job.id ?? "unknown"} could not complete: ${error instanceof Error ? error.name : "UnknownError"}`,
+      );
       return {
         ok: false,
         code: "TRANSPORT_FAILED",
         message:
-          error instanceof Error
-            ? error.message
-            : "Temp voice transport failed.",
+          "The temporary voice update could not be completed. Please try again.",
         retryable: true,
       };
     }

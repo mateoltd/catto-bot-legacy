@@ -17,6 +17,7 @@ import {
 import { getJson, setJson, deleteJson } from "#lib/cache/typedCache.js";
 import { z } from "zod";
 import type { Client } from "discord.js";
+import { normalizeConfigBitrateKbps } from "../domain/temp-voice-bitrate.js";
 
 /**
  * Zod schema for cached config — passthrough to accept the full Prisma shape
@@ -241,6 +242,7 @@ export class TempVoiceConfigService {
   private mapToModel(data: PrismaTempVoiceConfig): TempVoiceConfig {
     return {
       ...data,
+      defaultBitrate: normalizeConfigBitrateKbps(data.defaultBitrate),
       joinToCreateChannels: Array.isArray(data.joinToCreateChannels)
         ? (data.joinToCreateChannels as string[])
         : [],

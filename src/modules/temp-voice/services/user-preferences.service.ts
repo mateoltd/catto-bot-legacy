@@ -3,6 +3,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { normalizeDiscordBitrateBps } from "../domain/temp-voice-bitrate.js";
 import type {
   TempVoicePreferenceData,
   TempVoicePreferenceStore,
@@ -41,7 +42,7 @@ export class UserPreferencesService implements TempVoicePreferenceStore {
     return {
       customName: prefs.customName,
       customUserLimit: prefs.customUserLimit,
-      customBitrate: prefs.customBitrate,
+      customBitrate: normalizeDiscordBitrateBps(prefs.customBitrate),
       customRegion: prefs.customRegion,
       preferLocked: prefs.preferLocked,
       preferHidden: prefs.preferHidden,
@@ -65,14 +66,20 @@ export class UserPreferencesService implements TempVoicePreferenceStore {
     userId: string,
     data: UserPreferenceData,
   ): Promise<void> {
+    const normalizedData = {
+      ...data,
+      ...(data.customBitrate !== undefined && {
+        customBitrate: normalizeDiscordBitrateBps(data.customBitrate),
+      }),
+    };
     await this.prisma.tempVoiceUserPreference.upsert({
       where: { guildId_userId: { guildId, userId } },
       create: {
         guildId,
         userId,
-        ...data,
+        ...normalizedData,
       },
-      update: data,
+      update: normalizedData,
     });
   }
 

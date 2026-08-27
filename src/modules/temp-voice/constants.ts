@@ -191,8 +191,8 @@ export const API_RATE_LIMITS = {
 export const REDIS_KEYS = {
   /** User cooldown: tempvoice:cooldown:{userId}:{guildId} */
   COOLDOWN: "tempvoice:cooldown",
-  /** Config cache: tempvoice:config:{guildId} */
-  CONFIG_CACHE: "tempvoice:config",
+  /** Versioned config cache: tempvoice:config:v2:{guildId} */
+  CONFIG_CACHE: "tempvoice:config:v2",
   /** Join-to-create notice deduplication: tempvoice:join-notice:{guildId}:{userId}:{code} */
   JOIN_NOTICE: "tempvoice:join-notice",
   /** Presence generation used to coalesce aggregate reconciliation */
