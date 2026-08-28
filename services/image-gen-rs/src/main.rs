@@ -38,7 +38,7 @@ async fn main() {
     let text_renderer = text::create_shared_renderer();
     let state = AppState { text_renderer };
 
-    tracing::info!("Font system initialized with Anton + JetBrains Mono");
+    tracing::info!("Font system initialized with Anton + DM Sans + JetBrains Mono");
 
     // Build router
     let app = Router::new()

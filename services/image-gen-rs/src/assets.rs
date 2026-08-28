@@ -12,6 +12,8 @@ pub mod bonk {
 /// Embedded fonts
 pub mod fonts {
     pub const ANTON_REGULAR: &[u8] = include_bytes!("../assets/fonts/Anton-Regular.ttf");
+    pub const DM_SANS_REGULAR: &[u8] = include_bytes!("../assets/fonts/DMSans-Regular.ttf");
+    pub const DM_SANS_MEDIUM: &[u8] = include_bytes!("../assets/fonts/DMSans-Medium.ttf");
     pub const JETBRAINS_MONO_REGULAR: &[u8] =
         include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
     pub const JETBRAINS_MONO_MEDIUM: &[u8] =

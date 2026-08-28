@@ -28,6 +28,8 @@ impl TextRenderer {
 
         // Load all embedded fonts
         font_system.db_mut().load_font_data(fonts::ANTON_REGULAR.to_vec());
+        font_system.db_mut().load_font_data(fonts::DM_SANS_REGULAR.to_vec());
+        font_system.db_mut().load_font_data(fonts::DM_SANS_MEDIUM.to_vec());
         font_system.db_mut().load_font_data(fonts::JETBRAINS_MONO_REGULAR.to_vec());
         font_system.db_mut().load_font_data(fonts::JETBRAINS_MONO_MEDIUM.to_vec());
         font_system.db_mut().load_font_data(fonts::JETBRAINS_MONO_SEMIBOLD.to_vec());

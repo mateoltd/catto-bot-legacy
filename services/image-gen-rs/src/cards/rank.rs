@@ -1,61 +1,44 @@
-use crate::avatar::{draw_square_avatar, fetch_avatar};
+use super::common::{
+    draw_rect_filled, draw_rounded_rect_filled, format_number, sanitize_text, truncate_username,
+};
+use crate::avatar::{draw_circular_avatar, fetch_avatar};
 use crate::error::ImageGenError;
-use crate::text::{FontWeight, SharedTextRenderer};
-use super::common::{draw_hline, draw_rect_filled, draw_rect_outline, format_number, right_align, sanitize_text};
+use crate::text::{FontWeight, SharedTextRenderer, TextRenderer};
 use serde::Deserialize;
 use tiny_skia::{Color, Pixmap, PixmapPaint, Transform};
 
-// Canvas
-const CARD_WIDTH: u32 = 934;
+const CARD_WIDTH: u32 = 600;
+const CARD_HEIGHT: u32 = 423;
 
-// Padding
-const PAD_X: f32 = 40.0;
-const PAD_Y: f32 = 32.0;
-
-// Section dimensions
-const AVATAR_SIZE: f32 = 64.0;
-const HEADER_BOTTOM_GAP: f32 = 16.0;
-const DIVIDER_GAP: f32 = 20.0;
-const SECTION_LABEL_H: f32 = 16.0;
-const LABEL_GAP: f32 = 12.0;
-const STAT_BOX_H: f32 = 80.0;
-const STAT_BOX_GAP: f32 = 16.0;
-const SECTION_GAP: f32 = 24.0;
-const PROGRESS_LABEL_H: f32 = 16.0;
-const PROGRESS_GAP: f32 = 8.0;
-const PROGRESS_BAR_H: f32 = 24.0;
-const BREAKDOWN_H: f32 = 200.0;
-const BREAKDOWN_GAP: f32 = 24.0;
-const STAT_BOX_PAD: f32 = 16.0;
-
-// Theme colors (GitHub dark)
-fn bg_color() -> Color { Color::from_rgba8(13, 17, 23, 255) }
-fn border_color() -> Color { Color::from_rgba8(33, 38, 45, 255) }
-fn text_primary() -> Color { Color::from_rgba8(201, 209, 217, 255) }
-fn text_secondary() -> Color { Color::from_rgba8(110, 118, 129, 255) }
-fn text_muted() -> Color { Color::from_rgba8(155, 164, 174, 255) }
-fn box_bg() -> Color { Color::from_rgba8(22, 27, 34, 255) }
-fn accent_green() -> Color { Color::from_rgba8(124, 152, 133, 255) }
-fn bar_messages() -> Color { Color::from_rgba8(124, 152, 133, 255) }
-fn bar_voice() -> Color { Color::from_rgba8(107, 140, 122, 255) }
-fn bar_reactions() -> Color { Color::from_rgba8(90, 125, 106, 255) }
-fn bar_commands() -> Color { Color::from_rgba8(74, 109, 90, 255) }
-
-fn content_width() -> f32 {
-    CARD_WIDTH as f32 - PAD_X * 2.0
+fn surface() -> Color {
+    Color::from_rgba8(243, 239, 247, 255)
 }
-
-fn compute_card_height() -> u32 {
-    (PAD_Y
-        + AVATAR_SIZE + HEADER_BOTTOM_GAP       // header
-        + 1.0 + DIVIDER_GAP                     // divider + gap
-        + SECTION_LABEL_H + LABEL_GAP            // "YOUR STATS"
-        + STAT_BOX_H + SECTION_GAP               // stat boxes
-        + PROGRESS_LABEL_H + PROGRESS_GAP         // progress label
-        + PROGRESS_BAR_H + SECTION_GAP             // progress bar
-        + BREAKDOWN_H                              // breakdown panels
-        + PAD_Y                                    // bottom padding
-    ).ceil() as u32
+fn white() -> Color {
+    Color::from_rgba8(255, 255, 255, 255)
+}
+fn ink() -> Color {
+    Color::from_rgba8(37, 34, 42, 255)
+}
+fn muted() -> Color {
+    Color::from_rgba8(116, 111, 123, 255)
+}
+fn purple() -> Color {
+    Color::from_rgba8(115, 83, 219, 255)
+}
+fn lavender() -> Color {
+    Color::from_rgba8(233, 226, 255, 255)
+}
+fn lavender_strong() -> Color {
+    Color::from_rgba8(215, 204, 251, 255)
+}
+fn stats() -> Color {
+    Color::from_rgba8(221, 210, 234, 255)
+}
+fn stats_line() -> Color {
+    Color::from_rgba8(195, 185, 207, 255)
+}
+fn white_muted() -> Color {
+    Color::from_rgba8(221, 208, 249, 255)
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,361 +77,361 @@ pub struct RankCardRequest {
     pub is_voice_card: Option<bool>,
 }
 
+fn comma_number(n: u64) -> String {
+    let digits = n.to_string();
+    let mut formatted = String::with_capacity(digits.len() + digits.len() / 3);
+    for (index, character) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index) % 3 == 0 {
+            formatted.push(',');
+        }
+        formatted.push(character);
+    }
+    formatted
+}
+
+fn draw_text(
+    canvas: &mut Pixmap,
+    renderer: &mut TextRenderer,
+    text: &str,
+    x: f32,
+    y: f32,
+    max_width: f32,
+    size: f32,
+    weight: FontWeight,
+    color: Color,
+) -> Result<(f32, f32), ImageGenError> {
+    let (pixmap, width, height) =
+        renderer.render_text(text, "DM Sans", size, weight, color, max_width)?;
+    canvas.draw_pixmap(
+        x.round() as i32,
+        y.round() as i32,
+        pixmap.as_ref(),
+        &PixmapPaint::default(),
+        Transform::identity(),
+        None,
+    );
+    Ok((width, height))
+}
+
+fn draw_text_right(
+    canvas: &mut Pixmap,
+    renderer: &mut TextRenderer,
+    text: &str,
+    right: f32,
+    y: f32,
+    max_width: f32,
+    size: f32,
+    weight: FontWeight,
+    color: Color,
+) -> Result<(f32, f32), ImageGenError> {
+    let width = renderer.measure_text(text, "DM Sans", size, weight);
+    draw_text(
+        canvas,
+        renderer,
+        text,
+        right - width,
+        y,
+        max_width,
+        size,
+        weight,
+        color,
+    )
+}
+
+#[allow(non_snake_case)]
 pub async fn render_rank_card(
     req: &RankCardRequest,
     text_renderer: &SharedTextRenderer,
 ) -> Result<Vec<u8>, ImageGenError> {
-    let avatar = fetch_avatar(&req.avatar_url).await?;
-    let cw = content_width();
-    let card_h = compute_card_height();
-    let is_voice = req.is_voice_card.unwrap_or(false);
+    let SURFACE = surface();
+    let WHITE = white();
+    let INK = ink();
+    let MUTED = muted();
+    let PURPLE = purple();
+    let LAVENDER = lavender();
+    let LAVENDER_STRONG = lavender_strong();
+    let STATS = stats();
+    let STATS_LINE = stats_line();
+    let WHITE_MUTED = white_muted();
 
-    let mut canvas = Pixmap::new(CARD_WIDTH, card_h)
+    let avatar = fetch_avatar(&req.avatar_url).await?;
+    let mut canvas = Pixmap::new(CARD_WIDTH, CARD_HEIGHT)
         .ok_or_else(|| ImageGenError::Rendering("Failed to create canvas".into()))?;
 
-    canvas.fill(bg_color());
-    draw_rect_outline(&mut canvas, 0.0, 0.0, CARD_WIDTH as f32, card_h as f32, border_color(), 1.0);
+    draw_rounded_rect_filled(
+        &mut canvas,
+        0.0,
+        0.0,
+        CARD_WIDTH as f32,
+        CARD_HEIGHT as f32,
+        32.0,
+        SURFACE,
+    );
 
-    let mut y = PAD_Y;
+    draw_circular_avatar(&mut canvas, &avatar, 52.0, 52.0, 48.0, 0.0, LAVENDER);
 
-    // ── HEADER ──────────────────────────────────────────────────────────
-    // Avatar
-    draw_rect_filled(&mut canvas, PAD_X, y, AVATAR_SIZE, AVATAR_SIZE, box_bg());
-    draw_rect_outline(&mut canvas, PAD_X, y, AVATAR_SIZE, AVATAR_SIZE, border_color(), 1.0);
-    draw_square_avatar(&mut canvas, &avatar, PAD_X, y, AVATAR_SIZE);
+    // Main cards use the same 600 px proportions as the approved reference screenshot.
+    draw_rounded_rect_filled(&mut canvas, 20.0, 98.0, 386.0, 198.0, 24.0, WHITE);
+    draw_rounded_rect_filled(&mut canvas, 420.0, 98.0, 160.0, 198.0, 24.0, PURPLE);
+    draw_rounded_rect_filled(&mut canvas, 20.0, 310.0, 560.0, 93.0, 20.0, STATS);
 
-    let text_left = PAD_X + AVATAR_SIZE + 16.0;
-    let text_area_w = cw - AVATAR_SIZE - 16.0 - 160.0; // leave room for rank badge
-
-    {
-        let mut renderer = text_renderer.lock().unwrap();
-
-        // Username — vertically centered in top half of avatar area
-        let username = sanitize_text(&req.username);
-        let (username_pm, _, uh) = renderer.render_text(
-            &username, "JetBrains Mono", 22.0, FontWeight::SemiBold,
-            text_primary(), text_area_w,
-        )?;
-        let username_y = y + (AVATAR_SIZE / 2.0 - uh) / 2.0;
-        canvas.draw_pixmap(
-            text_left as i32, username_y as i32,
-            username_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-
-        // Member since — vertically centered in bottom half of avatar area
-        let member_since = req.member_since.as_deref().unwrap_or("Unknown");
-        let tag = format!("MEMBER SINCE {}", member_since.to_uppercase());
-        let (tag_pm, _, th) = renderer.render_text(
-            &tag, "JetBrains Mono", 11.0, FontWeight::Regular,
-            text_secondary(), text_area_w,
-        )?;
-        let tag_y = y + AVATAR_SIZE / 2.0 + (AVATAR_SIZE / 2.0 - th) / 2.0;
-        canvas.draw_pixmap(
-            text_left as i32, tag_y as i32,
-            tag_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-
-        // Rank badge — right-aligned, vertically centered in avatar area
-        let rank_text = format!("#{}", req.rank);
-        let (rl_pm, rlw, rlh) = renderer.render_text(
-            "RANK", "JetBrains Mono", 12.0, FontWeight::Regular,
-            text_secondary(), 100.0,
-        )?;
-        let (rv_pm, rvw, rvh) = renderer.render_text(
-            &rank_text, "JetBrains Mono", 22.0, FontWeight::Bold,
-            text_primary(), 100.0,
-        )?;
-        let badge_w = rlw + 8.0 + rvw;
-        let badge_x = right_align(PAD_X, cw, badge_w);
-        let badge_center_y = y + (AVATAR_SIZE - rvh.max(rlh)) / 2.0;
-        // "RANK" label baseline-aligned with value
-        canvas.draw_pixmap(
-            badge_x as i32, (badge_center_y + (rvh - rlh) / 2.0) as i32,
-            rl_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-        canvas.draw_pixmap(
-            (badge_x + rlw + 8.0) as i32, badge_center_y as i32,
-            rv_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-    }
-
-    y += AVATAR_SIZE + HEADER_BOTTOM_GAP;
-
-    // Divider
-    draw_hline(&mut canvas, PAD_X, CARD_WIDTH as f32 - PAD_X, y, border_color());
-    y += 1.0 + DIVIDER_GAP;
-
-    // ── YOUR STATS ──────────────────────────────────────────────────────
-    {
-        let mut renderer = text_renderer.lock().unwrap();
-        let (lbl_pm, _, _) = renderer.render_text(
-            "YOUR STATS", "JetBrains Mono", 11.0, FontWeight::Regular,
-            text_secondary(), cw,
-        )?;
-        canvas.draw_pixmap(
-            PAD_X as i32, y as i32,
-            lbl_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-    }
-    y += SECTION_LABEL_H + LABEL_GAP;
-
-    // Stat boxes — 3 equal width
-    let box_w = (cw - STAT_BOX_GAP * 2.0) / 3.0;
-    let total_xp = req.current_xp + req.level as u64 * req.required_xp;
-    let stats = [
-        ("LEVEL", format!("{}", req.level)),
-        ("TOTAL XP", format_number(total_xp)),
-        ("SERVER RANK", format!("#{}", req.rank)),
-    ];
-
-    for (i, (label, value)) in stats.iter().enumerate() {
-        let bx = PAD_X + (box_w + STAT_BOX_GAP) * i as f32;
-        draw_rect_filled(&mut canvas, bx, y, box_w, STAT_BOX_H, box_bg());
-        draw_rect_outline(&mut canvas, bx, y, box_w, STAT_BOX_H, border_color(), 1.0);
-
-        let mut renderer = text_renderer.lock().unwrap();
-
-        // Label — left-aligned with inner padding
-        let (lbl_pm, _, _) = renderer.render_text(
-            label, "JetBrains Mono", 11.0, FontWeight::Regular,
-            text_secondary(), box_w - STAT_BOX_PAD * 2.0,
-        )?;
-        canvas.draw_pixmap(
-            (bx + STAT_BOX_PAD) as i32, (y + STAT_BOX_PAD) as i32,
-            lbl_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-
-        // Value — left-aligned below label
-        let value_y = y + STAT_BOX_PAD + 14.0 + 6.0; // label_h + gap
-        let (val_pm, _, _) = renderer.render_text(
-            value, "JetBrains Mono", 28.0, FontWeight::SemiBold,
-            text_primary(), box_w - STAT_BOX_PAD * 2.0,
-        )?;
-        canvas.draw_pixmap(
-            (bx + STAT_BOX_PAD) as i32, value_y as i32,
-            val_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-    }
-    y += STAT_BOX_H + SECTION_GAP;
-
-    // ── PROGRESS BAR ────────────────────────────────────────────────────
-    let progress_pct = if req.required_xp > 0 {
-        (req.current_xp as f64 / req.required_xp as f64 * 100.0).min(100.0)
-    } else {
+    let progress = if req.required_xp == 0 {
         0.0
+    } else {
+        (req.current_xp as f32 / req.required_xp as f32).clamp(0.0, 1.0)
+    };
+    draw_rounded_rect_filled(&mut canvas, 44.0, 227.0, 338.0, 11.0, 6.0, LAVENDER_STRONG);
+    if progress > 0.0 {
+        draw_rounded_rect_filled(
+            &mut canvas,
+            44.0,
+            227.0,
+            338.0 * progress,
+            11.0,
+            6.0,
+            PURPLE,
+        );
+    }
+
+    // The stats remain a single card; these separators are deliberately low contrast.
+    for x in [170.0, 300.0, 430.0] {
+        draw_rect_filled(&mut canvas, x, 322.0, 1.0, 69.0, STATS_LINE);
+    }
+
+    let total_xp = req.current_xp + req.level as u64 * req.required_xp;
+    let current_level = format!("{:02}", req.level);
+    let next_level = format!("{:02}", req.level.saturating_add(1));
+    let recent_xp = format!("+{}", comma_number(req.last_7_days_xp.unwrap_or(0)));
+    let progress_percent = (progress * 100.0).round() as u32;
+    let member_since = sanitize_text(req.member_since.as_deref().unwrap_or("Unknown"));
+    let username = truncate_username(&sanitize_text(&req.username), 26, 23);
+    let channel = truncate_username(
+        &sanitize_text(req.most_active_channel.as_deref().unwrap_or("N/A")),
+        18,
+        15,
+    );
+    let is_voice = req.is_voice_card.unwrap_or(false);
+    let messages_label = if is_voice { "Total time" } else { "Messages" };
+    let voice_label = if is_voice { "Streaming" } else { "Voice" };
+    let streak = match req.streak.unwrap_or(0) {
+        1 => "1 day".to_string(),
+        days => format!("{days} days"),
     };
 
     {
         let mut renderer = text_renderer.lock().unwrap();
 
-        // "PROGRESS TO LEVEL X" — left-aligned
-        let progress_label = format!("PROGRESS TO LEVEL {}", req.level + 1);
-        let (pl_pm, _, _) = renderer.render_text(
-            &progress_label, "JetBrains Mono", 11.0, FontWeight::Regular,
-            text_secondary(), cw,
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            &username,
+            90.0,
+            32.0,
+            280.0,
+            21.0,
+            FontWeight::Medium,
+            INK,
         )?;
-        canvas.draw_pixmap(
-            PAD_X as i32, y as i32,
-            pl_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-
-        // "X / Y XP" — right-aligned on same line
-        let xp_text = format!("{} / {} XP", format_number(req.current_xp), format_number(req.required_xp));
-        let (xp_pm, xw, _) = renderer.render_text(
-            &xp_text, "JetBrains Mono", 12.0, FontWeight::Regular,
-            text_secondary(), cw,
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            &format!("Member since {member_since}"),
+            90.0,
+            61.0,
+            310.0,
+            15.0,
+            FontWeight::Regular,
+            MUTED,
         )?;
-        canvas.draw_pixmap(
-            right_align(PAD_X, cw, xw) as i32, y as i32,
-            xp_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-    }
-    y += PROGRESS_LABEL_H + PROGRESS_GAP;
 
-    // Bar track
-    draw_rect_filled(&mut canvas, PAD_X, y, cw, PROGRESS_BAR_H, box_bg());
-    draw_rect_outline(&mut canvas, PAD_X, y, cw, PROGRESS_BAR_H, border_color(), 1.0);
-
-    // Bar fill
-    let min_fill = cw * 0.02; // 2% minimum visible width
-    let fill_w = (cw * progress_pct as f32 / 100.0).max(min_fill).min(cw);
-    draw_rect_filled(&mut canvas, PAD_X, y, fill_w, PROGRESS_BAR_H, accent_green());
-
-    // Percentage text — right-aligned inside bar, vertically centered
-    {
-        let mut renderer = text_renderer.lock().unwrap();
-        let pct_text = format!("{:.1}%", progress_pct);
-        let (pct_pm, pw, ph) = renderer.render_text(
-            &pct_text, "JetBrains Mono", 11.0, FontWeight::Medium,
-            text_primary(), 100.0,
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            &format!("#{}", req.rank),
+            572.0,
+            28.0,
+            120.0,
+            22.0,
+            FontWeight::Medium,
+            PURPLE,
         )?;
-        let pct_x = right_align(PAD_X, cw, pw + 12.0);
-        let pct_y = y + (PROGRESS_BAR_H - ph) / 2.0;
-        canvas.draw_pixmap(
-            pct_x as i32, pct_y as i32,
-            pct_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-    }
-    y += PROGRESS_BAR_H + SECTION_GAP;
-
-    // ── BREAKDOWN PANELS ────────────────────────────────────────────────
-    let half_w = (cw - BREAKDOWN_GAP) / 2.0;
-    let inner_pad = 20.0;
-    let inner_w = half_w - inner_pad * 2.0;
-
-    // --- Left panel: XP Breakdown ---
-    let left_x = PAD_X;
-    draw_rect_filled(&mut canvas, left_x, y, half_w, BREAKDOWN_H, box_bg());
-    draw_rect_outline(&mut canvas, left_x, y, half_w, BREAKDOWN_H, border_color(), 1.0);
-
-    let messages_xp = req.messages_xp.unwrap_or(0);
-    let voice_xp = req.voice_xp.unwrap_or(0);
-    let reactions_xp = req.reactions_xp.unwrap_or(0);
-    let commands_xp = req.commands_xp.unwrap_or(0);
-    let total_breakdown = messages_xp + voice_xp + reactions_xp + commands_xp;
-
-    let label1 = if is_voice { "Total Time" } else { "Messages" };
-    let label2 = if is_voice { "Streaming" } else { "Voice" };
-    let label3 = if is_voice { "Video" } else { "Reactions" };
-    let label4 = if is_voice { "Regular" } else { "Commands" };
-
-    {
-        let mut renderer = text_renderer.lock().unwrap();
-
-        // Panel title
-        let (title_pm, _, _) = renderer.render_text(
-            "XP BREAKDOWN", "JetBrains Mono", 10.0, FontWeight::Regular,
-            text_secondary(), inner_w,
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            "Server rank",
+            572.0,
+            59.0,
+            120.0,
+            15.0,
+            FontWeight::Regular,
+            PURPLE,
         )?;
-        canvas.draw_pixmap(
-            (left_x + inner_pad) as i32, (y + inner_pad) as i32,
-            title_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
 
-        let bar_data: [(&str, u64, Color); 4] = [
-            (label1, messages_xp, bar_messages()),
-            (label2, voice_xp, bar_voice()),
-            (label3, reactions_xp, bar_reactions()),
-            (label4, commands_xp, bar_commands()),
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            &comma_number(total_xp),
+            44.0,
+            120.0,
+            210.0,
+            30.0,
+            FontWeight::Regular,
+            INK,
+        )?;
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            "Total XP",
+            44.0,
+            158.0,
+            150.0,
+            16.0,
+            FontWeight::Medium,
+            INK,
+        )?;
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            &recent_xp,
+            382.0,
+            128.0,
+            150.0,
+            20.0,
+            FontWeight::Medium,
+            PURPLE,
+        )?;
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            "Last 7 days",
+            382.0,
+            158.0,
+            150.0,
+            15.0,
+            FontWeight::Regular,
+            PURPLE,
+        )?;
+
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            &format!("Progress to level {}", req.level.saturating_add(1)),
+            44.0,
+            198.0,
+            250.0,
+            15.0,
+            FontWeight::Medium,
+            INK,
+        )?;
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            &format!("{progress_percent}%"),
+            382.0,
+            198.0,
+            60.0,
+            14.0,
+            FontWeight::Medium,
+            INK,
+        )?;
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            &format!(
+                "{} / {} XP",
+                format_number(req.current_xp),
+                format_number(req.required_xp)
+            ),
+            44.0,
+            249.0,
+            300.0,
+            15.0,
+            FontWeight::Regular,
+            MUTED,
+        )?;
+
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            &current_level,
+            444.0,
+            119.0,
+            82.0,
+            56.0,
+            FontWeight::Regular,
+            WHITE,
+        )?;
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            &next_level,
+            556.0,
+            126.0,
+            42.0,
+            26.0,
+            FontWeight::Regular,
+            WHITE,
+        )?;
+        draw_text(
+            &mut canvas,
+            &mut renderer,
+            "Current",
+            444.0,
+            255.0,
+            70.0,
+            15.0,
+            FontWeight::Regular,
+            WHITE,
+        )?;
+        draw_text_right(
+            &mut canvas,
+            &mut renderer,
+            "Next",
+            556.0,
+            255.0,
+            55.0,
+            15.0,
+            FontWeight::Regular,
+            WHITE_MUTED,
+        )?;
+
+        let detail_values = [
+            comma_number(req.messages_xp.unwrap_or(0)),
+            comma_number(req.voice_xp.unwrap_or(0)),
+            channel,
+            streak,
         ];
+        let detail_labels = [messages_label, voice_label, "Most active in", "Streak"];
+        let detail_lefts = [40.0, 190.0, 320.0, 450.0];
+        let detail_widths = [110.0, 90.0, 90.0, 105.0];
 
-        let bar_start_y = y + inner_pad + 28.0;
-        let bar_spacing = 36.0;
-        let label_col_w = 90.0;
-        let value_col_w = 50.0;
-        let gap_w = 12.0;
-        let bar_track_w = inner_w - label_col_w - value_col_w - gap_w * 2.0;
-
-        for (i, (label, xp, bar_color)) in bar_data.iter().enumerate() {
-            let by = bar_start_y + i as f32 * bar_spacing;
-
-            // Label — right-aligned in label column
-            let (lbl_pm, lw, lh) = renderer.render_text(
-                label, "JetBrains Mono", 11.0, FontWeight::Regular,
-                text_muted(), label_col_w,
+        for index in 0..4 {
+            draw_text(
+                &mut canvas,
+                &mut renderer,
+                &detail_values[index],
+                detail_lefts[index],
+                330.0,
+                detail_widths[index],
+                20.0,
+                FontWeight::Medium,
+                INK,
             )?;
-            let lbl_x = left_x + inner_pad + label_col_w - lw;
-            canvas.draw_pixmap(
-                lbl_x as i32, by as i32,
-                lbl_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-            );
-
-            // Bar track
-            let track_x = left_x + inner_pad + label_col_w + gap_w;
-            let bar_h = 12.0;
-            let bar_y = by + (lh - bar_h) / 2.0;
-            draw_rect_filled(&mut canvas, track_x, bar_y, bar_track_w, bar_h, border_color());
-
-            // Bar fill
-            let pct = if total_breakdown > 0 { *xp as f32 / total_breakdown as f32 } else { 0.0 };
-            let fill = bar_track_w * pct;
-            if fill > 0.0 {
-                draw_rect_filled(&mut canvas, track_x, bar_y, fill, bar_h, *bar_color);
-            }
-
-            // Value — right-aligned in value column
-            let (val_pm, vw, _) = renderer.render_text(
-                &format_number(*xp), "JetBrains Mono", 11.0, FontWeight::Regular,
-                text_muted(), value_col_w,
+            draw_text(
+                &mut canvas,
+                &mut renderer,
+                detail_labels[index],
+                detail_lefts[index],
+                361.0,
+                detail_widths[index],
+                if index == 2 { 13.0 } else { 14.0 },
+                FontWeight::Regular,
+                MUTED,
             )?;
-            let val_x = track_x + bar_track_w + gap_w + value_col_w - vw;
-            canvas.draw_pixmap(
-                val_x as i32, by as i32,
-                val_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-            );
         }
     }
 
-    // --- Right panel: Activity ---
-    let right_x = PAD_X + half_w + BREAKDOWN_GAP;
-    draw_rect_filled(&mut canvas, right_x, y, half_w, BREAKDOWN_H, box_bg());
-    draw_rect_outline(&mut canvas, right_x, y, half_w, BREAKDOWN_H, border_color(), 1.0);
-
-    {
-        let mut renderer = text_renderer.lock().unwrap();
-
-        let (title_pm, _, _) = renderer.render_text(
-            "ACTIVITY", "JetBrains Mono", 10.0, FontWeight::Regular,
-            text_secondary(), inner_w,
-        )?;
-        canvas.draw_pixmap(
-            (right_x + inner_pad) as i32, (y + inner_pad) as i32,
-            title_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-        );
-
-        let last7_label = if is_voice { "LAST 7 DAYS (MIN)" } else { "LAST 7 DAYS" };
-        let last30_label = if is_voice { "LAST 30 DAYS (MIN)" } else { "LAST 30 DAYS" };
-
-        let channel_name = sanitize_text(req.most_active_channel.as_deref().unwrap_or("N/A"));
-        let activity_rows = [
-            ("MOST ACTIVE IN", channel_name),
-            (last7_label, format!("+{}", format_number(req.last_7_days_xp.unwrap_or(0)))),
-            (last30_label, format!("+{}", format_number(req.last_30_days_xp.unwrap_or(0)))),
-            ("STREAK", format!("{} days", req.streak.unwrap_or(0))),
-        ];
-
-        let row_start_y = y + inner_pad + 28.0;
-        let row_spacing = 36.0;
-
-        for (i, (label, value)) in activity_rows.iter().enumerate() {
-            let ry = row_start_y + i as f32 * row_spacing;
-
-            // Label — left-aligned
-            let (lbl_pm, _, _) = renderer.render_text(
-                label, "JetBrains Mono", 11.0, FontWeight::Regular,
-                text_secondary(), inner_w,
-            )?;
-            canvas.draw_pixmap(
-                (right_x + inner_pad) as i32, ry as i32,
-                lbl_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-            );
-
-            // Value — right-aligned
-            let (val_pm, vw, _) = renderer.render_text(
-                value, "JetBrains Mono", 12.0, FontWeight::Regular,
-                text_primary(), inner_w,
-            )?;
-            canvas.draw_pixmap(
-                right_align(right_x + inner_pad, inner_w, vw) as i32, ry as i32,
-                val_pm.as_ref(), &PixmapPaint::default(), Transform::identity(), None,
-            );
-
-            // Divider between rows (not after last)
-            if i < activity_rows.len() - 1 {
-                draw_hline(
-                    &mut canvas,
-                    right_x + inner_pad,
-                    right_x + half_w - inner_pad,
-                    ry + 24.0,
-                    border_color(),
-                );
-            }
-        }
-    }
-
-    // Encode
-    let png_data = canvas.encode_png()
-        .map_err(|e| ImageGenError::Rendering(format!("PNG encode error: {e}")))?;
-
-    Ok(png_data)
+    canvas
+        .encode_png()
+        .map_err(|error| ImageGenError::Rendering(format!("PNG encode error: {error}")))
 }

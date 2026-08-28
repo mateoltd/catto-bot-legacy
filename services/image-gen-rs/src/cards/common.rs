@@ -9,6 +9,46 @@ pub fn draw_rect_filled(canvas: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, col
     }
 }
 
+/// Fill a rounded rectangle with a solid color.
+pub fn draw_rounded_rect_filled(
+    canvas: &mut Pixmap,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    radius: f32,
+    color: Color,
+) {
+    if w <= 0.0 || h <= 0.0 {
+        return;
+    }
+
+    let radius = radius.max(0.0).min(w / 2.0).min(h / 2.0);
+    if radius == 0.0 {
+        draw_rect_filled(canvas, x, y, w, h, color);
+        return;
+    }
+
+    let mut pb = PathBuilder::new();
+    pb.move_to(x + radius, y);
+    pb.line_to(x + w - radius, y);
+    pb.quad_to(x + w, y, x + w, y + radius);
+    pb.line_to(x + w, y + h - radius);
+    pb.quad_to(x + w, y + h, x + w - radius, y + h);
+    pb.line_to(x + radius, y + h);
+    pb.quad_to(x, y + h, x, y + h - radius);
+    pb.line_to(x, y + radius);
+    pb.quad_to(x, y, x + radius, y);
+    pb.close();
+
+    if let Some(path) = pb.finish() {
+        let mut paint = Paint::default();
+        paint.set_color(color);
+        paint.anti_alias = true;
+        canvas.fill_path(&path, &paint, FillRule::Winding, Transform::identity(), None);
+    }
+}
+
 /// Stroke a rectangle outline.
 pub fn draw_rect_outline(canvas: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, color: Color, width: f32) {
     let mut pb = PathBuilder::new();
