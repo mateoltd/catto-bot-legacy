@@ -100,6 +100,7 @@ model Guild {
   modCases          ModCase[]
   modConfig         ModConfig?
   logConfig         LogConfig?
+  vanityConfig      VanityConfig?
   xpConfig          GuildXPConfig?
   userXP            UserXP[]
   xpEventLogs       XPEventLog[]
@@ -113,6 +114,28 @@ model Guild {
 
   @@index([guildId])
   @@map("guilds")
+}
+
+// Presence-driven vanity role configuration per guild. Discord role assignments are the
+// observed state; this table stores only the desired guild-level policy.
+model VanityConfig {
+  id      String @id @default(cuid())
+  guildId String @unique
+
+  enabled Boolean @default(false)
+  keyword String  @default("")
+  roleId  String?
+
+  thankYouEnabled   Boolean @default(false)
+  thankYouChannelId String?
+  thankYouMessage   String  @default("Thanks {user} for supporting the server! You received {role}.")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  guild Guild @relation(fields: [guildId], references: [guildId], onDelete: Cascade)
+
+  @@map("vanity_configs")
 }
 
 model User {

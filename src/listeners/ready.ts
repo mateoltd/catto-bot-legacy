@@ -85,6 +85,20 @@ export class ReadyListener extends Listener {
       this.container.logger.error('Failed to sync guilds:', error);
     }
 
+    // Initialize presence-driven vanity roles. Normal reconciliation only inspects members with
+    // authoritative, non-offline presences and never requests the complete member list.
+    this.container.logger.info('Initializing vanity role system...');
+    try {
+      const { preloadVanityConfigs, reconcileAllGuildVanities, vanityCleanupService } =
+        await import('../modules/vanity/index.js');
+      const configCount = await preloadVanityConfigs();
+      await vanityCleanupService.initialize();
+      await reconcileAllGuildVanities(client.guilds.cache.values());
+      this.container.logger.info(`Vanity role system initialized with ${configCount} config(s)`);
+    } catch (error) {
+      this.container.logger.error('Failed to initialize vanity role system:', error);
+    }
+
     // Log ready event
     await this.container.prisma.log
       .create({
@@ -146,6 +160,14 @@ export class ReadyListener extends Listener {
         this.container.logger.info('Temp voice transport shut down');
       } catch (error) {
         this.container.logger.error('Error shutting down temp voice transport:', error);
+      }
+
+      try {
+        const { vanityCleanupService } = await import('../modules/vanity/index.js');
+        await vanityCleanupService.shutdown();
+        this.container.logger.info('Vanity cleanup worker shut down');
+      } catch (error) {
+        this.container.logger.error('Error shutting down vanity cleanup worker:', error);
       }
 
       // Shutdown logging service

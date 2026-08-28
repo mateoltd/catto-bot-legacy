@@ -6,6 +6,7 @@ import {
   IconGift,
   IconHome,
   IconListDetails,
+  IconLink,
   IconMicrophone,
   IconUsers,
   IconWaveSine,
@@ -34,6 +35,7 @@ export type GuildNavigationLabelKey =
   | 'voiceXp'
   | 'rewards'
   | 'tempVoice'
+  | 'vanity'
   | 'logging'
   | 'cases'
   | 'evidence'
@@ -49,6 +51,7 @@ const defaultLabels: Record<GuildNavigationLabelKey, string> = {
   voiceXp: 'Voice XP',
   rewards: 'Rewards',
   tempVoice: 'Temp voice',
+  vanity: 'Vanity role',
   logging: 'Logging',
   cases: 'Cases',
   evidence: 'Evidence',
@@ -117,6 +120,12 @@ export function getGuildNavigation(
           label: translate('tempVoice'),
           href: `/guilds/${guildId}/temp-voice`,
           icon: IconMicrophone,
+        },
+        {
+          id: 'vanity',
+          label: translate('vanity'),
+          href: `/guilds/${guildId}/vanity`,
+          icon: IconLink,
         },
         {
           id: 'logs',

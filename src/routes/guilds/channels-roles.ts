@@ -1,5 +1,5 @@
 import { Route } from '@sapphire/plugin-api';
-import { ChannelType } from 'discord.js';
+import { ChannelType, PermissionFlagsBits } from 'discord.js';
 
 export class GuildChannelsRolesRoute extends Route {
   public constructor(context: Route.LoaderContext, options: Route.Options) {
@@ -37,6 +37,11 @@ export class GuildChannelsRolesRoute extends Route {
           name: channel.name,
           type: 'text' as const,
           parentId: channel.parentId,
+          canSend: guild.members.me
+            ? (channel
+                .permissionsFor(guild.members.me)
+                ?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]) ?? false)
+            : false,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -72,6 +77,8 @@ export class GuildChannelsRolesRoute extends Route {
           name: role.name,
           color: role.color,
           position: role.position,
+          editable: role.editable,
+          managed: role.managed,
         }))
         .sort((a, b) => b.position - a.position);
 

@@ -4,3 +4,4 @@ export * from './voice-xp.service';
 export * from './logging.service';
 export * from './rewards.service';
 export * from './temp-voice.service';
+export * from './vanity.service';
