@@ -15,7 +15,6 @@ describe('getGuildNavigation', () => {
       'voice-xp',
       'rewards',
       'temp-voice',
-      'vanity',
       'logs',
     ]);
   });

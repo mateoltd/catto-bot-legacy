@@ -28,8 +28,6 @@ export interface Channel {
   id: string;
   name: string;
   type: string;
-  parentId?: string | null;
-  canSend?: boolean;
 }
 
 export interface Role {
@@ -37,8 +35,6 @@ export interface Role {
   name: string;
   color: number;
   position: number;
-  editable?: boolean;
-  managed?: boolean;
 }
 
 export interface GuildData {
