@@ -1,4 +1,4 @@
-use super::common::{draw_dot, draw_rounded_rect_filled, sanitize_text, truncate_username};
+use super::common::{draw_dot, draw_rounded_rect_filled, fit_single_line, sanitize_text};
 use crate::avatar::{draw_circular_avatar, fetch_avatar};
 use crate::error::ImageGenError;
 use crate::text::{FontWeight, SharedTextRenderer, TextRenderer};
@@ -40,17 +40,12 @@ fn white_muted() -> Color {
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardRequest {
     pub guild_name: String,
-    #[serde(default)]
-    pub guild_icon: Option<String>,
     pub entries: Vec<LeaderboardEntry>,
-    #[serde(default)]
-    pub accent_color: Option<String>,
-    #[serde(default)]
-    pub total_members: Option<u32>,
-    #[serde(default, alias = "totalXp")]
-    pub total_xp: Option<u64>,
-    #[serde(default, alias = "weeklyXp")]
-    pub weekly_xp: Option<u64>,
+    pub total_members: u32,
+    #[serde(alias = "totalXp")]
+    pub total_xp: u64,
+    #[serde(alias = "weeklyXp")]
+    pub weekly_xp: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,7 +53,7 @@ pub struct LeaderboardRequest {
 pub struct LeaderboardEntry {
     pub rank: u32,
     pub username: String,
-    pub avatar_url: String,
+    pub avatar_url: Option<String>,
     pub level: u32,
     pub xp: u64,
 }
@@ -143,22 +138,6 @@ fn draw_text_right(
     )
 }
 
-fn fitted_font_size(
-    renderer: &mut TextRenderer,
-    text: &str,
-    max_width: f32,
-    preferred: f32,
-    minimum: f32,
-) -> f32 {
-    let mut size = preferred;
-    while size > minimum
-        && renderer.measure_text(text, "DM Sans", size, FontWeight::Regular) > max_width
-    {
-        size -= 0.5;
-    }
-    size.max(minimum)
-}
-
 #[allow(non_snake_case)]
 pub async fn render_leaderboard(
     req: &LeaderboardRequest,
@@ -172,10 +151,12 @@ pub async fn render_leaderboard(
     let LAVENDER = lavender();
     let WHITE_MUTED = white_muted();
 
-    let avatar_futures = req
-        .entries
-        .iter()
-        .map(|entry| fetch_avatar(&entry.avatar_url));
+    let avatar_futures = req.entries.iter().map(|entry| async {
+        match &entry.avatar_url {
+            Some(url) => fetch_avatar(url).await.ok(),
+            None => None,
+        }
+    });
     let avatars = futures::future::join_all(avatar_futures).await;
 
     let height = card_height(req.entries.len());
@@ -221,16 +202,27 @@ pub async fn render_leaderboard(
         WHITE,
     );
 
-    let total_members = req.total_members.unwrap_or(req.entries.len() as u32);
-    let total_xp = req
-        .total_xp
-        .unwrap_or_else(|| req.entries.iter().map(|entry| entry.xp).sum());
-    let weekly_xp = req.weekly_xp.unwrap_or(0);
+    let total_members = req.total_members;
+    let total_xp = req.total_xp;
+    let weekly_xp = req.weekly_xp;
     let highest_xp = req.entries.iter().map(|entry| entry.xp).max().unwrap_or(0);
 
     {
         let mut renderer = text_renderer.lock().unwrap();
-        let guild_name = truncate_username(&sanitize_text(&req.guild_name), 32, 29);
+        let guild_name = sanitize_text(&req.guild_name);
+        if guild_name.is_empty() {
+            return Err(ImageGenError::Rendering(
+                "Leaderboard guild name must not be empty".into(),
+            ));
+        }
+        let (guild_name, guild_name_size) = fit_single_line(
+            &mut renderer,
+            &guild_name,
+            350.0,
+            21.0,
+            14.0,
+            FontWeight::Medium,
+        );
 
         draw_text(
             &mut canvas,
@@ -239,7 +231,7 @@ pub async fn render_leaderboard(
             28.0,
             28.0,
             350.0,
-            21.0,
+            guild_name_size,
             FontWeight::Medium,
             INK,
         )?;
@@ -254,14 +246,23 @@ pub async fn render_leaderboard(
             FontWeight::Regular,
             MUTED,
         )?;
+        let members_text = comma_number(total_members as u64);
+        let (members_text, members_size) = fit_single_line(
+            &mut renderer,
+            &members_text,
+            130.0,
+            22.0,
+            14.0,
+            FontWeight::Medium,
+        );
         draw_text_right(
             &mut canvas,
             &mut renderer,
-            &comma_number(total_members as u64),
+            &members_text,
             572.0,
             28.0,
             130.0,
-            22.0,
+            members_size,
             FontWeight::Medium,
             PURPLE,
         )?;
@@ -278,14 +279,21 @@ pub async fn render_leaderboard(
         )?;
 
         let total_text = comma_number(total_xp);
-        let total_size = fitted_font_size(&mut renderer, &total_text, 230.0, 52.0, 32.0);
+        let (total_text, total_size) = fit_single_line(
+            &mut renderer,
+            &total_text,
+            190.0,
+            52.0,
+            24.0,
+            FontWeight::Regular,
+        );
         draw_text(
             &mut canvas,
             &mut renderer,
             &total_text,
             44.0,
             117.0,
-            235.0,
+            190.0,
             total_size,
             FontWeight::Regular,
             INK,
@@ -301,14 +309,23 @@ pub async fn render_leaderboard(
             FontWeight::Medium,
             INK,
         )?;
+        let highest_text = comma_number(highest_xp);
+        let (highest_text, highest_size) = fit_single_line(
+            &mut renderer,
+            &highest_text,
+            110.0,
+            18.0,
+            12.0,
+            FontWeight::Medium,
+        );
         draw_text_right(
             &mut canvas,
             &mut renderer,
-            &comma_number(highest_xp),
+            &highest_text,
             382.0,
             128.0,
             110.0,
-            18.0,
+            highest_size,
             FontWeight::Medium,
             PURPLE,
         )?;
@@ -325,7 +342,14 @@ pub async fn render_leaderboard(
         )?;
 
         let weekly_text = comma_number(weekly_xp);
-        let weekly_size = fitted_font_size(&mut renderer, &weekly_text, 112.0, 28.0, 20.0);
+        let (weekly_text, weekly_size) = fit_single_line(
+            &mut renderer,
+            &weekly_text,
+            112.0,
+            28.0,
+            15.0,
+            FontWeight::Regular,
+        );
         draw_text(
             &mut canvas,
             &mut renderer,
@@ -410,7 +434,7 @@ pub async fn render_leaderboard(
 
             let center_y = row_y + ROW_HEIGHT / 2.0;
             draw_dot(&mut canvas, 140.0, center_y, 20.0, avatar_color);
-            if let Ok(avatar) = &avatars[index] {
+            if let Some(avatar) = &avatars[index] {
                 draw_circular_avatar(
                     &mut canvas,
                     avatar,
@@ -437,19 +461,42 @@ pub async fn render_leaderboard(
                 )?;
             }
 
+            let rank_text = format!("{:02}", entry.rank);
+            let (rank_text, rank_size) = fit_single_line(
+                &mut renderer,
+                &rank_text,
+                56.0,
+                16.0,
+                12.0,
+                FontWeight::Medium,
+            );
             draw_text(
                 &mut canvas,
                 &mut renderer,
-                &format!("{:02}", entry.rank),
+                &rank_text,
                 52.0,
                 row_y + 24.0,
                 56.0,
-                16.0,
+                rank_size,
                 FontWeight::Medium,
                 text_color,
             )?;
 
-            let username = truncate_username(&sanitize_text(&entry.username), 24, 21);
+            let username = sanitize_text(&entry.username);
+            if username.is_empty() {
+                return Err(ImageGenError::Rendering(format!(
+                    "Leaderboard entry {} has an empty username",
+                    entry.rank
+                )));
+            }
+            let (username, username_size) = fit_single_line(
+                &mut renderer,
+                &username,
+                185.0,
+                17.0,
+                12.0,
+                FontWeight::Medium,
+            );
             draw_text(
                 &mut canvas,
                 &mut renderer,
@@ -457,7 +504,7 @@ pub async fn render_leaderboard(
                 173.0,
                 row_y + 12.0,
                 185.0,
-                17.0,
+                username_size,
                 FontWeight::Medium,
                 text_color,
             )?;
@@ -466,6 +513,14 @@ pub async fn render_leaderboard(
             } else {
                 format!("{} XP", comma_number(entry.xp))
             };
+            let (member_note, member_note_size) = fit_single_line(
+                &mut renderer,
+                &member_note,
+                185.0,
+                13.0,
+                11.0,
+                FontWeight::Regular,
+            );
             draw_text(
                 &mut canvas,
                 &mut renderer,
@@ -473,29 +528,47 @@ pub async fn render_leaderboard(
                 173.0,
                 row_y + 38.0,
                 185.0,
-                13.0,
+                member_note_size,
                 FontWeight::Regular,
                 secondary_color,
             )?;
+            let xp_text = comma_number(entry.xp);
+            let (xp_text, xp_size) = fit_single_line(
+                &mut renderer,
+                &xp_text,
+                96.0,
+                16.0,
+                11.0,
+                FontWeight::Medium,
+            );
             draw_text_right(
                 &mut canvas,
                 &mut renderer,
-                &comma_number(entry.xp),
+                &xp_text,
                 472.0,
                 row_y + 23.0,
                 96.0,
-                16.0,
+                xp_size,
                 FontWeight::Medium,
                 text_color,
             )?;
+            let level_text = entry.level.to_string();
+            let (level_text, level_size) = fit_single_line(
+                &mut renderer,
+                &level_text,
+                64.0,
+                16.0,
+                11.0,
+                FontWeight::Medium,
+            );
             draw_text_right(
                 &mut canvas,
                 &mut renderer,
-                &entry.level.to_string(),
+                &level_text,
                 548.0,
                 row_y + 23.0,
                 64.0,
-                16.0,
+                level_size,
                 FontWeight::Medium,
                 text_color,
             )?;

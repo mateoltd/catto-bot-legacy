@@ -24,39 +24,33 @@ export interface BonkImageData {
 
 export interface RankCardData {
   username: string;
-  discriminator?: string;
   avatarUrl: string;
+  cardType: 'text' | 'voice';
+  totalXP: number;
   level: number;
   currentXP: number;
   requiredXP: number;
+  maxLevel: boolean;
   rank: number;
-  totalMembers: number;
-  accentColor?: string;
-  backgroundColor?: string;
-  messagesXP?: number;
-  voiceXP?: number;
-  reactionsXP?: number;
-  commandsXP?: number;
+  primaryValue: number;
+  secondaryValue: number;
   mostActiveChannel?: string;
-  last7DaysXP?: number;
-  last30DaysXP?: number;
-  streak?: number;
-  memberSince?: string;
-  isVoiceCard?: boolean;
+  activityState: 'available' | 'none' | 'unavailable';
+  last7DaysValue: number;
+  streak: number;
+  memberSince: string;
 }
 
 export interface LeaderboardCardData {
   guildName: string;
-  guildIcon?: string;
   entries: {
     rank: number;
     username: string;
-    avatarUrl: string;
+    avatarUrl?: string;
     level: number;
     xp: number;
   }[];
-  accentColor?: string;
-  totalMembers?: number;
-  totalXp?: number;
-  weeklyXp?: number;
+  totalMembers: number;
+  totalXp: number;
+  weeklyXp: number;
 }

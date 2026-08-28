@@ -81,7 +81,8 @@ export async function awardXP(context: ValidationContext): Promise<XPAwardResult
     context.guildId,
     context.userId,
     xpGain,
-    newLevelCalc.level
+    newLevelCalc.level,
+    { channelId: context.channelId, channelName: context.channelName }
   );
 
   return {

@@ -108,7 +108,8 @@ export async function awardXPSafe(
   guildId: string,
   userId: string,
   xpGain: number,
-  newLevel: number
+  newLevel: number,
+  metadata?: { channelId?: string; channelName?: string }
 ): Promise<{ userXP: UserXP; leveledUp: boolean; previousLevel: number }> {
   return await container.prisma.$transaction(async (tx) => {
     // Lock the row to prevent concurrent modifications
@@ -155,6 +156,7 @@ export async function awardXPSafe(
         levelBefore: previousLevel,
         levelAfter: newLevel,
         reason: 'message',
+        metadata,
       },
     });
 
@@ -216,6 +218,14 @@ export async function getUserCount(guildId: string): Promise<number> {
   return await container.prisma.userXP.count({
     where: { guildId },
   });
+}
+
+export async function getGuildTotalXP(guildId: string): Promise<number> {
+  const result = await container.prisma.userXP.aggregate({
+    where: { guildId },
+    _sum: { xp: true },
+  });
+  return result._sum.xp ?? 0;
 }
 
 /**

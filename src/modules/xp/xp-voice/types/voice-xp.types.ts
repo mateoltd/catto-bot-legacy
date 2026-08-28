@@ -59,7 +59,7 @@ export interface VoiceLevelCalculation {
 export interface VoiceLeaderboardEntry {
   userId: string;
   username: string;
-  discriminator: string;
+  discriminator: string | null;
   avatarUrl: string | null;
   xp: number;
   level: number;

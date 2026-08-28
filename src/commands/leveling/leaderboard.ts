@@ -113,24 +113,21 @@ export class LeaderboardCommand extends Command {
       const entries = leaderboardData.users.map((user) => ({
         rank: user.rank,
         username: user.username,
-        avatarUrl: user.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png',
+        ...(user.avatarUrl ? { avatarUrl: user.avatarUrl } : {}),
         level: user.level,
         xp: user.xp,
       }));
 
-      // Calculate total XP from entries
-      const totalXp = entries.reduce((sum, entry) => sum + entry.xp, 0);
-
-      // Get weekly XP
-      const weeklyXp = await leaderboardService.getWeeklyXP(guildId);
+      const [totalXp, weeklyXp] = await Promise.all([
+        leaderboardService.getTotalXP(guildId),
+        leaderboardService.getWeeklyXP(guildId),
+      ]);
 
       // Generate leaderboard card
       const cardImage = await imageGenClient.generateLeaderboard({
         guildName: guild.name,
-        guildIcon: guild.iconURL({ extension: 'png', size: 128 }) || undefined,
         entries: entries,
-        accentColor: '#5865F2',
-        totalMembers: leaderboardData.total || entries.length,
+        totalMembers: leaderboardData.total,
         totalXp: totalXp,
         weeklyXp: weeklyXp,
       });
@@ -203,24 +200,21 @@ export class LeaderboardCommand extends Command {
       const entries = leaderboardData.users.map((user) => ({
         rank: user.rank,
         username: user.username,
-        avatarUrl: user.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png',
+        ...(user.avatarUrl ? { avatarUrl: user.avatarUrl } : {}),
         level: user.level,
         xp: user.xp,
       }));
 
-      // Calculate total XP from entries
-      const totalXp = entries.reduce((sum, entry) => sum + entry.xp, 0);
-
-      // Get weekly voice XP
-      const weeklyXp = await voiceLeaderboardService.getWeeklyVoiceXP(guildId);
+      const [totalXp, weeklyXp] = await Promise.all([
+        voiceLeaderboardService.getTotalVoiceXP(guildId),
+        voiceLeaderboardService.getWeeklyVoiceXP(guildId),
+      ]);
 
       // Generate leaderboard card
       const cardImage = await imageGenClient.generateLeaderboard({
         guildName: guild.name,
-        guildIcon: guild.iconURL({ extension: 'png', size: 128 }) || undefined,
         entries: entries,
-        accentColor: '#9B59B6', // Purple for voice
-        totalMembers: leaderboardData.total || entries.length,
+        totalMembers: leaderboardData.total,
         totalXp: totalXp,
         weeklyXp: weeklyXp,
       });

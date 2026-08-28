@@ -32,7 +32,13 @@ export async function awardVoiceXPSafe(
   xpGain: number,
   newLevel: number,
   minutesGained: number,
-  metadata?: { channelId?: string; wasStreaming?: boolean; wasVideo?: boolean; sessionId?: string }
+  metadata?: {
+    channelId?: string;
+    channelName?: string;
+    wasStreaming?: boolean;
+    wasVideo?: boolean;
+    sessionId?: string;
+  }
 ): Promise<{ userXP: UserVoiceXP; leveledUp: boolean; previousLevel: number }> {
   return await container.prisma.$transaction(async (tx) => {
     const existing = await getUserVoiceXPForUpdate(guildId, userId, tx);
@@ -134,6 +140,14 @@ export async function getVoiceUserCount(guildId: string): Promise<number> {
   return await container.prisma.userVoiceXP.count({
     where: { guildId },
   });
+}
+
+export async function getGuildTotalVoiceXP(guildId: string): Promise<number> {
+  const result = await container.prisma.userVoiceXP.aggregate({
+    where: { guildId },
+    _sum: { xp: true },
+  });
+  return result._sum.xp ?? 0;
 }
 
 export async function resetUserVoiceXP(

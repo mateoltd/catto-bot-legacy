@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.85-slim-bookworm AS builder
+FROM rust:1.97-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -32,6 +32,9 @@ WORKDIR /app
 # Install runtime dependencies (minimal)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    fonts-noto-core \
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder

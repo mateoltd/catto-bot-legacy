@@ -11,6 +11,7 @@ import type {
 } from '../types/xp-text.types.js';
 import * as xpRepo from '../repositories/xp-text.repository.js';
 import * as levelService from './xp-text-level.service.js';
+import * as configService from './xp-text-config.service.js';
 import { container } from '@sapphire/framework';
 
 /**
@@ -29,6 +30,12 @@ export async function getLeaderboard(
   // Get users from database
   const users = await xpRepo.getLeaderboard(guildId, limit, offset);
   const total = await xpRepo.getUserCount(guildId);
+  const config = await configService.getConfig(guildId);
+  const storedUsers = await container.prisma.user.findMany({
+    where: { userId: { in: users.map((user) => user.userId) } },
+    select: { userId: true, username: true },
+  });
+  const storedUsernames = new Map(storedUsers.map((user) => [user.userId, user.username]));
 
   // Fetch user data from Discord
   const entries: LeaderboardEntry[] = [];
@@ -38,19 +45,24 @@ export async function getLeaderboard(
     if (!userXP) continue;
 
     // Try to fetch user from Discord
-    let username = 'Unknown User';
-    let discriminator = '0000';
+    let username = storedUsernames.get(userXP.userId);
+    let discriminator: string | null = null;
     let avatarUrl: string | null = null;
 
     try {
-      const discordUser = await container.client.users.fetch(userXP.userId);
+      const discordUser =
+        container.client.users.cache.get(userXP.userId) ??
+        (await container.client.users.fetch(userXP.userId));
       username = discordUser.username;
       discriminator = discordUser.discriminator;
       avatarUrl = discordUser.displayAvatarURL({ extension: 'png', size: 256 });
     } catch {
-      // User not found or inaccessible, use defaults
       container.logger.debug(`Failed to fetch user ${userXP.userId} for leaderboard`);
     }
+
+    if (!username) continue;
+
+    const level = levelService.calculateLevelWithConfig(config, userXP.xp).level;
 
     entries.push({
       userId: userXP.userId,
@@ -58,7 +70,7 @@ export async function getLeaderboard(
       discriminator,
       avatarUrl,
       xp: userXP.xp,
-      level: userXP.level,
+      level,
       messageCount: userXP.messageCount,
       rank: offset + i + 1,
     });
@@ -97,7 +109,7 @@ export async function getUserStats(
     userId: userXP.userId,
     guildId: userXP.guildId,
     xp: userXP.xp,
-    level: userXP.level,
+    level: levelCalc.level,
     nextLevelXp: levelCalc.nextLevelXp,
     currentLevelXp: levelCalc.currentLevelXp,
     progress: levelCalc.progress,
@@ -139,6 +151,10 @@ export async function getUserRank(guildId: string, userId: string): Promise<numb
  */
 export async function getTotalUsers(guildId: string): Promise<number> {
   return await xpRepo.getUserCount(guildId);
+}
+
+export async function getTotalXP(guildId: string): Promise<number> {
+  return await xpRepo.getGuildTotalXP(guildId);
 }
 
 /**

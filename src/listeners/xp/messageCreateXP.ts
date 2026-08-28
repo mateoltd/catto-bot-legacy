@@ -56,6 +56,7 @@ export class MessageCreateXPListener extends Listener {
         guildId,
         userId,
         channelId: message.channel.id,
+        channelName: 'name' in message.channel ? (message.channel.name ?? undefined) : undefined,
         messageContent: message.content,
         userRoles: message.member.roles.cache.map((role) => role.id),
         isBot: message.author.bot,

@@ -95,7 +95,7 @@ export interface LevelCalculation {
 export interface LeaderboardEntry {
   userId: string;
   username: string;
-  discriminator: string;
+  discriminator: string | null;
   avatarUrl: string | null;
   xp: number;
   level: number;
@@ -167,6 +167,7 @@ export interface ValidationContext {
   guildId: string;
   userId: string;
   channelId: string;
+  channelName?: string;
   messageContent: string;
   userRoles: string[];
   isBot: boolean;

@@ -1,5 +1,5 @@
 use super::common::{
-    draw_rect_filled, draw_rounded_rect_filled, format_number, sanitize_text, truncate_username,
+    draw_rect_filled, draw_rounded_rect_filled, fit_single_line, format_number, sanitize_text,
 };
 use crate::avatar::{draw_circular_avatar, fetch_avatar};
 use crate::error::ImageGenError;
@@ -41,40 +41,43 @@ fn white_muted() -> Color {
     Color::from_rgba8(221, 208, 249, 255)
 }
 
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RankCardType {
+    Text,
+    Voice,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ActivityState {
+    Available,
+    None,
+    Unavailable,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RankCardRequest {
     pub username: String,
     pub avatar_url: String,
+    pub card_type: RankCardType,
+    #[serde(alias = "totalXP")]
+    pub total_xp: u64,
     pub level: u32,
     #[serde(alias = "currentXP")]
     pub current_xp: u64,
     #[serde(alias = "requiredXP")]
     pub required_xp: u64,
+    pub max_level: bool,
     pub rank: u32,
-    pub total_members: u32,
-    #[serde(default)]
-    pub accent_color: Option<String>,
-    #[serde(default, alias = "messagesXP")]
-    pub messages_xp: Option<u64>,
-    #[serde(default, alias = "voiceXP")]
-    pub voice_xp: Option<u64>,
-    #[serde(default, alias = "reactionsXP")]
-    pub reactions_xp: Option<u64>,
-    #[serde(default, alias = "commandsXP")]
-    pub commands_xp: Option<u64>,
-    #[serde(default)]
+    pub primary_value: u64,
+    pub secondary_value: u64,
     pub most_active_channel: Option<String>,
-    #[serde(default, alias = "last7DaysXP")]
-    pub last_7_days_xp: Option<u64>,
-    #[serde(default, alias = "last30DaysXP")]
-    pub last_30_days_xp: Option<u64>,
-    #[serde(default)]
-    pub streak: Option<u32>,
-    #[serde(default)]
-    pub member_since: Option<String>,
-    #[serde(default)]
-    pub is_voice_card: Option<bool>,
+    pub activity_state: ActivityState,
+    pub last_7_days_value: u64,
+    pub streak: u32,
+    pub member_since: String,
 }
 
 fn comma_number(n: u64) -> String {
@@ -87,6 +90,20 @@ fn comma_number(n: u64) -> String {
         formatted.push(character);
     }
     formatted
+}
+
+fn format_duration(minutes: u64) -> String {
+    if minutes < 60 {
+        return format!("{minutes} min");
+    }
+
+    let hours = minutes / 60;
+    let remaining_minutes = minutes % 60;
+    if remaining_minutes == 0 {
+        format!("{hours}h")
+    } else {
+        format!("{hours}h {remaining_minutes}m")
+    }
 }
 
 fn draw_text(
@@ -174,7 +191,9 @@ pub async fn render_rank_card(
     draw_rounded_rect_filled(&mut canvas, 540.0, 98.0, 160.0, 198.0, 24.0, PURPLE);
     draw_rounded_rect_filled(&mut canvas, 20.0, 310.0, 680.0, 93.0, 20.0, STATS);
 
-    let progress = if req.required_xp == 0 {
+    let progress = if req.max_level {
+        1.0
+    } else if req.required_xp == 0 {
         0.0
     } else {
         (req.current_xp as f32 / req.required_xp as f32).clamp(0.0, 1.0)
@@ -197,28 +216,117 @@ pub async fn render_rank_card(
         draw_rect_filled(&mut canvas, x, 322.0, 1.0, 69.0, STATS_LINE);
     }
 
-    let total_xp = req.current_xp + req.level as u64 * req.required_xp;
     let current_level = format!("{:02}", req.level);
-    let next_level = format!("{:02}", req.level.saturating_add(1));
-    let recent_xp = format!("+{}", comma_number(req.last_7_days_xp.unwrap_or(0)));
+    let next_level = if req.max_level {
+        "MAX".to_string()
+    } else {
+        format!("{:02}", req.level.saturating_add(1))
+    };
+    let is_voice = matches!(req.card_type, RankCardType::Voice);
+    let recent_value = if is_voice {
+        format_duration(req.last_7_days_value)
+    } else {
+        format!("{} XP", comma_number(req.last_7_days_value))
+    };
     let progress_percent = (progress * 100.0).round() as u32;
-    let member_since = sanitize_text(req.member_since.as_deref().unwrap_or("Unknown"));
-    let username = truncate_username(&sanitize_text(&req.username), 26, 23);
-    let channel = truncate_username(
-        &sanitize_text(req.most_active_channel.as_deref().unwrap_or("N/A")),
-        18,
-        15,
-    );
-    let is_voice = req.is_voice_card.unwrap_or(false);
-    let messages_label = if is_voice { "Total time" } else { "Messages" };
-    let voice_label = if is_voice { "Streaming" } else { "Voice" };
-    let streak = match req.streak.unwrap_or(0) {
+    let member_since = sanitize_text(&req.member_since);
+    let username = sanitize_text(&req.username);
+    if username.is_empty() || member_since.is_empty() {
+        return Err(ImageGenError::Rendering(
+            "Rank card username and member date must not be empty".into(),
+        ));
+    }
+
+    let (activity_value, activity_label) = match req.activity_state {
+        ActivityState::Available => {
+            let channel = sanitize_text(req.most_active_channel.as_deref().unwrap_or(""));
+            if channel.is_empty() {
+                ("Channel unavailable".to_string(), "Last 30 days")
+            } else {
+                (channel, "Most active in")
+            }
+        }
+        ActivityState::None => ("No recent activity".to_string(), "Last 30 days"),
+        ActivityState::Unavailable => ("Channel unavailable".to_string(), "Last 30 days"),
+    };
+    let primary_value = comma_number(req.primary_value);
+    let secondary_value = if is_voice {
+        format_duration(req.secondary_value)
+    } else {
+        comma_number(req.secondary_value)
+    };
+    let primary_label = if is_voice { "Voice XP" } else { "Message XP" };
+    let secondary_label = if is_voice {
+        "Time in voice"
+    } else {
+        "Voice XP"
+    };
+    let streak = match req.streak {
+        0 => "No streak".to_string(),
         1 => "1 day".to_string(),
         days => format!("{days} days"),
+    };
+    let progress_label = if req.max_level {
+        "Maximum level".to_string()
+    } else {
+        format!("Progress to level {}", req.level.saturating_add(1))
+    };
+    let progress_detail = if req.max_level {
+        "Maximum level reached".to_string()
+    } else {
+        format!(
+            "{} / {} XP",
+            format_number(req.current_xp),
+            format_number(req.required_xp)
+        )
     };
 
     {
         let mut renderer = text_renderer.lock().unwrap();
+
+        let (username, username_size) = fit_single_line(
+            &mut renderer,
+            &username,
+            400.0,
+            21.0,
+            15.0,
+            FontWeight::Medium,
+        );
+        let member_text = format!("Member since {member_since}");
+        let (member_text, member_size) = fit_single_line(
+            &mut renderer,
+            &member_text,
+            420.0,
+            15.0,
+            12.0,
+            FontWeight::Regular,
+        );
+        let rank_text = format!("#{}", req.rank);
+        let (rank_text, rank_size) = fit_single_line(
+            &mut renderer,
+            &rank_text,
+            120.0,
+            22.0,
+            14.0,
+            FontWeight::Medium,
+        );
+        let total_text = comma_number(req.total_xp);
+        let (total_text, total_size) = fit_single_line(
+            &mut renderer,
+            &total_text,
+            210.0,
+            30.0,
+            20.0,
+            FontWeight::Regular,
+        );
+        let (recent_value, recent_size) = fit_single_line(
+            &mut renderer,
+            &recent_value,
+            150.0,
+            20.0,
+            14.0,
+            FontWeight::Medium,
+        );
 
         draw_text(
             &mut canvas,
@@ -227,18 +335,18 @@ pub async fn render_rank_card(
             90.0,
             32.0,
             400.0,
-            21.0,
+            username_size,
             FontWeight::Medium,
             INK,
         )?;
         draw_text(
             &mut canvas,
             &mut renderer,
-            &format!("Member since {member_since}"),
+            &member_text,
             90.0,
             61.0,
             420.0,
-            15.0,
+            member_size,
             FontWeight::Regular,
             MUTED,
         )?;
@@ -246,11 +354,11 @@ pub async fn render_rank_card(
         draw_text_right(
             &mut canvas,
             &mut renderer,
-            &format!("#{}", req.rank),
+            &rank_text,
             692.0,
             28.0,
             120.0,
-            22.0,
+            rank_size,
             FontWeight::Medium,
             PURPLE,
         )?;
@@ -269,11 +377,11 @@ pub async fn render_rank_card(
         draw_text(
             &mut canvas,
             &mut renderer,
-            &comma_number(total_xp),
+            &total_text,
             44.0,
             120.0,
             210.0,
-            30.0,
+            total_size,
             FontWeight::Regular,
             INK,
         )?;
@@ -291,11 +399,11 @@ pub async fn render_rank_card(
         draw_text_right(
             &mut canvas,
             &mut renderer,
-            &recent_xp,
+            &recent_value,
             502.0,
             128.0,
             150.0,
-            20.0,
+            recent_size,
             FontWeight::Medium,
             PURPLE,
         )?;
@@ -314,7 +422,7 @@ pub async fn render_rank_card(
         draw_text(
             &mut canvas,
             &mut renderer,
-            &format!("Progress to level {}", req.level.saturating_add(1)),
+            &progress_label,
             44.0,
             198.0,
             250.0,
@@ -336,11 +444,7 @@ pub async fn render_rank_card(
         draw_text(
             &mut canvas,
             &mut renderer,
-            &format!(
-                "{} / {} XP",
-                format_number(req.current_xp),
-                format_number(req.required_xp)
-            ),
+            &progress_detail,
             44.0,
             249.0,
             300.0,
@@ -349,6 +453,23 @@ pub async fn render_rank_card(
             MUTED,
         )?;
 
+        let (current_level, current_level_size) = fit_single_line(
+            &mut renderer,
+            &current_level,
+            70.0,
+            56.0,
+            28.0,
+            FontWeight::Regular,
+        );
+        let (next_level, next_level_size) = fit_single_line(
+            &mut renderer,
+            &next_level,
+            42.0,
+            if req.max_level { 18.0 } else { 26.0 },
+            14.0,
+            FontWeight::Regular,
+        );
+
         draw_text(
             &mut canvas,
             &mut renderer,
@@ -356,7 +477,7 @@ pub async fn render_rank_card(
             564.0,
             119.0,
             82.0,
-            56.0,
+            current_level_size,
             FontWeight::Regular,
             WHITE,
         )?;
@@ -364,10 +485,10 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &next_level,
-            676.0,
+            684.0,
             126.0,
             42.0,
-            26.0,
+            next_level_size,
             FontWeight::Regular,
             WHITE,
         )?;
@@ -385,8 +506,8 @@ pub async fn render_rank_card(
         draw_text_right(
             &mut canvas,
             &mut renderer,
-            "Next",
-            676.0,
+            if req.max_level { "Status" } else { "Next" },
+            684.0,
             255.0,
             55.0,
             15.0,
@@ -394,25 +515,28 @@ pub async fn render_rank_card(
             WHITE_MUTED,
         )?;
 
-        let detail_values = [
-            comma_number(req.messages_xp.unwrap_or(0)),
-            comma_number(req.voice_xp.unwrap_or(0)),
-            channel,
-            streak,
-        ];
-        let detail_labels = [messages_label, voice_label, "Most active in", "Streak"];
+        let raw_detail_values = [primary_value, secondary_value, activity_value, streak];
+        let detail_labels = [primary_label, secondary_label, activity_label, "Streak"];
         let detail_lefts = [56.0, 216.0, 376.0, 536.0];
         let detail_widths = [128.0; 4];
 
         for index in 0..4 {
+            let (value, size) = fit_single_line(
+                &mut renderer,
+                &raw_detail_values[index],
+                detail_widths[index],
+                20.0,
+                13.0,
+                FontWeight::Medium,
+            );
             draw_text(
                 &mut canvas,
                 &mut renderer,
-                &detail_values[index],
+                &value,
                 detail_lefts[index],
                 330.0,
                 detail_widths[index],
-                20.0,
+                size,
                 FontWeight::Medium,
                 INK,
             )?;
@@ -433,4 +557,40 @@ pub async fn render_rank_card(
     canvas
         .encode_png()
         .map_err(|error| ImageGenError::Rendering(format!("PNG encode error: {error}")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{format_duration, RankCardRequest};
+
+    #[test]
+    fn formats_voice_minutes_with_explicit_units() {
+        assert_eq!(format_duration(0), "0 min");
+        assert_eq!(format_duration(60), "1h");
+        assert_eq!(format_duration(185), "3h 5m");
+    }
+
+    #[test]
+    fn request_uses_authoritative_total_xp() {
+        let request: RankCardRequest = serde_json::from_value(serde_json::json!({
+            "username": "member",
+            "avatarUrl": "https://cdn.discordapp.com/avatar.png",
+            "cardType": "text",
+            "totalXP": 3782,
+            "level": 8,
+            "currentXP": 162,
+            "requiredXP": 955,
+            "maxLevel": false,
+            "rank": 28,
+            "primaryValue": 3782,
+            "secondaryValue": 0,
+            "activityState": "none",
+            "last7DaysValue": 0,
+            "streak": 0,
+            "memberSince": "Mar 2026"
+        }))
+        .expect("valid request");
+
+        assert_eq!(request.total_xp, 3782);
+    }
 }

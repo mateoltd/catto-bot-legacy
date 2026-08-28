@@ -1,3 +1,4 @@
+use crate::text::{FontWeight, TextRenderer};
 use tiny_skia::{Color, FillRule, Paint, PathBuilder, Pixmap, Rect, Transform};
 
 /// Fill a rectangle with a solid color.
@@ -126,20 +127,46 @@ pub fn draw_dot(canvas: &mut Pixmap, cx: f32, cy: f32, radius: f32, color: Color
     }
 }
 
-/// Strip characters that cannot be rendered by our embedded fonts (JetBrains Mono, Anton).
-/// Keeps ASCII, Latin-1 Supplement, and common punctuation. Removes emoji and other
-/// unsupported Unicode blocks so they don't render as tofu boxes.
+/// Preserve user-visible Unicode while forcing text into a single normalized line.
 pub fn sanitize_text(text: &str) -> String {
-    text.chars()
-        .filter(|&c| {
-            // Keep ASCII (includes basic Latin, digits, punctuation)
-            c.is_ascii()
-            // Keep Latin-1 Supplement (accented letters, symbols like ·, ©, etc.)
-            || ('\u{00A0}'..='\u{00FF}').contains(&c)
-            // Keep Latin Extended-A & B (covers most European languages)
-            || ('\u{0100}'..='\u{024F}').contains(&c)
-            // Keep General Punctuation (en-dash, em-dash, bullets, ellipsis, etc.)
-            || ('\u{2000}'..='\u{206F}').contains(&c)
-        })
-        .collect()
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+pub fn fit_single_line(
+    renderer: &mut TextRenderer,
+    text: &str,
+    max_width: f32,
+    preferred_size: f32,
+    minimum_size: f32,
+    weight: FontWeight,
+) -> (String, f32) {
+    let mut size = preferred_size;
+    while size > minimum_size && renderer.measure_text(text, "DM Sans", size, weight) > max_width {
+        size -= 0.5;
+    }
+
+    if renderer.measure_text(text, "DM Sans", size, weight) <= max_width {
+        return (text.to_string(), size);
+    }
+
+    let mut characters: Vec<char> = text.chars().collect();
+    while !characters.is_empty() {
+        characters.pop();
+        let candidate = format!("{}...", characters.iter().collect::<String>().trim_end());
+        if renderer.measure_text(&candidate, "DM Sans", size, weight) <= max_width {
+            return (candidate, size);
+        }
+    }
+
+    ("...".to_string(), size)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_text;
+
+    #[test]
+    fn sanitize_text_preserves_unicode_and_normalizes_whitespace() {
+        assert_eq!(sanitize_text("  Café\n東京\tПривет  "), "Café 東京 Привет");
+    }
 }

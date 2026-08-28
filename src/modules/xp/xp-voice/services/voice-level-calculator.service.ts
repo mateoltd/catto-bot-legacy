@@ -110,13 +110,15 @@ function calculateLevelFromTable(
   }
 
   const currentLevelXP = level > 0 ? (thresholds[level - 1] ?? 0) : 0;
-  const nextLevelXP =
-    level < thresholds.length
-      ? (thresholds[level] ?? currentLevelXP + 1000)
-      : currentLevelXP + 1000;
+  const atMaximumLevel = level >= thresholds.length;
+  const nextLevelXP = atMaximumLevel ? currentLevelXP : (thresholds[level] ?? currentLevelXP);
   const xpInCurrentLevel = currentXP - currentLevelXP;
   const xpNeededForLevel = nextLevelXP - currentLevelXP;
-  const progress = xpNeededForLevel > 0 ? (xpInCurrentLevel / xpNeededForLevel) * 100 : 0;
+  const progress = atMaximumLevel
+    ? 100
+    : xpNeededForLevel > 0
+      ? (xpInCurrentLevel / xpNeededForLevel) * 100
+      : 0;
 
   return {
     level,

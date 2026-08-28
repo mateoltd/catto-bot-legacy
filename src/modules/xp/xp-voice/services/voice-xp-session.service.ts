@@ -159,6 +159,7 @@ export async function handleVoiceLeave(voiceState: VoiceState): Promise<SessionA
     durationMinutes,
     {
       channelId: session.channelId,
+      channelName: guild.channels.cache.get(session.channelId)?.name,
       wasStreaming: session.isStreaming,
       wasVideo: session.isVideo,
       sessionId: session.sessionId,
@@ -448,6 +449,7 @@ export async function awardPerMinuteXP(guildId: string): Promise<number> {
       1, // 1 minute
       {
         channelId: session.channelId,
+        channelName: guild.channels.cache.get(session.channelId)?.name,
         wasStreaming: session.isStreaming,
         wasVideo: session.isVideo,
         sessionId: session.sessionId,

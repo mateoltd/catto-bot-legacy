@@ -119,9 +119,6 @@ export class RankCommand extends Command {
         });
       }
 
-      // Get total members for context
-      const totalMembers = await leaderboardService.getTotalUsers(guildId);
-
       // Calculate XP needed for next level
       const xpNeededForNextLevel = stats.nextLevelXp - stats.currentLevelXp;
       const xpInCurrentLevel = stats.xp - stats.currentLevelXp;
@@ -132,9 +129,6 @@ export class RankCommand extends Command {
         size: 256,
       });
 
-      // Determine accent color based on level
-      const accentColor = this.rankDataService.getLevelColor(stats.level);
-
       // Fetch detailed XP breakdown data
       const xpBreakdown = await this.rankDataService.getTextXPBreakdown(guildId, targetUser.id);
       const activityData = await this.rankDataService.getTextActivityData(guildId, targetUser.id);
@@ -142,23 +136,26 @@ export class RankCommand extends Command {
       // Get member join date
       const memberSince = await this.rankDataService.getMemberSince(guildId, targetUser.id);
 
+      if (stats.rank === null) {
+        throw new Error(`Rank is unavailable for XP member ${targetUser.id}`);
+      }
+
       // Generate rank card
       const cardImage = await imageGenClient.generateRankCard({
         username: targetUser.username,
         avatarUrl: avatarUrl,
+        cardType: 'text',
+        totalXP: stats.xp,
         level: stats.level,
         currentXP: xpInCurrentLevel,
         requiredXP: xpNeededForNextLevel,
-        rank: stats.rank ?? 0,
-        totalMembers: totalMembers,
-        accentColor: accentColor,
-        messagesXP: xpBreakdown.messagesXP,
-        voiceXP: xpBreakdown.voiceXP,
-        reactionsXP: xpBreakdown.reactionsXP,
-        commandsXP: xpBreakdown.commandsXP,
-        mostActiveChannel: activityData.mostActiveChannel,
-        last7DaysXP: activityData.last7DaysXP,
-        last30DaysXP: activityData.last30DaysXP,
+        maxLevel: xpNeededForNextLevel <= 0,
+        rank: stats.rank,
+        primaryValue: xpBreakdown.messageXP,
+        secondaryValue: xpBreakdown.voiceXP,
+        mostActiveChannel: activityData.channel.name,
+        activityState: activityData.channel.state,
+        last7DaysValue: activityData.last7DaysXP,
         streak: activityData.streak,
         memberSince: memberSince,
       });
@@ -197,7 +194,7 @@ export class RankCommand extends Command {
         .setDescription(
           `🎯 **Level ${stats.level}**\n` +
             `✨ **${stats.xp.toLocaleString()}** Total XP\n` +
-            `📊 **Rank #${stats.rank ?? 'N/A'}** of ${totalMembers}`
+            `📊 **${stats.rank === null ? 'Unranked' : `Rank #${stats.rank}`}** among ${totalMembers} members`
         )
         .addFields({
           name: 'Progress to Next Level',
@@ -228,9 +225,6 @@ export class RankCommand extends Command {
         });
       }
 
-      // Get total members for context
-      const totalMembers = await voiceLeaderboardService.getVoiceUserCount(guildId);
-
       // Calculate XP needed for next level
       const xpNeededForNextLevel = stats.nextLevelXp - stats.currentLevelXp;
       const xpInCurrentLevel = stats.xp - stats.currentLevelXp;
@@ -240,9 +234,6 @@ export class RankCommand extends Command {
         extension: 'png',
         size: 256,
       });
-
-      // Determine accent color based on level
-      const accentColor = this.rankDataService.getLevelColor(stats.level);
 
       // Fetch detailed voice XP breakdown data
       const voiceBreakdown = await this.rankDataService.getVoiceXPBreakdown(guildId, targetUser.id);
@@ -254,27 +245,28 @@ export class RankCommand extends Command {
       // Get member join date
       const memberSince = await this.rankDataService.getMemberSince(guildId, targetUser.id);
 
+      if (stats.rank === null) {
+        throw new Error(`Rank is unavailable for voice XP member ${targetUser.id}`);
+      }
+
       // Generate rank card
       const cardImage = await imageGenClient.generateRankCard({
         username: targetUser.username,
         avatarUrl: avatarUrl,
+        cardType: 'voice',
+        totalXP: stats.xp,
         level: stats.level,
         currentXP: xpInCurrentLevel,
         requiredXP: xpNeededForNextLevel,
-        rank: stats.rank ?? 0,
-        totalMembers: totalMembers,
-        accentColor: accentColor,
-        messagesXP: voiceBreakdown.totalTimeXP,
-        voiceXP: voiceBreakdown.streamingXP,
-        reactionsXP: voiceBreakdown.videoXP,
-        commandsXP: voiceBreakdown.regularXP,
-        mostActiveChannel: voiceActivityData.mostActiveChannel,
-        last7DaysXP: voiceActivityData.last7DaysMinutes,
-        last30DaysXP: voiceActivityData.last30DaysMinutes,
+        maxLevel: xpNeededForNextLevel <= 0,
+        rank: stats.rank,
+        primaryValue: voiceBreakdown.totalVoiceXP,
+        secondaryValue: voiceBreakdown.minutesInVoice,
+        mostActiveChannel: voiceActivityData.channel.name,
+        activityState: voiceActivityData.channel.state,
+        last7DaysValue: voiceActivityData.last7DaysMinutes,
         streak: voiceActivityData.streak,
         memberSince: memberSince,
-        // Voice-specific labels
-        isVoiceCard: true,
       });
 
       // Create attachment
@@ -314,7 +306,7 @@ export class RankCommand extends Command {
           `🎙️ **Level ${stats.level}**\n` +
             `✨ **${stats.xp.toLocaleString()}** Total Voice XP\n` +
             `⏱️ **${stats.minutesInVoice.toLocaleString()}** minutes in voice\n` +
-            `📊 **Rank #${stats.rank ?? 'N/A'}** of ${totalMembers}`
+            `📊 **${stats.rank === null ? 'Unranked' : `Rank #${stats.rank}`}** among ${totalMembers} members`
         )
         .addFields({
           name: 'Progress to Next Level',
