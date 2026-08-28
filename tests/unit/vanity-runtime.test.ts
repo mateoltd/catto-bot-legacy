@@ -22,7 +22,7 @@ function activity(type: ActivityType, state: string | null) {
 function configured() {
   return {
     enabled: true,
-    keyword: '/meetspace',
+    keyword: '/galaxia',
     roleId: '111111111111111111',
     thankYouEnabled: false,
     thankYouChannelId: null,
@@ -63,23 +63,23 @@ describe('vanity runtime', () => {
     expect(
       hasVanityKeyword(
         [
-          activity(ActivityType.Playing, '/meetspace'),
-          activity(ActivityType.Custom, 'JOIN /MeetSpace'),
+          activity(ActivityType.Playing, '/galaxia'),
+          activity(ActivityType.Custom, 'JOIN /Galaxia'),
         ],
-        ' /meetspace ',
+        ' /galaxia ',
       ),
     ).toBe(true);
-    expect(hasVanityKeyword([activity(ActivityType.Playing, '/meetspace')], '/meetspace')).toBe(
+    expect(hasVanityKeyword([activity(ActivityType.Playing, '/galaxia')], '/galaxia')).toBe(
       false,
     );
-    expect(hasVanityKeyword([activity(ActivityType.Custom, null)], '/meetspace')).toBe(false);
-    expect(hasVanityKeyword([activity(ActivityType.Custom, '/meetspace')], '   ')).toBe(false);
+    expect(hasVanityKeyword([activity(ActivityType.Custom, null)], '/galaxia')).toBe(false);
+    expect(hasVanityKeyword([activity(ActivityType.Custom, '/galaxia')], '   ')).toBe(false);
   });
 
   it('adds, removes, or avoids the Discord API according to the observed mismatch', async () => {
     const addFixture = memberFixture({
       id: 'member-add',
-      state: 'visit /meetspace',
+      state: 'visit /galaxia',
     });
     const removeFixture = memberFixture({
       id: 'member-remove',
@@ -88,7 +88,7 @@ describe('vanity runtime', () => {
     });
     const unchangedFixture = memberFixture({
       id: 'member-unchanged',
-      state: 'visit /meetspace',
+      state: 'visit /galaxia',
       hasRole: true,
     });
 
@@ -109,7 +109,7 @@ describe('vanity runtime', () => {
   });
 
   it('reconciles only members represented by non-offline presences without fetching members', async () => {
-    const online = memberFixture({ id: 'online-member', state: '/meetspace' });
+    const online = memberFixture({ id: 'online-member', state: '/galaxia' });
     const offline = memberFixture({
       id: 'offline-member',
       state: '',

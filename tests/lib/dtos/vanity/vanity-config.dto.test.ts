@@ -4,7 +4,7 @@ import { validateDto } from '#lib/validation/validate-dto.js';
 
 const validConfig = {
   enabled: true,
-  keyword: '/meetspace',
+  keyword: '/galaxia',
   roleId: '111111111111111111',
   thankYouEnabled: true,
   thankYouChannelId: '222222222222222222',

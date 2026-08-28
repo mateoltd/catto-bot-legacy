@@ -208,7 +208,7 @@ export default function VanityConfigForm({
               id="vanity-keyword"
               value={config.keyword}
               maxLength={128}
-              placeholder="/meetspace"
+              placeholder="/galaxia"
               disabled={cleanupActive}
               onChange={(event) =>
                 setConfig((current) => ({

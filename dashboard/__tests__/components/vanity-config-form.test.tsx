@@ -35,7 +35,7 @@ import VanityConfigForm from '@/components/vanity-config-form';
 
 const initialConfig = {
   enabled: true,
-  keyword: '/meetspace',
+  keyword: '/galaxia',
   roleId: '111111111111111111',
   thankYouEnabled: true,
   thankYouChannelId: '222222222222222222',
@@ -78,7 +78,7 @@ describe('VanityConfigForm', () => {
     renderForm(onSaved);
 
     expect(
-      screen.getByText('Thanks @member, you received @role for /meetspace.'),
+      screen.getByText('Thanks @member, you received @role for /galaxia.'),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Status phrase'), {
       target: { value: '/new-space' },
