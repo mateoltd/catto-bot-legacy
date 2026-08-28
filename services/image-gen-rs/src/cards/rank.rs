@@ -7,7 +7,7 @@ use crate::text::{FontWeight, SharedTextRenderer, TextRenderer};
 use serde::Deserialize;
 use tiny_skia::{Color, Pixmap, PixmapPaint, Transform};
 
-const CARD_WIDTH: u32 = 600;
+const CARD_WIDTH: u32 = 720;
 const CARD_HEIGHT: u32 = 423;
 
 fn surface() -> Color {
@@ -170,23 +170,22 @@ pub async fn render_rank_card(
 
     draw_circular_avatar(&mut canvas, &avatar, 52.0, 52.0, 48.0, 0.0, LAVENDER);
 
-    // Main cards use the same 600 px proportions as the approved reference screenshot.
-    draw_rounded_rect_filled(&mut canvas, 20.0, 98.0, 386.0, 198.0, 24.0, WHITE);
-    draw_rounded_rect_filled(&mut canvas, 420.0, 98.0, 160.0, 198.0, 24.0, PURPLE);
-    draw_rounded_rect_filled(&mut canvas, 20.0, 310.0, 560.0, 93.0, 20.0, STATS);
+    draw_rounded_rect_filled(&mut canvas, 20.0, 98.0, 506.0, 198.0, 24.0, WHITE);
+    draw_rounded_rect_filled(&mut canvas, 540.0, 98.0, 160.0, 198.0, 24.0, PURPLE);
+    draw_rounded_rect_filled(&mut canvas, 20.0, 310.0, 680.0, 93.0, 20.0, STATS);
 
     let progress = if req.required_xp == 0 {
         0.0
     } else {
         (req.current_xp as f32 / req.required_xp as f32).clamp(0.0, 1.0)
     };
-    draw_rounded_rect_filled(&mut canvas, 44.0, 227.0, 338.0, 11.0, 6.0, LAVENDER_STRONG);
+    draw_rounded_rect_filled(&mut canvas, 44.0, 227.0, 458.0, 11.0, 6.0, LAVENDER_STRONG);
     if progress > 0.0 {
         draw_rounded_rect_filled(
             &mut canvas,
             44.0,
             227.0,
-            338.0 * progress,
+            458.0 * progress,
             11.0,
             6.0,
             PURPLE,
@@ -194,7 +193,7 @@ pub async fn render_rank_card(
     }
 
     // The stats remain a single card; these separators are deliberately low contrast.
-    for x in [170.0, 300.0, 430.0] {
+    for x in [200.0, 360.0, 520.0] {
         draw_rect_filled(&mut canvas, x, 322.0, 1.0, 69.0, STATS_LINE);
     }
 
@@ -227,7 +226,7 @@ pub async fn render_rank_card(
             &username,
             90.0,
             32.0,
-            280.0,
+            400.0,
             21.0,
             FontWeight::Medium,
             INK,
@@ -238,7 +237,7 @@ pub async fn render_rank_card(
             &format!("Member since {member_since}"),
             90.0,
             61.0,
-            310.0,
+            420.0,
             15.0,
             FontWeight::Regular,
             MUTED,
@@ -248,7 +247,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &format!("#{}", req.rank),
-            572.0,
+            692.0,
             28.0,
             120.0,
             22.0,
@@ -259,7 +258,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             "Server rank",
-            572.0,
+            692.0,
             59.0,
             120.0,
             15.0,
@@ -293,7 +292,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &recent_xp,
-            382.0,
+            502.0,
             128.0,
             150.0,
             20.0,
@@ -304,7 +303,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             "Last 7 days",
-            382.0,
+            502.0,
             158.0,
             150.0,
             15.0,
@@ -327,7 +326,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &format!("{progress_percent}%"),
-            382.0,
+            502.0,
             198.0,
             60.0,
             14.0,
@@ -354,7 +353,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &current_level,
-            444.0,
+            564.0,
             119.0,
             82.0,
             56.0,
@@ -365,7 +364,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &next_level,
-            556.0,
+            676.0,
             126.0,
             42.0,
             26.0,
@@ -376,7 +375,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             "Current",
-            444.0,
+            564.0,
             255.0,
             70.0,
             15.0,
@@ -387,7 +386,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             "Next",
-            556.0,
+            676.0,
             255.0,
             55.0,
             15.0,
@@ -402,8 +401,8 @@ pub async fn render_rank_card(
             streak,
         ];
         let detail_labels = [messages_label, voice_label, "Most active in", "Streak"];
-        let detail_lefts = [40.0, 190.0, 320.0, 450.0];
-        let detail_widths = [110.0, 90.0, 90.0, 105.0];
+        let detail_lefts = [56.0, 216.0, 376.0, 536.0];
+        let detail_widths = [128.0; 4];
 
         for index in 0..4 {
             draw_text(
@@ -424,7 +423,7 @@ pub async fn render_rank_card(
                 detail_lefts[index],
                 361.0,
                 detail_widths[index],
-                if index == 2 { 13.0 } else { 14.0 },
+                14.0,
                 FontWeight::Regular,
                 MUTED,
             )?;
