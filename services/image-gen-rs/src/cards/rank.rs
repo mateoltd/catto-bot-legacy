@@ -470,11 +470,47 @@ pub async fn render_rank_card(
             FontWeight::Regular,
         );
 
+        // Treat both values as one centered composition. Edge-aligning them made the
+        // smaller next level hug the right side while leaving a visual hole after the
+        // much larger current level.
+        let current_level_width = renderer.measure_text(
+            &current_level,
+            "DM Sans",
+            current_level_size,
+            FontWeight::Regular,
+        );
+        let next_level_width = renderer.measure_text(
+            &next_level,
+            "DM Sans",
+            next_level_size,
+            FontWeight::Regular,
+        );
+        let level_gap = 12.0;
+        let level_group_left =
+            620.0 - (current_level_width + level_gap + next_level_width) / 2.0;
+        let current_level_center = level_group_left + current_level_width / 2.0;
+        let next_level_left = level_group_left + current_level_width + level_gap;
+        let next_level_center = next_level_left + next_level_width / 2.0;
+        let next_label = if req.max_level { "Status" } else { "Next" };
+        let current_label_width =
+            renderer.measure_text("Current", "DM Sans", 15.0, FontWeight::Regular);
+        let next_label_width =
+            renderer.measure_text(next_label, "DM Sans", 15.0, FontWeight::Regular);
+        // Center the labels as their own visual group. Keeping each label centered
+        // below differently sized numbers shifts the wider "Current" / "Next" pair
+        // toward the right even though the number pair itself is centered.
+        let uncentered_label_left = current_level_center - current_label_width / 2.0;
+        let uncentered_label_right = next_level_center + next_label_width / 2.0;
+        let label_group_offset =
+            620.0 - (uncentered_label_left + uncentered_label_right) / 2.0;
+        let current_label_left = uncentered_label_left + label_group_offset;
+        let next_label_right = uncentered_label_right + label_group_offset;
+
         draw_text(
             &mut canvas,
             &mut renderer,
             &current_level,
-            564.0,
+            level_group_left,
             119.0,
             82.0,
             current_level_size,
@@ -485,7 +521,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             &next_level,
-            684.0,
+            next_level_left + next_level_width,
             126.0,
             42.0,
             next_level_size,
@@ -496,7 +532,7 @@ pub async fn render_rank_card(
             &mut canvas,
             &mut renderer,
             "Current",
-            564.0,
+            current_label_left,
             255.0,
             70.0,
             15.0,
@@ -506,8 +542,8 @@ pub async fn render_rank_card(
         draw_text_right(
             &mut canvas,
             &mut renderer,
-            if req.max_level { "Status" } else { "Next" },
-            684.0,
+            next_label,
+            next_label_right,
             255.0,
             55.0,
             15.0,
