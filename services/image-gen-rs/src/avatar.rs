@@ -1,10 +1,19 @@
 use crate::error::ImageGenError;
 use image::GenericImageView;
 use std::sync::OnceLock;
-use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, PixmapPaint, PremultipliedColorU8, Transform};
+use tiny_skia::{
+    FillRule, FilterQuality, Mask, Paint, PathBuilder, Pixmap, PixmapPaint, Transform,
+};
 
 /// Maximum avatar response body size (10 MB).
 const MAX_AVATAR_BYTES: usize = 10 * 1024 * 1024;
+
+fn avatar_paint() -> PixmapPaint {
+    PixmapPaint {
+        quality: FilterQuality::Bicubic,
+        ..PixmapPaint::default()
+    }
+}
 
 /// Shared HTTP client — created once, reused for all avatar fetches.
 fn http_client() -> &'static reqwest::Client {
@@ -169,31 +178,26 @@ pub fn draw_circular_avatar(
         let offset_x = (target_size as f32 - avatar_w * temp_scale) / 2.0;
         let offset_y = (target_size as f32 - avatar_h * temp_scale) / 2.0;
 
-        let transform = Transform::from_scale(temp_scale, temp_scale)
-            .post_translate(offset_x, offset_y);
+        let transform =
+            Transform::from_scale(temp_scale, temp_scale).post_translate(offset_x, offset_y);
+
+        // Use a subpixel antialiased mask rather than cutting whole edge pixels away.
+        let center = target_size as f32 / 2.0;
+        let mut mask = Mask::new(target_size, target_size).unwrap();
+        let mut mask_builder = PathBuilder::new();
+        mask_builder.push_circle(center, center, center);
+        if let Some(mask_path) = mask_builder.finish() {
+            mask.fill_path(&mask_path, FillRule::Winding, true, Transform::identity());
+        }
 
         temp.draw_pixmap(
-            0, 0,
+            0,
+            0,
             avatar.as_ref(),
-            &PixmapPaint::default(),
+            &avatar_paint(),
             transform,
-            None,
+            Some(&mask),
         );
-
-        // Clip to circle by zeroing pixels outside the radius
-        let center = target_size as f32 / 2.0;
-        let r_sq = center * center;
-        for py in 0..target_size {
-            for px in 0..target_size {
-                let dx = px as f32 + 0.5 - center;
-                let dy = py as f32 + 0.5 - center;
-                if dx * dx + dy * dy > r_sq {
-                    let idx = (py * target_size + px) as usize;
-                    temp.pixels_mut()[idx] =
-                        PremultipliedColorU8::from_rgba(0, 0, 0, 0).unwrap();
-                }
-            }
-        }
 
         // Draw the clipped avatar onto destination
         let dest_x = (cx - radius) as i32;
@@ -227,8 +231,19 @@ pub fn draw_square_avatar(
         0,
         0,
         avatar.as_ref(),
-        &PixmapPaint::default(),
+        &avatar_paint(),
         transform,
         None,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::avatar_paint;
+    use tiny_skia::FilterQuality;
+
+    #[test]
+    fn avatar_scaling_uses_high_quality_resampling() {
+        assert_eq!(avatar_paint().quality, FilterQuality::Bicubic);
+    }
 }
